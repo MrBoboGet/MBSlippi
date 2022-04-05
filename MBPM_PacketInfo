@@ -1,0 +1,10 @@
+{
+	"PacketName":"MBSlippi",
+	"Attributes":["Embeddable"],
+	"OutputConfigurations":["StaticDebug","StaticRelease"],
+	"OutputTargetNames": {
+		"StaticRelease": "MBSlippi_SR",
+		"StaticDebug": "MBSlippi_SD"
+	},
+    "Dependancies":["MBParsing"]
+}
