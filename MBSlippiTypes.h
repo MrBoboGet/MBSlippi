@@ -75,7 +75,7 @@ namespace MBSlippi
 			return(m_Type);
 		}
 		virtual std::unique_ptr<EventData> Copy() const = 0;
-		virtual void ParseData(ParseVersion const& Version, void const* Data, size_t DataSize) = 0;
+		virtual size_t ParseData(ParseVersion const& Version, void const* Data, size_t DataSize) = 0;
 		virtual std::string Serialize(ParseVersion const& Version) const = 0;
 		virtual ~EventData()
 		{
@@ -93,9 +93,9 @@ namespace MBSlippi
 		{
 			return(std::make_unique<Event_Null>());
 		}
-		virtual void ParseData(ParseVersion const& Version, void const* Data, size_t DataSize)
+		virtual size_t ParseData(ParseVersion const& Version, void const* Data, size_t DataSize)
 		{
-
+			return(0);
 		}
 		virtual std::string Serialize(ParseVersion const& Version) const
 		{
@@ -111,13 +111,13 @@ namespace MBSlippi
 		bool LastMessage = 0;
 		Event_MessageSplit()
 		{
-			m_Type = EventType::Null;
+			m_Type = EventType::MessageSplitter;
 		}
 		virtual std::unique_ptr<EventData> Copy() const
 		{
 			return(std::make_unique<Event_MessageSplit>());
 		}
-		virtual void ParseData(ParseVersion const& Version, void const* Data, size_t DataSize)
+		virtual size_t ParseData(ParseVersion const& Version, void const* Data, size_t DataSize)
 		{
 			size_t ParseOffset = 0;
 			std::memcpy(FixedSizeBlock, Data, 512);
@@ -125,6 +125,7 @@ namespace MBSlippi
 			ActualSize = MBParsing::ParseBigEndianInteger(Data, 2, ParseOffset, &ParseOffset);
 			InternalCommand = MBParsing::ParseBigEndianInteger(Data, 1, ParseOffset, &ParseOffset);
 			LastMessage = MBParsing::ParseBigEndianInteger(Data, 1, ParseOffset, &ParseOffset);
+			return(ParseOffset);
 		}
 		virtual std::string Serialize(ParseVersion const& Version) const
 		{
@@ -150,7 +151,7 @@ namespace MBSlippi
 		{
 			m_Type = EventType::EventPayloads;
 		}
-		virtual void ParseData(ParseVersion const& , void const* Data, size_t DataSize) override
+		virtual size_t ParseData(ParseVersion const& , void const* Data, size_t DataSize) override
 		{
 			size_t ParseOffset = 0;
 			Size = MBParsing::ParseBigEndianInteger(Data, 1, ParseOffset, &ParseOffset);
@@ -161,6 +162,7 @@ namespace MBSlippi
 				NewSize.second	= MBParsing::ParseBigEndianInteger(Data, 2, ParseOffset, &ParseOffset);
 				EventSizes.push_back(NewSize);
 			}
+			return(ParseOffset);
 		}
 		std::unique_ptr<EventData> Copy() const override
 		{
@@ -201,7 +203,7 @@ namespace MBSlippi
 			*ReturnValue = *this;
 			return(ReturnValue);
 		}
-		void ParseData(ParseVersion const& CurrentVersion, void const* Data, size_t DataSize) override
+		size_t ParseData(ParseVersion const& CurrentVersion, void const* Data, size_t DataSize) override
 		{
 			size_t ParseOffset = 0;
 			uint8_t const* ByteData = (uint8_t const*)Data;
@@ -215,7 +217,7 @@ namespace MBSlippi
 			RandomSeed = MBParsing::ParseBigEndianInteger(Data, 4, ParseOffset, &ParseOffset);
 			if (Version.Major < 1)
 			{
-				return;
+				return ParseOffset;
 			}
 			for (size_t i = 0; i < 4; i++)
 			{
@@ -225,25 +227,34 @@ namespace MBSlippi
 			{
 				ShieldDropFix[i] = MBParsing::ParseBigEndianInteger(Data, 4, ParseOffset, &ParseOffset);
 			}
+			if (Version < ParseVersion{ 1,3,0,0 })
+			{
+				return(ParseOffset);
+			}
+			for (size_t i = 0; i < 4; i++)
+			{
+				NameTags[i] = std::string((const char*)ByteData + ParseOffset);
+				ParseOffset += 16;
+			}
 			if (Version < ParseVersion{ 1,5,0,0 })
 			{
-				return;
+				return ParseOffset;
 			}
 			IsPal = MBParsing::ParseBigEndianInteger(Data, 1, ParseOffset, &ParseOffset);
 			if (Version < ParseVersion{ 2,0,0 })
 			{
-				return;
+				return ParseOffset;
 			}
 			IsFrozenPS = MBParsing::ParseBigEndianInteger(Data, 1, ParseOffset, &ParseOffset);;
 			if (Version < ParseVersion{ 3,7,0 })
 			{
-				return;
+				return ParseOffset;
 			}
 			MinorScene = MBParsing::ParseBigEndianInteger(Data, 1, ParseOffset, &ParseOffset);
 			MajorScene = MBParsing::ParseBigEndianInteger(Data, 1, ParseOffset, &ParseOffset);
 			if (Version < ParseVersion{ 3,9,0 })
 			{
-				return;
+				return ParseOffset;
 			}
 			for (size_t i = 0; i < 4; i++)
 			{
@@ -257,7 +268,7 @@ namespace MBSlippi
 			}
 			if (Version < ParseVersion{3, 11, 0})
 			{
-				return;
+				return ParseOffset;
 			}
 			for (size_t i = 0; i < 4; i++)
 			{
@@ -266,11 +277,12 @@ namespace MBSlippi
 			}
 			if (Version < ParseVersion{ 3,12,0 })
 			{
-				return;
+				return ParseOffset;
 			}
 			LanguageOption = MBParsing::ParseBigEndianInteger(Data, 1, ParseOffset, &ParseOffset);
+			return(ParseOffset);
 		}
-		virtual std::string Serialize(ParseVersion const& Version) const
+		virtual std::string Serialize(ParseVersion const& CurrentVersion) const
 		{
 			std::string ReturnValue = std::string(sizeof(Event_GameStart)+1+ 31 * 4+10*4+ 4 * 29, 0);
 			size_t ParseOffset = 0;
@@ -283,8 +295,8 @@ namespace MBSlippi
 			ParseOffset += 4;
 			std::memcpy(ReturnValue.data() + ParseOffset, GameInfoBlock, 312);
 			ParseOffset += 312;
-			MBParsing::WriteBigEndianInteger(ReturnValue.data() + ParseOffset, RandomSeed, 4,ParseOffset,&ParseOffset);
-			if (Version < ParseVersion{ 1,0,0 })
+			MBParsing::WriteBigEndianInteger(ReturnValue.data(), RandomSeed, 4,ParseOffset,&ParseOffset);
+			if (CurrentVersion < ParseVersion{ 1,0,0 })
 			{
 				ReturnValue.resize(ParseOffset);
 				return(ReturnValue);
@@ -297,7 +309,7 @@ namespace MBSlippi
 			{
 				MBParsing::WriteBigEndianInteger(ReturnValue.data(), ShieldDropFix[i], 4,ParseOffset,&ParseOffset);
 			}
-			if (Version < ParseVersion{ 1,3,0 })
+			if (CurrentVersion < ParseVersion{ 1,3,0 })
 			{
 				ReturnValue.resize(ParseOffset);
 				return(ReturnValue);
@@ -307,21 +319,21 @@ namespace MBSlippi
 				std::memcpy(ReturnValue.data() + ParseOffset, NameTags[i].data(), NameTags[i].size());
 				ParseOffset += 16;
 			}
-			if (Version < ParseVersion{ 1,5,0 })
+			if (CurrentVersion < ParseVersion{ 1,5,0 })
 			{
 				ReturnValue.resize(ParseOffset);
 				return(ReturnValue);
 			}
 			ReturnValue[ParseOffset] = char(IsPal);
 			ParseOffset += 1;
-			if (Version < ParseVersion{ 2,0,0 })
+			if (CurrentVersion < ParseVersion{ 2,0,0 })
 			{
 				ReturnValue.resize(ParseOffset);
 				return(ReturnValue);
 			}
 			ReturnValue[ParseOffset] = char(IsFrozenPS);
 			ParseOffset += 1;
-			if (Version < ParseVersion{ 3,7,0 })
+			if (CurrentVersion < ParseVersion{ 3,7,0 })
 			{
 				ReturnValue.resize(ParseOffset);
 				return(ReturnValue);
@@ -329,7 +341,7 @@ namespace MBSlippi
 			ReturnValue[ParseOffset] = MinorScene;
 			ReturnValue[ParseOffset] = MajorScene;
 			ParseOffset += 2;
-			if (Version < ParseVersion{ 3,9,0 })
+			if (CurrentVersion < ParseVersion{ 3,9,0 })
 			{
 				ReturnValue.resize(ParseOffset);
 				return(ReturnValue);
@@ -344,7 +356,7 @@ namespace MBSlippi
 				std::memcpy(ReturnValue.data() + ParseOffset, ConnectCode[i].data(), ConnectCode[i].size());
 				ParseOffset += 10;
 			}
-			if (Version < ParseVersion{ 3,11,0 })
+			if (CurrentVersion < ParseVersion{ 3,11,0 })
 			{
 				ReturnValue.resize(ParseOffset);
 				return(ReturnValue);
@@ -354,7 +366,7 @@ namespace MBSlippi
 				std::memcpy(ReturnValue.data() + ParseOffset, SlippiUID[i].data(), SlippiUID[i].size());
 				ParseOffset += 29;
 			}
-			if (Version < ParseVersion{ 3,12,0 })
+			if (CurrentVersion < ParseVersion{ 3,12,0 })
 			{
 				ReturnValue.resize(ParseOffset);
 				return(ReturnValue);
@@ -403,7 +415,7 @@ namespace MBSlippi
 			*ReturnValue = *this;
 			return(ReturnValue);
 		}
-		void ParseData(ParseVersion const& CurrentVersion, void const* Data, size_t DataSize) override
+		size_t ParseData(ParseVersion const& CurrentVersion, void const* Data, size_t DataSize) override
 		{
 			size_t ParseOffset = 0;
 			FrameNumber = MBParsing::ParseBigEndianInteger(Data, 4, ParseOffset, &ParseOffset);
@@ -424,11 +436,12 @@ namespace MBSlippi
 			PhysicalLTrigger = MBParsing::ParseBigEndianIEEE754Float(Data, 4, ParseOffset, &ParseOffset);
 			PhysicalRTrigger = MBParsing::ParseBigEndianIEEE754Float(Data, 4, ParseOffset, &ParseOffset);
 			if (CurrentVersion < ParseVersion{ 1,2,0 })
-				return;
+				return ParseOffset;
 			XAnalog = MBParsing::ParseBigEndianInteger(Data, 1, ParseOffset, &ParseOffset);
 			if (CurrentVersion < ParseVersion{ 1,4,0 })
-				return;
+				return ParseOffset;
 			Percent = MBParsing::ParseBigEndianIEEE754Float(Data, 4, ParseOffset, &ParseOffset);
+			return(ParseOffset);
 		}
 		std::string Serialize(ParseVersion const& Version)const override
 		{
@@ -504,7 +517,7 @@ namespace MBSlippi
 			*ReturnValue = *this;
 			return(ReturnValue);
 		}
-		void ParseData(ParseVersion const& CurrentVersion, void const* Data, size_t DataSize) override
+		size_t ParseData(ParseVersion const& CurrentVersion, void const* Data, size_t DataSize) override
 		{
 			size_t ParseOffset = 0;
 			FrameNumber = MBParsing::ParseBigEndianInteger(Data, 4, ParseOffset, &ParseOffset);
@@ -526,10 +539,10 @@ namespace MBSlippi
 				int hej = 2;
 			}
 			if (CurrentVersion < ParseVersion{ 0,2,0 })
-				return;
+				return ParseOffset;
 			ActionStateFrameCounter = MBParsing::ParseBigEndianIEEE754Float(Data, 4, ParseOffset, &ParseOffset);
 			if (CurrentVersion < ParseVersion{ 2,0,0 })
-				return;
+				return ParseOffset;
 			StateBitFlags1 = MBParsing::ParseBigEndianInteger(Data, 1, ParseOffset, &ParseOffset);
 			StateBitFlags2 = MBParsing::ParseBigEndianInteger(Data, 1, ParseOffset, &ParseOffset);
 			StateBitFlags3 = MBParsing::ParseBigEndianInteger(Data, 1, ParseOffset, &ParseOffset);
@@ -541,21 +554,22 @@ namespace MBSlippi
 			JumpsRemaining = MBParsing::ParseBigEndianInteger(Data, 1, ParseOffset, &ParseOffset);
 			LCancelStatus = MBParsing::ParseBigEndianInteger(Data, 1, ParseOffset, &ParseOffset);
 			if (CurrentVersion < ParseVersion{ 2,1,0 })
-				return;
+				return ParseOffset;
 			HurtboxCollisionState = MBParsing::ParseBigEndianInteger(Data, 1, ParseOffset, &ParseOffset);
 			if (CurrentVersion < ParseVersion{ 3,5,0 })
-				return;
+				return ParseOffset;
 			SelfInducedAirXSpeed = MBParsing::ParseBigEndianIEEE754Float(Data, 4, ParseOffset, &ParseOffset);
 			SelfInducedYSpeed = MBParsing::ParseBigEndianIEEE754Float(Data, 4, ParseOffset, &ParseOffset);
 			AttackBasedXSpeed = MBParsing::ParseBigEndianIEEE754Float(Data, 4, ParseOffset, &ParseOffset);
 			AttackBasedYSpeed = MBParsing::ParseBigEndianIEEE754Float(Data, 4, ParseOffset, &ParseOffset);
 			SelfInducedGroundXSpeed = MBParsing::ParseBigEndianIEEE754Float(Data, 4, ParseOffset, &ParseOffset);
 			if (CurrentVersion < ParseVersion{ 3,8,0 })
-				return;
+				return ParseOffset;
 			HitlagFramesRemaining = MBParsing::ParseBigEndianIEEE754Float(Data, 4, ParseOffset, &ParseOffset);
 			if (CurrentVersion < ParseVersion{ 3,11,0 })
-				return;
+				return ParseOffset;
 			AnimationIndex = MBParsing::ParseBigEndianInteger(Data, 4, ParseOffset, &ParseOffset);
+			return(ParseOffset);
 		}
 		std::string Serialize(ParseVersion const& Version)const override
 		{
@@ -684,13 +698,14 @@ namespace MBSlippi
 			*ReturnValue = *this;
 			return(ReturnValue);
 		}
-		void ParseData(ParseVersion const& CurrentVersion, void const* Data, size_t DataSize) override
+		size_t ParseData(ParseVersion const& CurrentVersion, void const* Data, size_t DataSize) override
 		{
 			size_t ParseOffset = 0;
 			GameEndMethod = MBParsing::ParseBigEndianInteger(Data, 1, ParseOffset, &ParseOffset);
 			if (CurrentVersion < ParseVersion{ 2,0,0 })
-				return;
+				return ParseOffset;
 			LRASInitiator = MBParsing::ParseBigEndianInteger(Data, 1, ParseOffset, &ParseOffset);
+			return(ParseOffset);
 		}
 		std::string Serialize(ParseVersion const& Version)const override
 		{
@@ -722,14 +737,15 @@ namespace MBSlippi
 			*ReturnValue = *this;
 			return(ReturnValue);
 		}
-		void ParseData(ParseVersion const& CurrentVersion, void const* Data, size_t DataSize) override
+		size_t ParseData(ParseVersion const& CurrentVersion, void const* Data, size_t DataSize) override
 		{
 			size_t ParseOffset = 0;
 			FrameNumber = MBParsing::ParseBigEndianInteger(Data, 4, ParseOffset, &ParseOffset);
-			RandomSeed = MBParsing::ParseBigEndianInteger(Data, 1, ParseOffset, &ParseOffset);
+			RandomSeed = MBParsing::ParseBigEndianInteger(Data, 4, ParseOffset, &ParseOffset);
 			if (CurrentVersion < ParseVersion{ 3,10,0 })
-				return;
+				return ParseOffset;
 			SceneFrameCounter = MBParsing::ParseBigEndianInteger(Data, 1, ParseOffset, &ParseOffset);
+			return(ParseOffset);
 		}
 		std::string Serialize(ParseVersion const& Version)const override
 		{
@@ -764,7 +780,7 @@ namespace MBSlippi
 			*ReturnValue = *this;
 			return(ReturnValue);
 		}
-		void ParseData(ParseVersion const& CurrentVersion, void const* Data, size_t DataSize) override
+		size_t ParseData(ParseVersion const& CurrentVersion, void const* Data, size_t DataSize) override
 		{
 			size_t ParseOffset = 0;
 			FrameNumber = MBParsing::ParseBigEndianInteger(Data, 4, ParseOffset, &ParseOffset);
@@ -779,14 +795,15 @@ namespace MBSlippi
 			ExpirationTimer = MBParsing::ParseBigEndianIEEE754Float(Data, 4, ParseOffset, &ParseOffset);
 			SpawnID = MBParsing::ParseBigEndianIEEE754Float(Data, 4, ParseOffset, &ParseOffset);
 			if (CurrentVersion < ParseVersion{ 3,2,0 })
-				return;
+				return ParseOffset;
 			Misc1 = MBParsing::ParseBigEndianInteger(Data, 1, ParseOffset, &ParseOffset);
 			Misc2 = MBParsing::ParseBigEndianInteger(Data, 1, ParseOffset, &ParseOffset);
 			Misc3 = MBParsing::ParseBigEndianInteger(Data, 1, ParseOffset, &ParseOffset);
 			Misc4 = MBParsing::ParseBigEndianInteger(Data, 1, ParseOffset, &ParseOffset);
 			if (CurrentVersion < ParseVersion{ 3,6,0 })
-				return;
+				return ParseOffset; 
 			Owner = MBParsing::ParseBigEndianInteger(Data, 1, ParseOffset, &ParseOffset);
+			return(ParseOffset);
 		}
 		std::string Serialize(ParseVersion const& Version)const override
 		{
@@ -860,13 +877,14 @@ namespace MBSlippi
 			*ReturnValue = *this;
 			return(ReturnValue);
 		}
-		void ParseData(ParseVersion const& CurrentVersion, void const* Data, size_t DataSize) override
+		size_t ParseData(ParseVersion const& CurrentVersion, void const* Data, size_t DataSize) override
 		{
 			size_t ParseOffset = 0;
 			FrameNumber = MBParsing::ParseBigEndianInteger(Data, 4, ParseOffset, &ParseOffset);
 			if (CurrentVersion < ParseVersion{ 3,7,0 })
-				return;
+				return ParseOffset;
 			LatestFinalizedFrame = MBParsing::ParseBigEndianInteger(Data, 4, ParseOffset, &ParseOffset);
+			return(ParseOffset);
 		}
 		std::string Serialize(ParseVersion const& Version)const override
 		{
@@ -901,10 +919,11 @@ namespace MBSlippi
 			*ReturnValue = *this;
 			return(ReturnValue);
 		}
-		void ParseData(ParseVersion const& CurrentVersion, void const* Data, size_t DataSize) override
+		size_t ParseData(ParseVersion const& CurrentVersion, void const* Data, size_t DataSize) override
 		{
 			RawData = std::string(DataSize, 0);
 			std::memcpy(RawData.data(), Data, DataSize);
+			return(DataSize);
 		}
 		std::string Serialize(ParseVersion const& Version)const override
 		{

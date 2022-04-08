@@ -140,7 +140,8 @@ namespace MBSlippi
 						//mest för debugg
 						throw std::runtime_error("Unsupported event type");
 					}
-					DataToReturn->ParseData(m_ParseVersion,ByteBuffer.data(), ByteBuffer.size());
+					size_t ParsedBytes = DataToReturn->ParseData(m_ParseVersion,ByteBuffer.data(), ByteBuffer.size());
+					assert(ParsedBytes == ByteBuffer.size());
 				}
 			}
 			//DEBUG

@@ -44,7 +44,17 @@ int main(int argc, const char** argv)
 		TotalRawData += AllEvents[i].Serialize(MBSlippi::ParseVersion{ 3,6,0 });
 	}
 	assert(TotalRawData.size() == EventData.size());
-	
+	assert(std::memcmp(TotalRawData.data(), EventData.data(), 29) == 0);
+	for (size_t i = 0; i < TotalRawData.size(); i++)
+	{
+		if (TotalRawData[i] != EventData[i])
+		{
+			size_t DebugPos = i - 29;
+			uint8_t* BytePointer =(uint8_t*)  TotalRawData.data();
+			std::cout << "First differing byte position: " << i<<std::endl;
+			break;
+		}
+	}
 	std::vector<std::vector<MBSlippi::Event>> TotalFrames = {};
 	MBSlippi::FrameParser FrameParser;
 	FrameParser.SetVersion(EventParser.GetVersion());
@@ -64,11 +74,16 @@ int main(int argc, const char** argv)
 	
 	MBParsing::JSONObject TestCopy = ResultObject;
 	TestCopy.GetAttribute("raw") = MBParsing::JSONObject(TotalRawData);
-	std::ofstream FileOutStream("TestOut.slp", std::ios::out | std::ios::binary);
+	std::ofstream FileOutStream("ReplayVariable.slp", std::ios::out | std::ios::binary);
 	MBUtility::MBFileOutputStream OutStream(&FileOutStream);
+	//direkt till filen test
+	//OutStream.Write("\x7b\x55\x03\x72\x61\x77\x5b\x24\x55\x23\x6c", 11);
+	//OutStream.Write(TotalRawData.data(),TotalRawData.size());
+	//OutStream.Write("U\x08metadata",10);
+	//MBParsing::SerialiseUBJSON(OutStream, TestCopy.GetAttribute("metadata"));
 	MBParsing::SerialiseUBJSON(OutStream, TestCopy);
 
-	MBUtility::MBFileInputStream CopiedInputStream("TestOut.slp");
+	MBUtility::MBFileInputStream CopiedInputStream("ReplayVariable.slp");
 	MBParsing::JSONObject CopiedResultObject = MBParsing::ParseUBJSON(&CopiedInputStream, nullptr);
 	std::cout << CopiedResultObject.GetAttribute("metadata").ToString() << std::endl;
 	assert(CopiedResultObject.GetAttribute("raw").GetStringData() == TotalRawData);
