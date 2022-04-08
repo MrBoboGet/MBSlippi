@@ -1,9 +1,14 @@
 #pragma once
 #include "MBSlippiTypes.h"
 #include <MBUtility/MBInterfaces.h>
+
+#include <assert.h>
+#include <queue>
+#include <stack>
 namespace MBSlippi
 {
 	typedef MBUtility::MBOctetInputStream T;
+
 	class SlippiEventParser
 	{
 	private:
@@ -11,7 +16,7 @@ namespace MBSlippi
 		ParseVersion m_ParseVersion;
 		std::unordered_map<EventType, size_t> m_PossibleEvents;
 
-		std::vector<Event> m_StoredEvents = {};//fullhack
+		std::queue<Event> m_StoredEvents = {};//fullhack
 		void p_Initialize()
 		{
 			uint8_t NextByte;
@@ -39,7 +44,8 @@ namespace MBSlippi
 			Event GameStartEvent = GetNextEvent();
 			Event_GameStart& GameStartData = GameStartEvent.GetEventData<Event_GameStart>();
 			m_ParseVersion = GameStartData.Version;
-			m_StoredEvents.push_back(std::move(GameStartEvent));
+			m_StoredEvents.push(Event(std::make_unique<Event_Payloads>(std::move(PayloadData))));
+			m_StoredEvents.push(std::move(GameStartEvent));
 		}
 	public:
 		SlippiEventParser(std::unique_ptr<T> InputStream)
@@ -47,12 +53,16 @@ namespace MBSlippi
 			m_InputStream = std::move(InputStream);
 			p_Initialize();
 		}
+		ParseVersion GetVersion()
+		{
+			return(m_ParseVersion);
+		}
 		Event GetNextEvent()
 		{
 			if (m_StoredEvents.size() > 0)
 			{
 				Event ReturnValue = std::move(m_StoredEvents.front());
-				m_StoredEvents.pop_back();
+				m_StoredEvents.pop();
 				return(ReturnValue);
 			}
 			std::unique_ptr<EventData> DataToReturn;
@@ -124,7 +134,7 @@ namespace MBSlippi
 					else if (CurrentEvent == EventType::FrameBockend)
 						DataToReturn = std::make_unique<Event_FrameBookend>();
 					else if (CurrentEvent == EventType::GeckoList)
-						DataToReturn = std::make_unique<Event_GeckoList>();
+						DataToReturn = std::make_unique<Event_GeckoList>();	
 					else
 					{
 						//mest för debugg
@@ -133,7 +143,88 @@ namespace MBSlippi
 					DataToReturn->ParseData(m_ParseVersion,ByteBuffer.data(), ByteBuffer.size());
 				}
 			}
+			//DEBUG
+			EventType Type = DataToReturn->GetType();
+			size_t EventSize = DataToReturn->Serialize(ParseVersion{ 3,6,0 }).size();
+			size_t ActualVersion = m_PossibleEvents[DataToReturn->GetType()];
+			if (Type != EventType::GeckoList && Type != EventType::Null)
+			{
+				assert(EventSize == ActualVersion + 1);
+			}
+			//
 			return(Event(std::move(DataToReturn)));
+		}
+	};
+
+	class FrameParser
+	{
+	private:
+		ParseVersion m_Version;
+		std::deque<std::vector<Event>> m_StoredFrames = {};
+		std::vector<Event> m_CurrentFrameData = {};
+		bool m_Finished = false;
+	public:
+		void SetVersion(ParseVersion Version)
+		{
+			m_Version = Version;
+		}
+		void Reset()
+		{
+			ParseVersion PreviousVersion = m_Version;
+			*this = FrameParser();
+			m_Version = PreviousVersion;
+		}
+		void InsertEvent(Event EventToInsert)
+		{
+			if(m_Finished)
+			{
+				throw std::runtime_error("cant insert more frames after stream has finished");
+			}
+			EventType CurrentType = EventToInsert.GetType();
+			if (CurrentType == EventType::EventPayloads || CurrentType == EventType::GameStart || CurrentType == EventType::GeckoList)
+			{
+				return;
+			}
+			if (CurrentType == EventType::GameEnd)
+			{
+				if (m_CurrentFrameData.size() > 0)
+				{
+					m_StoredFrames.push_back(std::move(m_CurrentFrameData));
+					m_CurrentFrameData = {};
+				}
+				m_Finished = true;
+				return;
+			}
+			if (m_CurrentFrameData.size() > 0 && m_CurrentFrameData.back().GetType() == EventType::PostFrameUpdate && (CurrentType == EventType::FrameStart || CurrentType == EventType::PreFrameUpdate))
+			{
+				m_StoredFrames.push_back(std::move(m_CurrentFrameData));
+				m_CurrentFrameData = {};
+			}
+			m_CurrentFrameData.push_back(std::move(EventToInsert));
+			if (CurrentType == EventType::FrameBockend)
+			{
+				m_StoredFrames.push_back(std::move(m_CurrentFrameData));
+				m_CurrentFrameData = {};
+			}
+			
+		}
+		bool Finished()
+		{
+			return(m_Finished);
+		}
+		size_t AvailableFrames()
+		{
+			return(m_StoredFrames.size());
+		}
+		std::vector<Event> ExtractFrame()
+		{
+			if (m_StoredFrames.size() == 0)
+			{
+				throw std::runtime_error("No stored frames to extract");
+			}
+			std::vector<Event> ReturnValue = std::move(m_StoredFrames.front());
+			m_StoredFrames.pop_front();
+			return(ReturnValue);
 		}
 	};
 }
