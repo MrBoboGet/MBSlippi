@@ -74,7 +74,7 @@ int main(int argc, const char** argv)
 	
 	MBParsing::JSONObject TestCopy = ResultObject;
 	TestCopy.GetAttribute("raw") = MBParsing::JSONObject(TotalRawData);
-	std::ofstream FileOutStream("ReplayVariable.slp", std::ios::out | std::ios::binary);
+	std::ofstream FileOutStream("TestTest.slp", std::ios::out | std::ios::binary);
 	MBUtility::MBFileOutputStream OutStream(&FileOutStream);
 	//direkt till filen test
 	//OutStream.Write("\x7b\x55\x03\x72\x61\x77\x5b\x24\x55\x23\x6c", 11);
@@ -83,16 +83,85 @@ int main(int argc, const char** argv)
 	//MBParsing::SerialiseUBJSON(OutStream, TestCopy.GetAttribute("metadata"));
 	MBParsing::SerialiseUBJSON(OutStream, TestCopy);
 
-	MBUtility::MBFileInputStream CopiedInputStream("ReplayVariable.slp");
+	MBUtility::MBFileInputStream CopiedInputStream("TestTest.slp");
 	MBParsing::JSONObject CopiedResultObject = MBParsing::ParseUBJSON(&CopiedInputStream, nullptr);
 	std::cout << CopiedResultObject.GetAttribute("metadata").ToString() << std::endl;
 	assert(CopiedResultObject.GetAttribute("raw").GetStringData() == TotalRawData);
-
-	std::ofstream CorrectRawData("CorrectRawData", std::ios::out | std::ios::binary);
-	CorrectRawData.write(EventData.data(),EventData.size());
-	std::ofstream MyRawData("MyRawData", std::ios::out | std::ios::binary);
-	MyRawData.write(TotalRawData.data(), TotalRawData.size());
 	//eld testet, spela varannan frame 
 	std::cout << AllEvents.size() << std::endl;
 
+
+	//Varannan sekund test
+	MBUtility::MBFileInputStream OriginalInputStream("./Game_20200630T190553.slp");
+	MBParsing::JSONObject OriginalJSONData = MBParsing::ParseUBJSON(&OriginalInputStream, nullptr);
+	MBUtility::MBBufferInputStream BufferInput(OriginalJSONData.GetAttribute("raw").GetStringData().data(), OriginalJSONData.GetAttribute("raw").GetStringData().size());
+	
+	MBSlippi::SlippiEventParser OriginalEventParser(std::make_unique<MBUtility::MBBufferInputStream>(std::move(BufferInput)));
+	std::vector<std::vector<MBSlippi::Event>> AllFrames = {};
+	MBSlippi::FrameParser FrameParserToUse;
+	FrameParserToUse.SetVersion(OriginalEventParser.GetVersion());
+	TotalRawData = "";
+	std::string LastEventData;
+	while (true)
+	{
+		MBSlippi::Event NewEvent = OriginalEventParser.GetNextEvent();
+		MBSlippi::EventType CurrentType = NewEvent.GetType();
+		if(CurrentType == MBSlippi::EventType::Null)
+		{
+			break;
+		}
+		if (CurrentType == MBSlippi::EventType::GameStart || CurrentType == MBSlippi::EventType::EventPayloads || CurrentType == MBSlippi::EventType::GeckoList)
+		{
+			TotalRawData += NewEvent.Serialize(OriginalEventParser.GetVersion());
+		}
+		else if (CurrentType == MBSlippi::EventType::GameEnd)
+		{
+			LastEventData = NewEvent.Serialize(OriginalEventParser.GetVersion());
+		}
+		else
+		{
+			FrameParserToUse.InsertEvent(std::move(NewEvent));
+			if (FrameParserToUse.AvailableFrames() > 0)
+			{
+				AllFrames.push_back(FrameParserToUse.ExtractFrame());
+			}
+		}
+	}
+	while (FrameParserToUse.AvailableFrames() > 0)
+	{
+		AllFrames.push_back(FrameParserToUse.ExtractFrame());
+	}
+	int FrameCounter = 0;
+	size_t TotalFrameCount = 0;
+	int32_t CurrentFrameIndex = -123;
+	size_t FramePerChunk = 360;
+	for (size_t i = 0; i < AllFrames.size(); i++)
+	{
+		if (FrameCounter < FramePerChunk)
+		{
+			for (size_t j = 0; j < AllFrames[i].size(); j++)
+			{
+				MBSlippi::UpdateFrameIndex(AllFrames[i][j], CurrentFrameIndex);
+				TotalRawData += AllFrames[i][j].Serialize(OriginalEventParser.GetVersion());
+			}
+			TotalFrameCount += 1;
+			CurrentFrameIndex += 1;
+		}
+		if(FrameCounter > FramePerChunk*2)
+		{
+			FrameCounter = 0;
+		}
+		FrameCounter++;
+	}
+	TotalRawData += LastEventData;
+	MBParsing::JSONObject ObjectToWrite(MBParsing::JSONObjectType::Aggregate);
+	ObjectToWrite["raw"] = std::move(TotalRawData);
+	ObjectToWrite["metadata"] = ResultObject.GetAttribute("metadata");
+	ObjectToWrite["metadata"]["lastFrame"] = int64_t(TotalFrameCount - 705);
+	ObjectToWrite["metadata"]["players"]["0"]["characters"]["9"] = int64_t(TotalFrameCount);
+	ObjectToWrite["metadata"]["players"]["1"]["characters"]["1"] = int64_t(TotalFrameCount);
+	std::cout << ObjectToWrite["metadata"].ToString() << std::endl;
+	std::ofstream FrameSkipTestFile("FrameSkipTest.slp", std::ios::out | std::ios::binary);
+	MBUtility::MBFileOutputStream FrameSkipTestStream(&FrameSkipTestFile);
+	MBParsing::SerialiseUBJSON(FrameSkipTestStream, ObjectToWrite); 
 }

@@ -980,4 +980,42 @@ namespace MBSlippi
 			return(dynamic_cast<T const&>(*m_Data));
 		}
 	};
+	inline void UpdateFrameIndex(EventData& EventToUpdate, int32_t NewFrameIndex)
+	{
+		EventType CurrentType = EventToUpdate.GetType();
+		if (CurrentType == EventType::FrameBockend)
+		{
+			Event_FrameBookend& Data = dynamic_cast<Event_FrameBookend&>(EventToUpdate);
+			if (Data.LatestFinalizedFrame != Data.LatestFinalizedFrame)
+			{
+				throw std::runtime_error("Implement the case for LatestFinalizedFrame");
+			}
+			Data.FrameNumber = NewFrameIndex;
+			Data.LatestFinalizedFrame = NewFrameIndex;
+		}
+		else if (CurrentType == EventType::FrameStart)
+		{
+			Event_FrameStart& Data = dynamic_cast<Event_FrameStart&>(EventToUpdate);
+			Data.FrameNumber = NewFrameIndex;
+		}
+		else if (CurrentType == EventType::PostFrameUpdate)
+		{
+			Event_PostFrameUpdate& Data = dynamic_cast<Event_PostFrameUpdate&>(EventToUpdate);
+			Data.FrameNumber = NewFrameIndex;
+		}
+		else if (CurrentType == EventType::PreFrameUpdate)
+		{
+			Event_PreFrameUpdate& Data = dynamic_cast<Event_PreFrameUpdate&>(EventToUpdate);
+			Data.FrameNumber = NewFrameIndex;
+		}
+		else if (CurrentType == EventType::ItemUpdate)
+		{
+			Event_ItemUpdate& Data = dynamic_cast<Event_ItemUpdate&>(EventToUpdate);
+			Data.FrameNumber = NewFrameIndex;
+		}
+	}
+	inline void UpdateFrameIndex(Event& EventToUpdate, int32_t NewFrameIndex)
+	{
+		UpdateFrameIndex(EventToUpdate.GetEventData<EventData>(), NewFrameIndex);
+	}
 }
