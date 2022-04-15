@@ -1,0 +1,6 @@
+MeleeGameData = LoadGame("./Original.slp");
+print(MeleeGameData.MetaData.Players[0].Character);
+for(i = 0; i < MeleeGameData.MetaData.Players.size;i += 1)
+{
+	print(MeleeGameData.MetaData.Players[i].Character);
+}

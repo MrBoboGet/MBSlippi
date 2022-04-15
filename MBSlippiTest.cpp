@@ -4,6 +4,8 @@
 #include <iostream>
 #include <MBParsing/MBParsing.h>
 #include <filesystem>
+
+#include "MBSlippiScript.h"
 int main(int argc, const char** argv)
 {
 	std::filesystem::current_path(std::filesystem::current_path().parent_path());
@@ -164,4 +166,13 @@ int main(int argc, const char** argv)
 	std::ofstream FrameSkipTestFile("FrameSkipTest.slp", std::ios::out | std::ios::binary);
 	MBUtility::MBFileOutputStream FrameSkipTestStream(&FrameSkipTestFile);
 	MBParsing::SerialiseUBJSON(FrameSkipTestStream, ObjectToWrite); 
+
+	MBError MBSParseResult = true;
+	auto Statements = MBScript::ParseFile("./TestScript.mbs",&MBSParseResult);
+	assert(MBSParseResult == true);
+	MBScript::ExecutionEnvironment ExecutionEnvironment;
+	ExecutionEnvironment.AddModule(std::make_unique<MBSlippi::MBS_SlippiModule>());
+	ExecutionEnvironment.Execute(Statements);
+	
+
 }

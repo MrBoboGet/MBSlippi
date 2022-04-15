@@ -3,6 +3,9 @@
 #include <vector>
 #include <string>
 #include <MBParsing/MBParsing.h>
+
+
+#include "MeleeID.h"
 namespace MBSlippi
 {
 
@@ -422,7 +425,7 @@ namespace MBSlippi
 			PlayIndex = MBParsing::ParseBigEndianInteger(Data, 1, ParseOffset, &ParseOffset);
 			IsFollower = MBParsing::ParseBigEndianInteger(Data, 1, ParseOffset, &ParseOffset);
 			RandomSeed = MBParsing::ParseBigEndianInteger(Data, 4, ParseOffset, &ParseOffset);
-			ActionStateID = MBParsing::ParseBigEndianInteger(Data, 2, ParseOffset, &ParseOffset);
+			ActionStateID =ActionState(MBParsing::ParseBigEndianInteger(Data, 2, ParseOffset, &ParseOffset));
 			XPosition = MBParsing::ParseBigEndianIEEE754Float(Data, 4, ParseOffset, &ParseOffset);
 			YPosition = MBParsing::ParseBigEndianIEEE754Float(Data, 4, ParseOffset, &ParseOffset);
 			FacingDirection = MBParsing::ParseBigEndianIEEE754Float(Data, 4, ParseOffset, &ParseOffset);
@@ -453,7 +456,7 @@ namespace MBSlippi
 			MBParsing::WriteBigEndianInteger(OutBuffer, PlayIndex, 1, ParseOffset, &ParseOffset);
 			MBParsing::WriteBigEndianInteger(OutBuffer, IsFollower, 1, ParseOffset, &ParseOffset);
 			MBParsing::WriteBigEndianInteger(OutBuffer, RandomSeed,4, ParseOffset, &ParseOffset);
-			MBParsing::WriteBigEndianInteger(OutBuffer, ActionStateID,2, ParseOffset, &ParseOffset);
+			MBParsing::WriteBigEndianInteger(OutBuffer, uint64_t(ActionStateID),2, ParseOffset, &ParseOffset);
 			MBParsing::WriteBigEndianIEEE754Float(OutBuffer, XPosition,4, ParseOffset, &ParseOffset);
 			MBParsing::WriteBigEndianIEEE754Float(OutBuffer, YPosition,4, ParseOffset, &ParseOffset);
 			MBParsing::WriteBigEndianIEEE754Float(OutBuffer, FacingDirection,4, ParseOffset, &ParseOffset);
@@ -485,7 +488,7 @@ namespace MBSlippi
 		uint8_t PlayIndex = -1;
 		bool IsFollower = false;
 		uint32_t RandomSeed = 0;
-		uint16_t ActionStateID = 0;
+		ActionState ActionStateID = ActionState(0);
 		float XPosition = 0;
 		float YPosition = 0;
 		float FacingDirection = 0;
@@ -523,14 +526,14 @@ namespace MBSlippi
 			FrameNumber = MBParsing::ParseBigEndianInteger(Data, 4, ParseOffset, &ParseOffset);
 			PlayerIndex = MBParsing::ParseBigEndianInteger(Data, 1, ParseOffset, &ParseOffset);
 			IsFollower = MBParsing::ParseBigEndianInteger(Data, 1, ParseOffset, &ParseOffset);
-			InternalCharacterID = MBParsing::ParseBigEndianInteger(Data, 1, ParseOffset, &ParseOffset);
-			ActionStateID = MBParsing::ParseBigEndianInteger(Data, 2, ParseOffset, &ParseOffset);
+			InternalCharID = InternalCharacterID(MBParsing::ParseBigEndianInteger(Data, 1, ParseOffset, &ParseOffset));
+			ActionStateID = ActionState(MBParsing::ParseBigEndianInteger(Data, 2, ParseOffset, &ParseOffset));
 			XPosition = MBParsing::ParseBigEndianIEEE754Float(Data, 4, ParseOffset, &ParseOffset);
 			YPosition = MBParsing::ParseBigEndianIEEE754Float(Data, 4, ParseOffset, &ParseOffset);
 			FacingDirection = MBParsing::ParseBigEndianIEEE754Float(Data, 4, ParseOffset, &ParseOffset);
 			Percent = MBParsing::ParseBigEndianIEEE754Float(Data, 4, ParseOffset, &ParseOffset);
 			ShieldSize = MBParsing::ParseBigEndianIEEE754Float(Data, 4, ParseOffset, &ParseOffset);
-			LastHittingAttackID = MBParsing::ParseBigEndianInteger(Data, 1	, ParseOffset, &ParseOffset);
+			LastHittingAttackID = AttackID(MBParsing::ParseBigEndianInteger(Data, 1	, ParseOffset, &ParseOffset));
 			CurrentComboCount = MBParsing::ParseBigEndianInteger(Data, 1	, ParseOffset, &ParseOffset);
 			LastHitBy = MBParsing::ParseBigEndianInteger(Data, 1	, ParseOffset, &ParseOffset);
 			StocksRemaining = MBParsing::ParseBigEndianInteger(Data, 1	, ParseOffset, &ParseOffset);
@@ -543,11 +546,12 @@ namespace MBSlippi
 			ActionStateFrameCounter = MBParsing::ParseBigEndianIEEE754Float(Data, 4, ParseOffset, &ParseOffset);
 			if (CurrentVersion < ParseVersion{ 2,0,0 })
 				return ParseOffset;
-			StateBitFlags1 = MBParsing::ParseBigEndianInteger(Data, 1, ParseOffset, &ParseOffset);
-			StateBitFlags2 = MBParsing::ParseBigEndianInteger(Data, 1, ParseOffset, &ParseOffset);
-			StateBitFlags3 = MBParsing::ParseBigEndianInteger(Data, 1, ParseOffset, &ParseOffset);
-			StateBitFlags4 = MBParsing::ParseBigEndianInteger(Data, 1, ParseOffset, &ParseOffset);
-			StateBitFlags5 = MBParsing::ParseBigEndianInteger(Data, 1, ParseOffset, &ParseOffset);
+			StateBitFlags = MBParsing::ParseBigEndianInteger(Data, 5, ParseOffset, &ParseOffset);
+			//StateBitFlags1 = MBParsing::ParseBigEndianInteger(Data, 1, ParseOffset, &ParseOffset);
+			//StateBitFlags2 = MBParsing::ParseBigEndianInteger(Data, 1, ParseOffset, &ParseOffset);
+			//StateBitFlags3 = MBParsing::ParseBigEndianInteger(Data, 1, ParseOffset, &ParseOffset);
+			//StateBitFlags4 = MBParsing::ParseBigEndianInteger(Data, 1, ParseOffset, &ParseOffset);
+			//StateBitFlags5 = MBParsing::ParseBigEndianInteger(Data, 1, ParseOffset, &ParseOffset);
 			MiscAS = MBParsing::ParseBigEndianIEEE754Float(Data, 4, ParseOffset, &ParseOffset);
 			Airborne = MBParsing::ParseBigEndianInteger(Data, 1, ParseOffset, &ParseOffset);
 			LastGroundID = MBParsing::ParseBigEndianInteger(Data, 2, ParseOffset, &ParseOffset);
@@ -580,14 +584,14 @@ namespace MBSlippi
 			MBParsing::WriteBigEndianInteger(OutBuffer, FrameNumber, 4, ParseOffset, &ParseOffset);
 			MBParsing::WriteBigEndianInteger(OutBuffer, PlayerIndex, 1, ParseOffset, &ParseOffset);
 			MBParsing::WriteBigEndianInteger(OutBuffer, IsFollower, 1, ParseOffset, &ParseOffset);
-			MBParsing::WriteBigEndianInteger(OutBuffer, InternalCharacterID, 1, ParseOffset, &ParseOffset);
-			MBParsing::WriteBigEndianInteger(OutBuffer, ActionStateID, 2, ParseOffset, &ParseOffset);
+			MBParsing::WriteBigEndianInteger(OutBuffer, uint8_t(InternalCharID), 1, ParseOffset, &ParseOffset);
+			MBParsing::WriteBigEndianInteger(OutBuffer, uint16_t(ActionStateID), 2, ParseOffset, &ParseOffset);
 			MBParsing::WriteBigEndianIEEE754Float(OutBuffer, XPosition, 4, ParseOffset, &ParseOffset);
 			MBParsing::WriteBigEndianIEEE754Float(OutBuffer, YPosition, 4, ParseOffset, &ParseOffset);
 			MBParsing::WriteBigEndianIEEE754Float(OutBuffer, FacingDirection, 4, ParseOffset, &ParseOffset);
 			MBParsing::WriteBigEndianIEEE754Float(OutBuffer, Percent, 4, ParseOffset, &ParseOffset);
 			MBParsing::WriteBigEndianIEEE754Float(OutBuffer, ShieldSize, 4, ParseOffset, &ParseOffset);
-			MBParsing::WriteBigEndianInteger(OutBuffer, LastHittingAttackID, 1, ParseOffset, &ParseOffset);
+			MBParsing::WriteBigEndianInteger(OutBuffer, uint8_t(LastHittingAttackID), 1, ParseOffset, &ParseOffset);
 			MBParsing::WriteBigEndianInteger(OutBuffer, CurrentComboCount, 1, ParseOffset, &ParseOffset);
 			MBParsing::WriteBigEndianInteger(OutBuffer, LastHitBy, 1, ParseOffset, &ParseOffset);
 			MBParsing::WriteBigEndianInteger(OutBuffer, StocksRemaining, 1, ParseOffset, &ParseOffset);
@@ -602,11 +606,12 @@ namespace MBSlippi
 				ReturnValue.resize(ParseOffset);
 				return(ReturnValue);
 			}
-			MBParsing::WriteBigEndianInteger(OutBuffer, StateBitFlags1, 1, ParseOffset, &ParseOffset);
-			MBParsing::WriteBigEndianInteger(OutBuffer, StateBitFlags2, 1, ParseOffset, &ParseOffset);
-			MBParsing::WriteBigEndianInteger(OutBuffer, StateBitFlags3, 1, ParseOffset, &ParseOffset);
-			MBParsing::WriteBigEndianInteger(OutBuffer, StateBitFlags4, 1, ParseOffset, &ParseOffset);
-			MBParsing::WriteBigEndianInteger(OutBuffer, StateBitFlags5, 1, ParseOffset, &ParseOffset);
+			MBParsing::WriteBigEndianInteger(OutBuffer, StateBitFlags, 5, ParseOffset, &ParseOffset);
+			//MBParsing::WriteBigEndianInteger(OutBuffer, StateBitFlags1, 1, ParseOffset, &ParseOffset);
+			//MBParsing::WriteBigEndianInteger(OutBuffer, StateBitFlags2, 1, ParseOffset, &ParseOffset);
+			//MBParsing::WriteBigEndianInteger(OutBuffer, StateBitFlags3, 1, ParseOffset, &ParseOffset);
+			//MBParsing::WriteBigEndianInteger(OutBuffer, StateBitFlags4, 1, ParseOffset, &ParseOffset);
+			//MBParsing::WriteBigEndianInteger(OutBuffer, StateBitFlags5, 1, ParseOffset, &ParseOffset);
 			MBParsing::WriteBigEndianIEEE754Float(OutBuffer, MiscAS, 4, ParseOffset, &ParseOffset);
 			MBParsing::WriteBigEndianInteger(OutBuffer, Airborne, 1, ParseOffset, &ParseOffset);
 			MBParsing::WriteBigEndianInteger(OutBuffer, LastGroundID, 2, ParseOffset, &ParseOffset);
@@ -646,25 +651,26 @@ namespace MBSlippi
 		int32_t 	FrameNumber				= 0;
 		uint8_t 	PlayerIndex				 = 0;
 		bool 		IsFollower					 = 0;
-		uint8_t		InternalCharacterID		 = 0;
-		uint16_t 	ActionStateID				 = 0;
+		InternalCharacterID	InternalCharID	= InternalCharacterID(0);
+		ActionState ActionStateID				 = ActionState(0);
 		float 		XPosition					 = 0;
 		float 		YPosition					 = 0;
 		float		FacingDirection			 = 0;
 		float 		Percent						 = 0;
 		float 		ShieldSize					 = 0;
-		uint8_t		LastHittingAttackID		 = 0;
+		AttackID    LastHittingAttackID		 = AttackID(0);
 		uint8_t 	CurrentComboCount			 = 0;
-		uint8_t 	LastHitBy					 = 0;
+		uint8_t 	LastHitBy					 = 0; //player index
 		uint8_t 	StocksRemaining			 = 0;
 		//0.2.0
 		float 		ActionStateFrameCounter	 = 0;
 		//2.0.0
-		uint8_t 	StateBitFlags1			 = 0;
-		uint8_t 	StateBitFlags2			 = 0;
-		uint8_t 	StateBitFlags3			 = 0;
-		uint8_t 	StateBitFlags4			 = 0;
-		uint8_t 	StateBitFlags5			 = 0;
+		uint64_t StateBitFlags = 0;
+		//uint8_t 	StateBitFlags1			 = 0;
+		//uint8_t 	StateBitFlags2			 = 0;
+		//uint8_t 	StateBitFlags3			 = 0;
+		//uint8_t 	StateBitFlags4			 = 0;
+		//uint8_t 	StateBitFlags5			 = 0;
 		float 		MiscAS	 = 0;
 		bool 		Airborne			 = 0;
 		uint16_t 	LastGroundID				 = 0;
@@ -683,7 +689,22 @@ namespace MBSlippi
 		//3.11.0
 		uint32_t 	AnimationIndex				 = 0;
 	};
+	enum class StateBitFlags : uint64_t
+	{
+		ReflectActive = (1 << 32) + 4,
+		Invincible = (1 << 24) + 2,
+		FastFalling = (1 << 24) + 3,
+		InHitlag = (1 << 24) + 5,
+		ShieldActive = (1<<16)+7,
+		InHitstun = (1<<8)+1,
+		HitboxTouchingShieldBubble = (1<<8)+2,
+		PowershieldActive = (1<<8)+5,
+		IsFollower = (1<<0)+3,
+		IsInActionStateSleep = (1<<0)+4,
+		Dead = (1<<0)+6,
+		OffScreen = (1<<0)+7,
 
+	};
 
 	class Event_GameEnd : public EventData
 	{

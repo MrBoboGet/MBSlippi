@@ -4,6 +4,7 @@ set(PROJECT_NAME "MBSlippi")
 set(MBPM_DEPENDENCIES 
 	"MBParsing"
 	"MBUtility"
+	"MBScript"
 )
 set(MBPM_SystemLibraries
 Ws2_32.lib
