@@ -1,6 +1,7 @@
 #pragma once
 #include <cstdint>
 #include <stdint.h>
+#include <string>
 namespace MBSlippi
 {
 	enum class ActionState : uint16_t
@@ -821,6 +822,11 @@ namespace MBSlippi
 		SideSpecial							= 19, 	//See sheet Specials for special rulesand clarifications
 		UpSpecial							= 20, 	//See sheet Specials for special rulesand clarifications
 		DownSpecial							= 21, 	//See sheet Specials for special rulesand clarifications
+		
+		
+		
+		
+		
 		KirbyHat_MarioNeutralSpecial		= 22, 
 		KirbyHat_FoxNeutralSpecial			= 23, 
 		KirbyHat_CFalconNeutralSpecial		= 24, 
@@ -1195,4 +1201,6 @@ namespace MBSlippi
 		}
 		return(__ExternalCharacterStringMap[uint64_t(IdToConvert)]);
 	}
+
+	//AttackID ActionStateToAttackID(ActionState StateToConvert);
 }

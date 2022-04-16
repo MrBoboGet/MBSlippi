@@ -5,6 +5,7 @@ set(MBPM_DEPENDENCIES
 	"MBParsing"
 	"MBUtility"
 	"MBScript"
+	"MBUnicode"
 )
 set(MBPM_SystemLibraries
 Ws2_32.lib
@@ -129,6 +130,7 @@ set(PROJECT_SOURCES
 	"${CMAKE_CURRENT_SOURCE_DIR}/MBSlippiParsing.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/MBSlippiTypes.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/MBSlippiScript.cpp"
+	"${CMAKE_CURRENT_SOURCE_DIR}/MBMeleeID.cpp"
 )
 set(PROJECT_HEADERS 
 	"${CMAKE_CURRENT_SOURCE_DIR}//MBSlippi.h"

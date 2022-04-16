@@ -1,5 +1,7 @@
 #include "MBSlippiScript.h"
-
+#include "MBMeleeID.h"
+#include <filesystem>
+#include <MBUnicode/MBUnicode.h>
 namespace MBSlippi
 {
 	//BEGIN MBS_Slippi Objects
@@ -30,11 +32,14 @@ namespace MBSlippi
 		Event_PostFrameUpdate const& EventData = PostFrameUpdate.GetEventData<Event_PostFrameUpdate>();
 		//m_Fields["State"] = ;
 		m_Fields["State"] = MBScript::MBSObjectStore(std::make_unique<MBScript::MBSObject_String>(ActionStateToString(EventData.ActionStateID)));
+		m_Fields["MBState"] = MBScript::MBSObjectStore(std::make_unique<MBScript::MBSObject_String>(MBActionStateToString(StateToMBActionState(EventData))));
+		m_Fields["Attack"] = MBScript::MBSObjectStore(std::make_unique<MBScript::MBSObject_String>(MBAttackIDToString(StateToMBAttackID(EventData))));
+		m_Fields["LastHitBy"] = MBScript::MBSObjectStore(std::make_unique<MBScript::MBSObject_String>(MBAttackIDToString(StateToMBAttackID(EventData))));
+		m_Fields["FrameNumber"] = MBScript::MBSObjectStore(std::make_unique<MBScript::MBSObject_Integer>(EventData.FrameNumber));
 		m_Fields["Shielding"] = MBScript::MBSObjectStore(std::make_unique<MBScript::MBSObject_Bool>(EventData.StateBitFlags & uint64_t(StateBitFlags::ShieldActive)));
 		m_Fields["InHitlag"] = MBScript::MBSObjectStore(std::make_unique<MBScript::MBSObject_Bool>(EventData.StateBitFlags & uint64_t(StateBitFlags::InHitlag)));
 		m_Fields["InHitstun"] = MBScript::MBSObjectStore(std::make_unique<MBScript::MBSObject_Bool>(EventData.StateBitFlags & uint64_t(StateBitFlags::InHitstun)));
 		m_Fields["InShieldStun"] = MBScript::MBSObjectStore(std::make_unique<MBScript::MBSObject_Bool>(EventData.ActionStateID == ActionState::GuardSetOff));
-		m_Fields["LastHitBy"] = MBScript::MBSObjectStore(std::make_unique<MBScript::MBSObject_String>(AttackIDToString(EventData.LastHittingAttackID)));
 		if (EventData.ActionStateID == ActionState::GuardSetOff)
 		{
 			int hej = 2;
@@ -75,6 +80,7 @@ namespace MBSlippi
 		for (size_t i = 0; i < PostFrameUpdates.size(); i++)
 		{
 			*PlayerFrameDataList += std::make_unique<MBS_SlippiPlayerFrameInfo>(std::move(PostFrameUpdates[i]),AssociatedModule);
+			
 		}
 		m_Fields["PlayerInfo"] = MBScript::MBSObjectStore(std::move(PlayerFrameDataList));
 	}
@@ -127,7 +133,7 @@ namespace MBSlippi
 		}
 		MetaData["Players"] = std::move(PlayerList);
 		m_Fields["MetaData"] = MBScript::MBSObjectStore(std::make_unique<MBS_SlippiPlayerMetadata>(AssociatedModule->GetTypeConversion(MBSSlippiTypes::PlayerMetadata), std::move(MetaData)));
-
+		m_Fields["Path"] = MBScript::MBSObjectStore(std::make_unique<MBScript::MBSObject_String>(MBUnicode::PathToUTF8(std::filesystem::absolute(GamePath))));
 
 		//frames grejer
 		std::unique_ptr<MBScript::MBSObject> FrameList = std::make_unique<MBScript::MBSObject_List>();
@@ -167,6 +173,41 @@ namespace MBSlippi
 		}
 		return(m_Fields[FieldName].GetReferenceObject());
 	}
+
+	MBS_SlippiReplayInfo::MBS_SlippiReplayInfo(MBS_SlippiModule& AssociatedModule,MBScript::ArgumentList Arguments)
+	{
+		if (Arguments.Arguments.size() < 2)
+		{
+			throw MBScript::MBSRuntimeException("ReplayInfo requires atleast 2 arguments");
+		}
+		m_Type = AssociatedModule.GetTypeConversion(MBSSlippiTypes::ReplayInfo);
+		//för att garantera att den är en string mest
+		m_Fields["Path"] = MBScript::MBSObjectStore(std::make_unique<MBScript::MBSObject_String>(MBScript::CastObject<MBScript::MBSObject_String>(*Arguments.Arguments[0]).Value));
+		if (Arguments.Arguments[1]->GetType() == MBScript::ObjectType::Reference)
+		{
+			m_Fields["Intervalls"] = Arguments.Arguments[1]->Copy();
+		}
+		else
+		{
+			m_Fields["Intervalls"] = std::move(Arguments.Arguments[1]);
+		}
+		
+	}
+	std::unique_ptr<MBScript::MBSObject> MBS_SlippiReplayInfo::Copy() const 
+	{
+		std::unique_ptr<MBS_SlippiReplayInfo> ReturnValue = std::make_unique<MBS_SlippiReplayInfo>();
+		ReturnValue->m_Type = m_Type;
+		ReturnValue->m_Fields = m_Fields;
+		return(ReturnValue);
+	}
+	std::unique_ptr<MBScript::MBSObject> MBS_SlippiReplayInfo::DotOperator(std::string const& FieldName)
+	{
+		if (m_Fields.find(FieldName) == m_Fields.end())
+		{
+			throw MBScript::MBSRuntimeException("Field \"" + FieldName + "\" not defined in object");
+		}
+		return(m_Fields[FieldName].GetReferenceObject());
+	}
 	//END MBS_Slippi Objects
 
 
@@ -195,6 +236,89 @@ namespace MBSlippi
 		std::unique_ptr<MBScript::MBSObject> ReturnValue = std::make_unique<MBS_SlippiGame>(MBScript::CastObject<MBScript::MBSObject_String>(*Argumnets.Arguments[0]).Value,this);
 		return(ReturnValue);
 	}
+	std::unique_ptr<MBScript::MBSObject> MBS_SlippiModule::ReplayInfo(MBScript::ArgumentList Arguments)
+	{
+		std::unique_ptr<MBS_SlippiReplayInfo> ReturnValue = std::make_unique<MBS_SlippiReplayInfo>(*this,std::move(Arguments));
+		return(ReturnValue);
+	}
+	struct ReplayIntervall
+	{
+		int FirstFrame;
+		int LastFrame;
+	};
+	bool h_ReplayIntervallComparison(ReplayIntervall const& Left, ReplayIntervall const& Right)
+	{
+		return(Left.FirstFrame < Right.FirstFrame);
+	}
+	std::vector<ReplayIntervall> h_NormalizeIntervalls(std::vector<ReplayIntervall>IntervallsToNormalize)
+	{
+		std::vector<ReplayIntervall> ReturnValue;
+		if (IntervallsToNormalize.size() == 0)
+		{
+			throw std::runtime_error("Need atleast 1 intervall to normalize");
+		}
+		std::sort(IntervallsToNormalize.begin(), IntervallsToNormalize.end(), h_ReplayIntervallComparison);
+		ReturnValue.push_back(IntervallsToNormalize.front());
+		for (size_t i = 1; i < IntervallsToNormalize.size(); i++)
+		{
+			if (IntervallsToNormalize[i].FirstFrame <= ReturnValue.back().LastFrame)
+			{
+				ReturnValue.back().LastFrame = IntervallsToNormalize[i].LastFrame;
+			}
+			else
+			{
+				ReturnValue.push_back(IntervallsToNormalize[i]);
+			}
+		}
+		return(ReturnValue);
+	}
+	std::unique_ptr<MBScript::MBSObject> MBS_SlippiModule::WriteReplayInfo(MBScript::ArgumentList Arguments)
+	{
+		std::unique_ptr<MBScript::MBSObject> ReturnValue = std::make_unique<MBScript::MBSObject>();
+		MBParsing::JSONObject JSONToWrite(MBParsing::JSONObjectType::Aggregate);
+		JSONToWrite["mode"] = "queue";
+		JSONToWrite["replay"] = "";
+		JSONToWrite["isRealTimeMode"] = false;
+		JSONToWrite["outputOverlayFiles"] = true;
+		std::vector<MBParsing::JSONObject> QueueElements;
+
+		MBScript::MBSObject_List& ReplayInfoList = MBScript::CastObject<MBScript::MBSObject_List>(*Arguments.Arguments[0]);
+		for (size_t i = 0; i < ReplayInfoList.size(); i++)
+		{
+			std::string Path = MBUnicode::PathToUTF8(std::filesystem::absolute(MBScript::CastObject<MBScript::MBSObject_String>(*ReplayInfoList[i].DotOperator("Path")).Value));
+			std::unique_ptr<MBScript::MBSObject> IntervallListReference = ReplayInfoList[i].DotOperator("Intervalls");
+			MBScript::MBSObject_List& IntervallList = MBScript::CastObject<MBScript::MBSObject_List>(*IntervallListReference);
+			std::vector<ReplayIntervall> IntervallsToWrite = {};
+			for (size_t j = 0; j < IntervallList.size(); j++)
+			{
+				MBScript::MBSObject_List const& IntervallReference = MBScript::CastObject<MBScript::MBSObject_List>(IntervallList[j]);
+				ReplayIntervall NewIntervall;
+				NewIntervall.FirstFrame = MBScript::CastObject<MBScript::MBSObject_Integer>(IntervallReference[0]).Value;
+				NewIntervall.LastFrame = MBScript::CastObject<MBScript::MBSObject_Integer>(IntervallReference[1]).Value;
+				if (NewIntervall.FirstFrame > NewIntervall.LastFrame)
+				{
+					std::swap(NewIntervall.FirstFrame, NewIntervall.LastFrame);
+				}
+				IntervallsToWrite.push_back(NewIntervall);
+			}
+			IntervallsToWrite = h_NormalizeIntervalls(IntervallsToWrite);
+			for (size_t i = 0; i < IntervallsToWrite.size(); i++)
+			{
+				MBParsing::JSONObject NewQueueElement(MBParsing::JSONObjectType::Aggregate);
+				NewQueueElement["path"] = Path;
+				NewQueueElement["startFrame"] =int64_t(IntervallsToWrite[i].FirstFrame);
+				NewQueueElement["endFrame"] = int64_t( IntervallsToWrite[i].LastFrame);
+				QueueElements.push_back(std::move(NewQueueElement));
+			}
+		}
+		JSONToWrite["queue"] = std::move(QueueElements);
+
+		std::string OutputPath = MBScript::CastObject<MBScript::MBSObject_String>(*Arguments.Arguments[1]).Value;
+
+		std::ofstream OutStream(OutputPath);
+		OutStream << JSONToWrite.ToString();
+		return(ReturnValue);
+	}
 	MBScript::ObjectType MBS_SlippiModule::GetTypeConversion(MBSSlippiTypes TypeToConvert)
 	{
 		return(m_TypeMap.at(TypeToConvert));
@@ -218,5 +342,6 @@ namespace MBSlippi
 		m_TypeMap[MBSSlippiTypes::PlayerFrameInfo] = AssociatedEnvironment.GetUniqueTypeID();
 		m_TypeMap[MBSSlippiTypes::Metadata] = AssociatedEnvironment.GetUniqueTypeID();
 		m_TypeMap[MBSSlippiTypes::PlayerMetadata] = AssociatedEnvironment.GetUniqueTypeID();
+		m_TypeMap[MBSSlippiTypes::ReplayInfo] = AssociatedEnvironment.GetUniqueTypeID();
 	}
 }

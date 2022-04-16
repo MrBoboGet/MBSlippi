@@ -65,12 +65,30 @@ namespace MBSlippi
 		virtual std::unique_ptr<MBScript::MBSObject> Copy() const override;
 		virtual std::unique_ptr<MBScript::MBSObject> DotOperator(std::string const& FieldName) override;
 	};
+
+	class MBS_SlippiReplayInfo : public MBScript::MBSObject
+	{
+	private:
+		MBScript::ObjectType m_Type = MBScript::ObjectType::Null;
+		std::unordered_map<std::string, MBScript::MBSObjectStore> m_Fields = {};
+	public:
+		virtual MBScript::ObjectType GetType() const override
+		{
+			return(m_Type);
+		}
+		MBS_SlippiReplayInfo() {};
+		MBS_SlippiReplayInfo(MBS_SlippiModule& AssociatedModule, MBScript::ArgumentList Arguments);
+		virtual std::unique_ptr<MBScript::MBSObject> Copy() const override;
+		virtual std::unique_ptr<MBScript::MBSObject> DotOperator(std::string const& FieldName) override;
+	};
+
 	enum class MBSSlippiTypes
 	{
 		Frame,
 		PlayerFrameInfo,
 		Metadata,
 		PlayerMetadata,
+		ReplayInfo
 	};
 	class MBS_SlippiModule : public MBScript::MBScriptModule
 	{
@@ -78,6 +96,8 @@ namespace MBSlippi
 		std::unique_ptr<MBScript::MBSObject> ActionableFrames(MBScript::ArgumentList Argumnets);
 		std::unique_ptr<MBScript::MBSObject> InShieldStun(MBScript::ArgumentList Argumnets);
 		std::unique_ptr<MBScript::MBSObject> LoadGame(MBScript::ArgumentList Argumnets);
+		std::unique_ptr<MBScript::MBSObject> ReplayInfo(MBScript::ArgumentList Arguments);
+		std::unique_ptr<MBScript::MBSObject> WriteReplayInfo(MBScript::ArgumentList Arguments);
 		
 		std::unordered_map<MBSSlippiTypes, MBScript::ObjectType> m_TypeMap = {};
 		
@@ -86,6 +106,8 @@ namespace MBSlippi
 			{"ActionableFrames",&MBS_SlippiModule::ActionableFrames},
 			{"InShieldStun",&MBS_SlippiModule::InShieldStun},
 			{"LoadGame",&MBS_SlippiModule::LoadGame},
+			{"ReplayInfo",&MBS_SlippiModule::ReplayInfo},
+			{"WriteReplayInfo",&MBS_SlippiModule::WriteReplayInfo},
 
 		};
 	public:
