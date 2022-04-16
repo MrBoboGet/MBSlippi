@@ -4,3 +4,10 @@ for(i = 0; i < MeleeGameData.MetaData.Players.size;i += 1)
 {
 	print(MeleeGameData.MetaData.Players[i].Character);
 }
+for(i = 0; i < MeleeGameData.Frames.size; i += 1)
+{
+	if(MeleeGameData.Frames[i].PlayerInfo[0].InShieldStun)
+	{
+		print(MeleeGameData.Frames[i].PlayerInfo[0].LastHitBy);		
+	}
+}

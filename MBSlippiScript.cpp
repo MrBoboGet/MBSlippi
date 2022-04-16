@@ -3,7 +3,7 @@
 namespace MBSlippi
 {
 	//BEGIN MBS_Slippi Objects
-	MBS_SlippiPlayerMetadata::MBS_SlippiPlayerMetadata(MBScript::ObjectType TypeToUse,std::unordered_map<std::string, std::unique_ptr<MBScript::MBSObject>> FieldsToUse)
+	MBS_SlippiPlayerMetadata::MBS_SlippiPlayerMetadata(MBScript::ObjectType TypeToUse,std::unordered_map<std::string, MBScript::MBSObjectStore> FieldsToUse)
 	{
 		m_Fields = std::move(FieldsToUse);
 		m_Type = TypeToUse;
@@ -12,10 +12,7 @@ namespace MBSlippi
 	{
 		std::unique_ptr<MBS_SlippiPlayerMetadata> ReturnValue = std::make_unique<MBS_SlippiPlayerMetadata>();
 		ReturnValue->m_Type = m_Type;
-		for (auto const& Element : m_Fields)
-		{
-			ReturnValue->m_Fields[Element.first] = Element.second->Copy();
-		}
+		ReturnValue->m_Fields = m_Fields;
 		return(ReturnValue);
 	}
 	std::unique_ptr<MBScript::MBSObject> MBS_SlippiPlayerMetadata::DotOperator(std::string const& FieldName)
@@ -24,21 +21,30 @@ namespace MBSlippi
 		{
 			throw MBScript::MBSRuntimeException("Field \"" + FieldName + "\" not defined in object");
 		}
-		return(std::make_unique<MBScript::MBSObject_Reference>(m_Fields.at(FieldName).get()));
+		return(m_Fields[FieldName].GetReferenceObject());
 	}
 	//
-	MBS_SlippiPlayerFrameInfo::MBS_SlippiPlayerFrameInfo(Event PostFrameUpdate)
+	MBS_SlippiPlayerFrameInfo::MBS_SlippiPlayerFrameInfo(Event PostFrameUpdate, MBS_SlippiModule& AssociatedModule)
 	{
-
+		m_Type = AssociatedModule.GetTypeConversion(MBSSlippiTypes::PlayerFrameInfo);
+		Event_PostFrameUpdate const& EventData = PostFrameUpdate.GetEventData<Event_PostFrameUpdate>();
+		//m_Fields["State"] = ;
+		m_Fields["State"] = MBScript::MBSObjectStore(std::make_unique<MBScript::MBSObject_String>(ActionStateToString(EventData.ActionStateID)));
+		m_Fields["Shielding"] = MBScript::MBSObjectStore(std::make_unique<MBScript::MBSObject_Bool>(EventData.StateBitFlags & uint64_t(StateBitFlags::ShieldActive)));
+		m_Fields["InHitlag"] = MBScript::MBSObjectStore(std::make_unique<MBScript::MBSObject_Bool>(EventData.StateBitFlags & uint64_t(StateBitFlags::InHitlag)));
+		m_Fields["InHitstun"] = MBScript::MBSObjectStore(std::make_unique<MBScript::MBSObject_Bool>(EventData.StateBitFlags & uint64_t(StateBitFlags::InHitstun)));
+		m_Fields["InShieldStun"] = MBScript::MBSObjectStore(std::make_unique<MBScript::MBSObject_Bool>(EventData.ActionStateID == ActionState::GuardSetOff));
+		m_Fields["LastHitBy"] = MBScript::MBSObjectStore(std::make_unique<MBScript::MBSObject_String>(AttackIDToString(EventData.LastHittingAttackID)));
+		if (EventData.ActionStateID == ActionState::GuardSetOff)
+		{
+			int hej = 2;
+		}
 	}
 	std::unique_ptr<MBScript::MBSObject> MBS_SlippiPlayerFrameInfo::Copy() const
 	{
 		std::unique_ptr<MBS_SlippiPlayerFrameInfo> ReturnValue = std::make_unique<MBS_SlippiPlayerFrameInfo>();
 		ReturnValue->m_Type = m_Type;
-		for (auto const& Element : m_Fields)
-		{
-			ReturnValue->m_Fields[Element.first] = Element.second->Copy();
-		}
+		ReturnValue->m_Fields = m_Fields;
 		return(ReturnValue);
 	}
 	std::unique_ptr<MBScript::MBSObject> MBS_SlippiPlayerFrameInfo::DotOperator(std::string const& FieldName)
@@ -47,22 +53,36 @@ namespace MBSlippi
 		{
 			throw MBScript::MBSRuntimeException("Field \"" + FieldName + "\" not defined in object");
 		}
-		return(std::make_unique<MBScript::MBSObject_Reference>(m_Fields.at(FieldName).get()));
+		return(m_Fields[FieldName].GetReferenceObject());
 	}
 	//
-
-	MBS_SlippiFrame::MBS_SlippiFrame(std::vector<Event> PostFrameUpdates)
+	bool h_PlayerCompare(Event const& Left, Event const& Right)
 	{
-
+		return(Left.GetEventData<Event_PostFrameUpdate>().PlayerIndex < Right.GetEventData<Event_PostFrameUpdate>().PlayerIndex);
+	}
+	MBS_SlippiFrame::MBS_SlippiFrame(std::vector<Event> FrameEvents, MBS_SlippiModule& AssociatedModule)
+	{
+		std::vector<Event> PostFrameUpdates;
+		for (size_t i = 0; i < FrameEvents.size(); i++)
+		{
+			if (FrameEvents[i].GetType() == EventType::PostFrameUpdate)
+			{
+				PostFrameUpdates.push_back(std::move(FrameEvents[i]));
+			}
+		}
+		std::sort(PostFrameUpdates.begin(), PostFrameUpdates.end(), h_PlayerCompare);
+		std::unique_ptr<MBSObject> PlayerFrameDataList = std::make_unique<MBScript::MBSObject_List>();
+		for (size_t i = 0; i < PostFrameUpdates.size(); i++)
+		{
+			*PlayerFrameDataList += std::make_unique<MBS_SlippiPlayerFrameInfo>(std::move(PostFrameUpdates[i]),AssociatedModule);
+		}
+		m_Fields["PlayerInfo"] = MBScript::MBSObjectStore(std::move(PlayerFrameDataList));
 	}
 	std::unique_ptr<MBScript::MBSObject> MBS_SlippiFrame::Copy() const
 	{
 		std::unique_ptr<MBS_SlippiFrame> ReturnValue = std::make_unique<MBS_SlippiFrame>();
 		ReturnValue->m_Type = m_Type;
-		for (auto const& Element : m_Fields)
-		{
-			ReturnValue->m_Fields[Element.first] = Element.second->Copy();
-		}
+		ReturnValue->m_Fields = m_Fields;
 		return(ReturnValue);
 	}
 	std::unique_ptr<MBScript::MBSObject> MBS_SlippiFrame::DotOperator(std::string const& FieldName)
@@ -71,7 +91,7 @@ namespace MBSlippi
 		{
 			throw MBScript::MBSRuntimeException("Field \"" + FieldName + "\" not defined in object");
 		}
-		return(std::make_unique<MBScript::MBSObject_Reference>(m_Fields.at(FieldName).get()));
+		return(m_Fields[FieldName].GetReferenceObject());
 	}
 	//
 	MBS_SlippiGame::MBS_SlippiGame(std::string const& GamePath, MBS_SlippiModule* AssociatedModule)
@@ -93,29 +113,50 @@ namespace MBSlippi
 		{
 			return;
 		}
-		std::unordered_map<std::string, std::unique_ptr<MBScript::MBSObject>> MetaData = {};
+		std::unordered_map < std::string, MBScript::MBSObjectStore> MetaData = {};
 		std::map<std::string, MBParsing::JSONObject> const& PlayerArray = TotalFileData["metadata"]["players"].GetMapData();
 		std::unique_ptr<MBScript::MBSObject> PlayerList = std::make_unique<MBScript::MBSObject_List>();
 		for (auto const& Element : PlayerArray)
 		{
 			//kanske borde göra en aggregate klass...
-			std::unordered_map<std::string, std::unique_ptr<MBScript::MBSObject>> PlayerData;
-			PlayerData["Code"] = std::make_unique<MBScript::MBSObject_String>(Element.second.GetAttribute("names").GetAttribute("code").GetStringData());
-			PlayerData["Tag"] = std::make_unique<MBScript::MBSObject_String>(Element.second.GetAttribute("names").GetAttribute("netplay").GetStringData());
-			PlayerData["Character"] = std::make_unique<MBScript::MBSObject_String>(CharacterToString(InternalCharacterID(std::stoi(Element.second.GetAttribute("characters").GetMapData().begin()->first))));
+			std::unordered_map<std::string, MBScript::MBSObjectStore> PlayerData;
+			PlayerData["Code"] = MBScript::MBSObjectStore(std::make_unique<MBScript::MBSObject_String>(Element.second.GetAttribute("names").GetAttribute("code").GetStringData()));
+			PlayerData["Tag"] = MBScript::MBSObjectStore(std::make_unique<MBScript::MBSObject_String>(Element.second.GetAttribute("names").GetAttribute("netplay").GetStringData()));
+			PlayerData["Character"] = MBScript::MBSObjectStore(std::make_unique<MBScript::MBSObject_String>(CharacterToString(InternalCharacterID(std::stoi(Element.second.GetAttribute("characters").GetMapData().begin()->first)))));
 			*PlayerList += std::make_unique<MBS_SlippiPlayerMetadata>(AssociatedModule->GetTypeConversion(MBSSlippiTypes::PlayerMetadata),std::move(PlayerData));
 		}
 		MetaData["Players"] = std::move(PlayerList);
-		m_Fields["MetaData"] = std::make_unique<MBS_SlippiPlayerMetadata>(AssociatedModule->GetTypeConversion(MBSSlippiTypes::PlayerMetadata), std::move(MetaData));
+		m_Fields["MetaData"] = MBScript::MBSObjectStore(std::make_unique<MBS_SlippiPlayerMetadata>(AssociatedModule->GetTypeConversion(MBSSlippiTypes::PlayerMetadata), std::move(MetaData)));
+
+
+		//frames grejer
+		std::unique_ptr<MBScript::MBSObject> FrameList = std::make_unique<MBScript::MBSObject_List>();
+		FrameParser LocalFrameParser;
+		LocalFrameParser.SetVersion(EventParser.GetVersion());
+		while (true)
+		{
+			Event NewEvent = EventParser.GetNextEvent();
+			if (NewEvent.GetType() == EventType::Null)
+			{
+				break;
+			}
+			LocalFrameParser.InsertEvent(std::move(NewEvent));
+			if (LocalFrameParser.AvailableFrames() > 0)
+			{
+				*FrameList += std::make_unique<MBS_SlippiFrame>(LocalFrameParser.ExtractFrame(),*AssociatedModule);
+			}
+		}
+		if (LocalFrameParser.AvailableFrames() > 0)
+		{
+			*FrameList += std::make_unique<MBS_SlippiFrame>(LocalFrameParser.ExtractFrame(),*AssociatedModule);
+		}
+		m_Fields["Frames"] = MBScript::MBSObjectStore(std::move(FrameList));
 	}
 	std::unique_ptr<MBScript::MBSObject> MBS_SlippiGame::Copy() const
 	{
 		std::unique_ptr<MBS_SlippiGame> ReturnValue = std::make_unique<MBS_SlippiGame>();
 		ReturnValue->m_Type = m_Type;
-		for (auto const& Element : m_Fields)
-		{
-			ReturnValue->m_Fields[Element.first] = Element.second->Copy();
-		}
+		ReturnValue->m_Fields = m_Fields;
 		return(ReturnValue);
 	}
 	std::unique_ptr<MBScript::MBSObject> MBS_SlippiGame::DotOperator(std::string const& FieldName)
@@ -124,7 +165,7 @@ namespace MBSlippi
 		{
 			throw MBScript::MBSRuntimeException("Field \"" + FieldName + "\" not defined in object");
 		}
-		return(std::make_unique<MBScript::MBSObject_Reference>(m_Fields.at(FieldName).get()));
+		return(m_Fields[FieldName].GetReferenceObject());
 	}
 	//END MBS_Slippi Objects
 

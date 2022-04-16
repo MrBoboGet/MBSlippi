@@ -3,14 +3,15 @@
 #include <MBScript/MBScript.h>
 namespace MBSlippi
 {
+	class MBS_SlippiModule;
 	class MBS_SlippiPlayerMetadata : public MBScript::MBSObject
 	{
 	private:
 		MBScript::ObjectType m_Type = MBScript::ObjectType::Null;
-		std::unordered_map<std::string, std::unique_ptr<MBScript::MBSObject>> m_Fields = {};
+		std::unordered_map<std::string, MBScript::MBSObjectStore> m_Fields = {};
 	public:
 		MBS_SlippiPlayerMetadata() {};
-		MBS_SlippiPlayerMetadata(MBScript::ObjectType TypeToUse,std::unordered_map<std::string, std::unique_ptr<MBScript::MBSObject>> FieldsToUse);
+		MBS_SlippiPlayerMetadata(MBScript::ObjectType TypeToUse,std::unordered_map<std::string,MBScript::MBSObjectStore> FieldsToUse);
 		virtual MBScript::ObjectType GetType() const override
 		{
 			return(m_Type);
@@ -22,11 +23,11 @@ namespace MBSlippi
 	{
 	private:
 		MBScript::ObjectType m_Type = MBScript::ObjectType::Null;
-		std::unordered_map<std::string, std::unique_ptr<MBScript::MBSObject>> m_Fields = {};
+		std::unordered_map<std::string, MBScript::MBSObjectStore> m_Fields = {};
 
 	public:
 		MBS_SlippiPlayerFrameInfo() {};
-		MBS_SlippiPlayerFrameInfo(Event PostFrameUpdate);
+		MBS_SlippiPlayerFrameInfo(Event PostFrameUpdate, MBS_SlippiModule& AssociatedModule);
 		virtual MBScript::ObjectType GetType() const override
 		{
 			return(m_Type);
@@ -38,10 +39,10 @@ namespace MBSlippi
 	{
 	private:
 		MBScript::ObjectType m_Type = MBScript::ObjectType::Null;
-		std::unordered_map<std::string, std::unique_ptr<MBScript::MBSObject>> m_Fields = {};
+		std::unordered_map<std::string, MBScript::MBSObjectStore> m_Fields = {};
 	public:
 		MBS_SlippiFrame() {};
-		MBS_SlippiFrame(std::vector<Event> PostFrameUpdates);
+		MBS_SlippiFrame(std::vector<Event> FrameEvents,MBS_SlippiModule& AssociatedModule);
 		virtual MBScript::ObjectType GetType() const override
 		{
 			return(m_Type);
@@ -49,12 +50,11 @@ namespace MBSlippi
 		virtual std::unique_ptr<MBScript::MBSObject> Copy() const override;
 		virtual std::unique_ptr<MBScript::MBSObject> DotOperator(std::string const& FieldName) override;
 	};
-	class MBS_SlippiModule;
 	class MBS_SlippiGame : public MBScript::MBSObject
 	{
 	private:
 		MBScript::ObjectType m_Type = MBScript::ObjectType::Null;
-		std::unordered_map<std::string, std::unique_ptr<MBScript::MBSObject>> m_Fields = {};
+		std::unordered_map<std::string, MBScript::MBSObjectStore> m_Fields = {};
 	public:
 		MBS_SlippiGame() {};
 		MBS_SlippiGame(std::string const& GamePath, MBS_SlippiModule* AssociatedModule);

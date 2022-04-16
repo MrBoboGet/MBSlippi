@@ -691,18 +691,18 @@ namespace MBSlippi
 	};
 	enum class StateBitFlags : uint64_t
 	{
-		ReflectActive = (1 << 32) + 4,
-		Invincible = (1 << 24) + 2,
-		FastFalling = (1 << 24) + 3,
-		InHitlag = (1 << 24) + 5,
-		ShieldActive = (1<<16)+7,
-		InHitstun = (1<<8)+1,
-		HitboxTouchingShieldBubble = (1<<8)+2,
-		PowershieldActive = (1<<8)+5,
-		IsFollower = (1<<0)+3,
-		IsInActionStateSleep = (1<<0)+4,
-		Dead = (1<<0)+6,
-		OffScreen = (1<<0)+7,
+		ReflectActive =					1ull << uint64_t(32 + 4),
+		Invincible =					1ull << uint64_t(24 + 2),
+		FastFalling =					1ull << uint64_t(24 + 3),
+		InHitlag =						1ull << uint64_t(24 + 5),
+		ShieldActive =					1ull << uint64_t(16 + 7),
+		InHitstun =						1ull << uint64_t(8 + 1),
+		HitboxTouchingShieldBubble =	1ull << uint64_t(8 + 2),
+		PowershieldActive =				1ull << uint64_t(8 + 5),
+		IsFollower =					1ull << uint64_t(0 + 3),
+		IsInActionStateSleep =			1ull << uint64_t(0 + 4),
+		Dead =							1ull << uint64_t(0 + 6),
+		OffScreen =						1ull << uint64_t(0 + 7),
 
 	};
 
