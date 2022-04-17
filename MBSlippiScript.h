@@ -90,6 +90,24 @@ namespace MBSlippi
 		PlayerMetadata,
 		ReplayInfo
 	};
+
+	//Not knowing if order is relevant im going to assume that it is
+	struct DolphinConfigOption
+	{
+		std::string Name;
+		std::string Value;
+	};
+	class DolphinConfigParser
+	{
+	private:
+		std::vector<std::pair<std::string, std::vector<DolphinConfigOption>>> m_Options;
+	public:
+		DolphinConfigParser(std::string const& FileToReadPath);
+		void InsertValue(std::string const& OptionType, std::string const& OptionName, std::string const& OptionValue);
+		void RemoveValue(std::string const& OptionType, std::string const& OptionName);
+		void WriteValues(std::string const& Path);
+	};
+
 	class MBS_SlippiModule : public MBScript::MBScriptModule
 	{
 	private:
@@ -99,6 +117,16 @@ namespace MBSlippi
 		std::unique_ptr<MBScript::MBSObject> ReplayInfo(MBScript::ArgumentList Arguments);
 		std::unique_ptr<MBScript::MBSObject> WriteReplayInfo(MBScript::ArgumentList Arguments);
 		
+		std::unique_ptr<MBScript::MBSObject> RecordReplay(MBScript::ArgumentList Arguments);
+
+		//returns the relative path for the dump directory
+		std::string p_UpdateDolphinConfigs();
+		void p_RestoreDolphinConfigs(std::string const& DumpPath);
+
+		std::string m_ReplayDolphinDirectory;
+		std::string m_MeleeISOPath;
+
+
 		std::unordered_map<MBSSlippiTypes, MBScript::ObjectType> m_TypeMap = {};
 		
 		std::unordered_map<std::string, std::unique_ptr<MBScript::MBSObject>(MBS_SlippiModule::*)(MBScript::ArgumentList)> m_StaticFunctions =
@@ -108,11 +136,13 @@ namespace MBSlippi
 			{"LoadGame",&MBS_SlippiModule::LoadGame},
 			{"ReplayInfo",&MBS_SlippiModule::ReplayInfo},
 			{"WriteReplayInfo",&MBS_SlippiModule::WriteReplayInfo},
+			{"RecordReplay",&MBS_SlippiModule::RecordReplay},
 
 		};
 	public:
-		MBScript::ObjectType GetTypeConversion(MBSSlippiTypes TypeToConvert);
+		MBS_SlippiModule(MBParsing::JSONObject const& ConfigObject);
 
+		MBScript::ObjectType GetTypeConversion(MBSSlippiTypes TypeToConvert);
 		std::vector<std::string> GetExportedFunctions() const override;
 		std::unique_ptr<MBScript::MBSObject> ExecuteFunction(std::string const& FunctionName, MBScript::ArgumentList Arguments) override;
 		void OnCreate(MBScript::ExecutionEnvironment& AssociatedEnvironment) override;

@@ -2,6 +2,7 @@
 #include "MBMeleeID.h"
 #include <filesystem>
 #include <MBUnicode/MBUnicode.h>
+#include <MBUtility/MBStrings.h>
 namespace MBSlippi
 {
 	//BEGIN MBS_Slippi Objects
@@ -211,6 +212,120 @@ namespace MBSlippi
 	//END MBS_Slippi Objects
 
 
+	//BEGIN DolphinConfigParsser
+	DolphinConfigParser::DolphinConfigParser(std::string const& FileToReadPath)
+	{
+		std::ifstream InputStream(FileToReadPath);
+		std::string CurrentLine;
+
+		std::string CurrentOptionType;
+		while (std::getline(InputStream,CurrentLine))
+		{
+			if (CurrentLine == "")
+			{
+				continue;
+			}
+			if (CurrentLine[0] == '[')
+			{
+				CurrentOptionType = CurrentLine.substr(1, CurrentLine.size()- 2);
+				m_Options.push_back(std::pair<std::string, std::vector<DolphinConfigOption>>(CurrentOptionType, {}));
+			}
+			else
+			{
+				size_t FirstEqual = CurrentLine.find('=');
+				if(FirstEqual == CurrentLine.npos)
+				{
+					continue;
+				}
+				DolphinConfigOption NewOption;
+				NewOption.Name = MBUtility::ReplaceAll(CurrentLine.substr(0, FirstEqual)," ","");
+				NewOption.Value = CurrentLine.substr(FirstEqual + 1);
+				m_Options.back().second.push_back(NewOption);
+			}
+		}
+	}
+	void DolphinConfigParser::InsertValue(std::string const& OptionType, std::string const& OptionName, std::string const& OptionValue)
+	{
+		size_t OptionTypeIndex = -1;
+		for (size_t i = 0; i < m_Options.size(); i++)
+		{
+			if (m_Options[i].first == OptionType)
+			{
+				OptionTypeIndex = i;
+				break;
+			}
+		}
+		if (OptionTypeIndex == -1)
+		{
+			m_Options.push_back(std::pair<std::string, std::vector<DolphinConfigOption>>(OptionType, {}));
+			OptionTypeIndex = m_Options.size() - 1;
+		}
+		std::vector<DolphinConfigOption> const& ArrayToTraverse = m_Options[OptionTypeIndex].second;
+		size_t ArrayOptionIndex = -1;
+		for (size_t i = 0; i < ArrayToTraverse.size(); i++)
+		{
+			if (ArrayToTraverse[i].Name == OptionName)
+			{
+				ArrayOptionIndex = i;
+				break;
+			}
+		}
+		if (ArrayOptionIndex == -1)
+		{
+			m_Options[OptionTypeIndex].second.push_back(DolphinConfigOption{ OptionName,OptionValue });
+		}
+		else
+		{
+			m_Options[OptionTypeIndex].second[ArrayOptionIndex] = DolphinConfigOption{ OptionName,OptionValue };
+		}
+	}
+	void DolphinConfigParser::RemoveValue(std::string const& OptionType, std::string const& OptionName)
+	{
+		size_t OptionTypeIndex = -1;
+		for (size_t i = 0; i < m_Options.size(); i++)
+		{
+			if (m_Options[i].first == OptionType)
+			{
+				OptionTypeIndex = i;
+				break;
+			}
+		}
+		if (OptionTypeIndex == -1)
+		{
+			return;
+		}
+		std::vector<DolphinConfigOption> const& ArrayToTraverse = m_Options[OptionTypeIndex].second;
+		size_t ArrayOptionIndex = -1;
+		for (size_t i = 0; i < ArrayToTraverse.size(); i++)
+		{
+			if(ArrayToTraverse[i].Name == OptionName)
+			{
+				ArrayOptionIndex = i;
+				break;
+			}
+		}
+		if (ArrayOptionIndex == -1)
+		{
+			return;
+		}
+		m_Options[OptionTypeIndex].second.erase(m_Options[OptionTypeIndex].second.begin() + ArrayOptionIndex);
+	}
+	void DolphinConfigParser::WriteValues(std::string const& Path)
+	{
+		std::ofstream OutputStream(Path);
+		for (size_t i = 0; i < m_Options.size(); i++)
+		{
+			OutputStream << "[" << m_Options[i].first << "]" << std::endl;
+			for (size_t j = 0; j < m_Options[i].second.size(); j++)
+			{
+				OutputStream << m_Options[i].second[j].Name << " = " << m_Options[i].second[j].Value << std::endl;
+			}
+		}
+		
+	}
+	//END DolphinConfigParser
+
+
 
 
 	std::unique_ptr<MBScript::MBSObject> MBS_SlippiModule::ActionableFrames(MBScript::ArgumentList Argumnets)
@@ -318,6 +433,72 @@ namespace MBSlippi
 		std::ofstream OutStream(OutputPath);
 		OutStream << JSONToWrite.ToString();
 		return(ReturnValue);
+	}
+
+	std::unique_ptr<MBScript::MBSObject> MBS_SlippiModule::RecordReplay(MBScript::ArgumentList Arguments)
+	{
+		if (Arguments.Arguments.size() < 2 || (Arguments.Arguments[0]->GetType() != MBScript::ObjectType::String || Arguments.Arguments[1]->GetType() != MBScript::ObjectType::String))
+		{
+			throw MBScript::MBSRuntimeException("RecordReplay requires exactly 2 strings, path to ReplayInfo.json and name of outputfile");
+		}
+		std::unique_ptr<MBScript::MBSObject> ReturnValue = std::make_unique<MBScript::MBSObject>();
+		std::string ReplayInfoFile = MBScript::CastObject<MBScript::MBSObject_String>(*Arguments.Arguments[0]).Value;
+		std::string OutputVideo = MBScript::CastObject<MBScript::MBSObject_String>(*Arguments.Arguments[1]).Value;
+		std::string DumpDirectory = p_UpdateDolphinConfigs();
+		std::string DolphinCommand = "\"\"" + m_ReplayDolphinDirectory + "\\SlippiMBFix.exe\"" + " -b -e " + "\"" + m_MeleeISOPath + "\" -i " + ReplayInfoFile+"\"";
+		int DolphinResult = std::system(DolphinCommand.c_str());
+		std::string FFMPEGCommand = "ffmpeg -i " + DumpDirectory + "/Frames/framedump0.avi -i " + DumpDirectory + "/Audio/dspdump.wav -map 0:v:0 -map 1:a:0 " + OutputVideo;
+		int FFMPEGResult = std::system(FFMPEGCommand.c_str());
+		p_RestoreDolphinConfigs(DumpDirectory);
+		return(ReturnValue);
+	}
+	std::string MBS_SlippiModule::p_UpdateDolphinConfigs()
+	{
+		std::string DumpPath = ".__DolphinDumpDirectory";
+		std::filesystem::create_directory(DumpPath);
+		
+		std::string AbsoluteDumpPath = MBUnicode::PathToUTF8(std::filesystem::absolute(DumpPath));
+		
+		if (!std::filesystem::exists(m_ReplayDolphinDirectory + "/User/Config/Dolphin.ini") || !std::filesystem::exists(m_ReplayDolphinDirectory + "/User/Config/GFX.ini"))
+		{
+			throw MBScript::MBSRuntimeException("Dolphin configs doesnt exist. Invalid dolphin replay path specified?");
+		}
+		DolphinConfigParser DolphinIniConfigs = DolphinConfigParser(m_ReplayDolphinDirectory + "/User/Config/Dolphin.ini");
+		DolphinConfigParser DolphinGFXConfigs = DolphinConfigParser(m_ReplayDolphinDirectory + "/User/Config/GFX.ini");
+		DolphinIniConfigs.InsertValue("Core", "SlippiPlaybackExitOnFinished", "True");
+		DolphinIniConfigs.InsertValue("Core", "EmulationSpeed", "0.00000000");
+		DolphinIniConfigs.InsertValue("Movie", "DumpFrames", "True");
+		DolphinIniConfigs.InsertValue("Movie", "DumpFramesSilent", "True");
+		DolphinIniConfigs.InsertValue("DSP", "DumpAudio", "True");
+		DolphinIniConfigs.InsertValue("DSP", "DumpAudioSilent", "True");
+		DolphinIniConfigs.InsertValue("DSP", "Volume", "0");
+		DolphinIniConfigs.InsertValue("General", "DumpPath", AbsoluteDumpPath);
+		DolphinIniConfigs.WriteValues(m_ReplayDolphinDirectory + "/User/Config/Dolphin.ini");
+		return(DumpPath);
+	}
+	void MBS_SlippiModule::p_RestoreDolphinConfigs(std::string const& DumpDirectory)
+	{
+		std::filesystem::remove_all(DumpDirectory);
+		if (!std::filesystem::exists(m_ReplayDolphinDirectory + "/User/Config/Dolphin.ini") || !std::filesystem::exists(m_ReplayDolphinDirectory + "/User/Config/GFX.ini"))
+		{
+			throw MBScript::MBSRuntimeException("Dolphin configs doesnt exist. Invalid dolphin replay path specified?");
+		}
+		DolphinConfigParser DolphinIniConfigs = DolphinConfigParser(m_ReplayDolphinDirectory + "/User/Config/Dolphin.ini");
+		DolphinConfigParser DolphinGFXConfigs = DolphinConfigParser(m_ReplayDolphinDirectory + "/User/Config/GFX.ini");
+		DolphinIniConfigs.RemoveValue("Core", "SlippiPlaybackExitOnFinished");
+		DolphinIniConfigs.RemoveValue("Core", "EmulationSpeed");
+		DolphinIniConfigs.RemoveValue("Movie", "DumpFrames");
+		DolphinIniConfigs.RemoveValue("Movie", "DumpFramesSilent");
+		DolphinIniConfigs.RemoveValue("DSP", "DumpAudio");
+		DolphinIniConfigs.RemoveValue("DSP", "DumpAudioSilent");
+		DolphinIniConfigs.RemoveValue("DSP", "Volume");
+		DolphinIniConfigs.RemoveValue("General", "DumpPath");
+		DolphinIniConfigs.WriteValues(m_ReplayDolphinDirectory + "/User/Config/Dolphin.ini");
+	}
+	MBS_SlippiModule::MBS_SlippiModule(MBParsing::JSONObject const& ConfigObject)
+	{
+		m_MeleeISOPath = ConfigObject.GetAttribute("MeleeISOPath").GetStringData();
+		m_ReplayDolphinDirectory = ConfigObject.GetAttribute("ReplayDolphinDirectory").GetStringData();
 	}
 	MBScript::ObjectType MBS_SlippiModule::GetTypeConversion(MBSSlippiTypes TypeToConvert)
 	{

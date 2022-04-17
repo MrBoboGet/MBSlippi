@@ -3,6 +3,7 @@
 
 #include <iostream>
 #include <MBParsing/MBParsing.h>
+#include <MBUtility/MBFiles.h>
 #include <filesystem>
 
 #include "MBSlippiScript.h"
@@ -171,7 +172,8 @@ int main(int argc, const char** argv)
 	auto Statements = MBScript::ParseFile("./TestScript.mbs",&MBSParseResult);
 	assert(MBSParseResult == true);
 	MBScript::ExecutionEnvironment ExecutionEnvironment;
-	ExecutionEnvironment.AddModule(std::make_unique<MBSlippi::MBS_SlippiModule>());
+	MBParsing::JSONObject SlippiModuleConfig = MBParsing::ParseJSONObject(MBUtility::ReadWholeFile("./MBSlippiConfig.json"), 0, 0, nullptr);
+	ExecutionEnvironment.AddModule(std::make_unique<MBSlippi::MBS_SlippiModule>(SlippiModuleConfig));
 	ExecutionEnvironment.Execute(Statements);
 	
 
