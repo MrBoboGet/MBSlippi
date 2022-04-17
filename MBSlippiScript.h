@@ -102,12 +102,12 @@ namespace MBSlippi
 	private:
 		std::vector<std::pair<std::string, std::vector<DolphinConfigOption>>> m_Options;
 	public:
+		DolphinConfigParser() {};
 		DolphinConfigParser(std::string const& FileToReadPath);
 		void InsertValue(std::string const& OptionType, std::string const& OptionName, std::string const& OptionValue);
 		void RemoveValue(std::string const& OptionType, std::string const& OptionName);
-		void WriteValues(std::string const& Path);
+		void WriteValues(std::string const& Path) const;
 	};
-
 	class MBS_SlippiModule : public MBScript::MBScriptModule
 	{
 	private:
@@ -120,8 +120,8 @@ namespace MBSlippi
 		std::unique_ptr<MBScript::MBSObject> RecordReplay(MBScript::ArgumentList Arguments);
 
 		//returns the relative path for the dump directory
-		std::string p_UpdateDolphinConfigs();
-		void p_RestoreDolphinConfigs(std::string const& DumpPath);
+		std::string p_UpdateDolphinConfigs(DolphinConfigParser* OriginalDolphinINI,DolphinConfigParser* OriginalDolphinGFX);
+		void p_RestoreDolphinConfigs(std::string const& DumpPath,DolphinConfigParser const& DolphinINI,DolphinConfigParser const& DolphinGFX);
 
 		std::string m_ReplayDolphinDirectory;
 		std::string m_MeleeISOPath;

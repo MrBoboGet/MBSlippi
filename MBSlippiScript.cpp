@@ -310,7 +310,7 @@ namespace MBSlippi
 		}
 		m_Options[OptionTypeIndex].second.erase(m_Options[OptionTypeIndex].second.begin() + ArrayOptionIndex);
 	}
-	void DolphinConfigParser::WriteValues(std::string const& Path)
+	void DolphinConfigParser::WriteValues(std::string const& Path) const
 	{
 		std::ofstream OutputStream(Path);
 		for (size_t i = 0; i < m_Options.size(); i++)
@@ -444,15 +444,17 @@ namespace MBSlippi
 		std::unique_ptr<MBScript::MBSObject> ReturnValue = std::make_unique<MBScript::MBSObject>();
 		std::string ReplayInfoFile = MBScript::CastObject<MBScript::MBSObject_String>(*Arguments.Arguments[0]).Value;
 		std::string OutputVideo = MBScript::CastObject<MBScript::MBSObject_String>(*Arguments.Arguments[1]).Value;
-		std::string DumpDirectory = p_UpdateDolphinConfigs();
+		DolphinConfigParser OriginalIni;
+		DolphinConfigParser OriginalGFX;
+		std::string DumpDirectory = p_UpdateDolphinConfigs(&OriginalIni, &OriginalGFX);
 		std::string DolphinCommand = "\"\"" + m_ReplayDolphinDirectory + "\\SlippiMBFix.exe\"" + " -b -e " + "\"" + m_MeleeISOPath + "\" -i " + ReplayInfoFile+"\"";
 		int DolphinResult = std::system(DolphinCommand.c_str());
-		std::string FFMPEGCommand = "ffmpeg -i " + DumpDirectory + "/Frames/framedump0.avi -i " + DumpDirectory + "/Audio/dspdump.wav -map 0:v:0 -map 1:a:0 " + OutputVideo;
+		std::string FFMPEGCommand = "ffmpeg -y -i " + DumpDirectory + "/Frames/framedump0.avi -i " + DumpDirectory + "/Audio/dspdump.wav -map 0:v:0 -map 1:a:0 " + OutputVideo+" > nul 2> nul";
 		int FFMPEGResult = std::system(FFMPEGCommand.c_str());
-		p_RestoreDolphinConfigs(DumpDirectory);
+		p_RestoreDolphinConfigs(DumpDirectory,OriginalIni,OriginalGFX);
 		return(ReturnValue);
 	}
-	std::string MBS_SlippiModule::p_UpdateDolphinConfigs()
+	std::string MBS_SlippiModule::p_UpdateDolphinConfigs(DolphinConfigParser* OutOriginalIni,DolphinConfigParser* OutOriginalGFX)
 	{
 		std::string DumpPath = ".__DolphinDumpDirectory";
 		std::filesystem::create_directory(DumpPath);
@@ -464,7 +466,15 @@ namespace MBSlippi
 			throw MBScript::MBSRuntimeException("Dolphin configs doesnt exist. Invalid dolphin replay path specified?");
 		}
 		DolphinConfigParser DolphinIniConfigs = DolphinConfigParser(m_ReplayDolphinDirectory + "/User/Config/Dolphin.ini");
+		if (OutOriginalIni)
+		{
+			*OutOriginalIni = DolphinIniConfigs;
+		}
 		DolphinConfigParser DolphinGFXConfigs = DolphinConfigParser(m_ReplayDolphinDirectory + "/User/Config/GFX.ini");
+		if (OutOriginalGFX)
+		{
+			*OutOriginalGFX = DolphinGFXConfigs;
+		}
 		DolphinIniConfigs.InsertValue("Core", "SlippiPlaybackExitOnFinished", "True");
 		DolphinIniConfigs.InsertValue("Core", "EmulationSpeed", "0.00000000");
 		DolphinIniConfigs.InsertValue("Movie", "DumpFrames", "True");
@@ -473,27 +483,27 @@ namespace MBSlippi
 		DolphinIniConfigs.InsertValue("DSP", "DumpAudioSilent", "True");
 		DolphinIniConfigs.InsertValue("DSP", "Volume", "0");
 		DolphinIniConfigs.InsertValue("General", "DumpPath", AbsoluteDumpPath);
+
+		//DolphinIniConfigs.InsertValue("Display", "RenderWindowWidth", "1280");
+		//DolphinIniConfigs.InsertValue("Display", "RenderWindowHeight", "1052");
+		//DolphinIniConfigs.InsertValue("Display", "RenderWindowAutoSize", "True");
+
+		//DolphinGFXConfigs.InsertValue("Settings", "EFBScale", "8");
+		DolphinGFXConfigs.InsertValue("Settings", "BitrateKbps", "10000");
+
+		DolphinGFXConfigs.WriteValues(m_ReplayDolphinDirectory + "/User/Config/GFX.ini");
 		DolphinIniConfigs.WriteValues(m_ReplayDolphinDirectory + "/User/Config/Dolphin.ini");
 		return(DumpPath);
 	}
-	void MBS_SlippiModule::p_RestoreDolphinConfigs(std::string const& DumpDirectory)
+	void MBS_SlippiModule::p_RestoreDolphinConfigs(std::string const& DumpDirectory, DolphinConfigParser const& DolphinINI, DolphinConfigParser const& DolphinGFX)
 	{
 		std::filesystem::remove_all(DumpDirectory);
 		if (!std::filesystem::exists(m_ReplayDolphinDirectory + "/User/Config/Dolphin.ini") || !std::filesystem::exists(m_ReplayDolphinDirectory + "/User/Config/GFX.ini"))
 		{
 			throw MBScript::MBSRuntimeException("Dolphin configs doesnt exist. Invalid dolphin replay path specified?");
 		}
-		DolphinConfigParser DolphinIniConfigs = DolphinConfigParser(m_ReplayDolphinDirectory + "/User/Config/Dolphin.ini");
-		DolphinConfigParser DolphinGFXConfigs = DolphinConfigParser(m_ReplayDolphinDirectory + "/User/Config/GFX.ini");
-		DolphinIniConfigs.RemoveValue("Core", "SlippiPlaybackExitOnFinished");
-		DolphinIniConfigs.RemoveValue("Core", "EmulationSpeed");
-		DolphinIniConfigs.RemoveValue("Movie", "DumpFrames");
-		DolphinIniConfigs.RemoveValue("Movie", "DumpFramesSilent");
-		DolphinIniConfigs.RemoveValue("DSP", "DumpAudio");
-		DolphinIniConfigs.RemoveValue("DSP", "DumpAudioSilent");
-		DolphinIniConfigs.RemoveValue("DSP", "Volume");
-		DolphinIniConfigs.RemoveValue("General", "DumpPath");
-		DolphinIniConfigs.WriteValues(m_ReplayDolphinDirectory + "/User/Config/Dolphin.ini");
+		DolphinGFX.WriteValues(m_ReplayDolphinDirectory + "/User/Config/GFX.ini");
+		DolphinINI.WriteValues(m_ReplayDolphinDirectory + "/User/Config/Dolphin.ini");
 	}
 	MBS_SlippiModule::MBS_SlippiModule(MBParsing::JSONObject const& ConfigObject)
 	{
