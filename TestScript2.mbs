@@ -1,0 +1,19 @@
+QueryResult = GetGameQuery("SELECT * FROM GAMES WHERE Player2Tag LIKE \"Emanuel\"");
+print(QueryResult);
+
+NewGame = LoadGame(QueryResult[0][0]);
+print(NewGame.Path);
+NewGame = LoadGame(QueryResult[1][0]);
+print(NewGame.Path);
+NewGame = LoadGame(QueryResult[2][0]);
+print(NewGame.Path);
+NewGame = LoadGame(QueryResult[3][0]);
+print(NewGame.Path);
+NewGame = LoadGame(QueryResult[4][0]);
+print(NewGame.Path);
+NewGame = LoadGame(QueryResult[5][0]);
+print(NewGame.Path);
+NewGame = LoadGame(QueryResult[6][0]);
+print(NewGame.Path);
+NewGame = LoadGame(QueryResult[7][0]);
+print(NewGame.Path);

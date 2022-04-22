@@ -6,5 +6,5 @@
 		"StaticRelease": "MBSlippi_SR",
 		"StaticDebug": "MBSlippi_SD"
 	},
-    "Dependancies":["MBParsing"]
+    "Dependancies":["MBParsing","MBPacketManager","MBScript","MBUnicode","MrBoboDatabase"]
 }

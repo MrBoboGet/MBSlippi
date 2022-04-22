@@ -145,13 +145,13 @@ namespace MBSlippi
 				}
 			}
 			//DEBUG
-			EventType Type = DataToReturn->GetType();
-			size_t EventSize = DataToReturn->Serialize(ParseVersion{ 3,6,0 }).size();
-			size_t ActualVersion = m_PossibleEvents[DataToReturn->GetType()];
-			if (Type != EventType::GeckoList && Type != EventType::Null)
-			{
-				assert(EventSize == ActualVersion + 1);
-			}
+			//EventType Type = DataToReturn->GetType();
+			//size_t EventSize = DataToReturn->Serialize(ParseVersion{ 3,6,0 }).size();
+			//size_t ActualVersion = m_PossibleEvents[DataToReturn->GetType()];
+			//if (Type != EventType::GeckoList && Type != EventType::Null)
+			//{
+			//	assert(EventSize == ActualVersion + 1);
+			//}
 			//
 			return(Event(std::move(DataToReturn)));
 		}

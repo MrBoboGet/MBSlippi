@@ -3,6 +3,8 @@
 #include <filesystem>
 #include <MBUnicode/MBUnicode.h>
 #include <MBUtility/MBStrings.h>
+
+#include <MrBoboDatabase/MrBoboDatabase.h>
 namespace MBSlippi
 {
 	//BEGIN MBS_Slippi Objects
@@ -127,9 +129,18 @@ namespace MBSlippi
 		{
 			//kanske borde göra en aggregate klass...
 			std::unordered_map<std::string, MBScript::MBSObjectStore> PlayerData;
-			PlayerData["Code"] = MBScript::MBSObjectStore(std::make_unique<MBScript::MBSObject_String>(Element.second.GetAttribute("names").GetAttribute("code").GetStringData()));
-			PlayerData["Tag"] = MBScript::MBSObjectStore(std::make_unique<MBScript::MBSObject_String>(Element.second.GetAttribute("names").GetAttribute("netplay").GetStringData()));
-			PlayerData["Character"] = MBScript::MBSObjectStore(std::make_unique<MBScript::MBSObject_String>(CharacterToString(InternalCharacterID(std::stoi(Element.second.GetAttribute("characters").GetMapData().begin()->first)))));
+			if (Element.second["names"].HasAttribute("code"))
+			{
+				PlayerData["Code"] = MBScript::MBSObjectStore(std::make_unique<MBScript::MBSObject_String>(Element.second.GetAttribute("names").GetAttribute("code").GetStringData()));
+			}
+			if (Element.second["names"].HasAttribute("tag"))
+			{
+				PlayerData["Tag"] = MBScript::MBSObjectStore(std::make_unique<MBScript::MBSObject_String>(Element.second.GetAttribute("names").GetAttribute("netplay").GetStringData()));
+			}
+			if (Element.second["names"].HasAttribute("characters"))
+			{
+				PlayerData["Character"] = MBScript::MBSObjectStore(std::make_unique<MBScript::MBSObject_String>(CharacterToString(InternalCharacterID(std::stoi(Element.second.GetAttribute("characters").GetMapData().begin()->first)))));
+			}
 			*PlayerList += std::make_unique<MBS_SlippiPlayerMetadata>(AssociatedModule->GetTypeConversion(MBSSlippiTypes::PlayerMetadata),std::move(PlayerData));
 		}
 		MetaData["Players"] = std::move(PlayerList);
@@ -348,7 +359,20 @@ namespace MBSlippi
 		{
 			throw MBScript::MBSRuntimeException("InShieldStun frames takes only 1 argument");
 		}
-		std::unique_ptr<MBScript::MBSObject> ReturnValue = std::make_unique<MBS_SlippiGame>(MBScript::CastObject<MBScript::MBSObject_String>(*Argumnets.Arguments[0]).Value,this);
+		std::string GamePath = MBScript::CastObject<MBScript::MBSObject_String>(*Argumnets.Arguments[0]).Value;
+		std::error_code Code;
+		if (!std::filesystem::exists(GamePath,Code))
+		{
+			if (std::filesystem::exists(m_Config.ReplaysDirectory + "/" + GamePath))
+			{
+				GamePath = m_Config.ReplaysDirectory + "/" + GamePath;
+			}
+			else
+			{
+				throw MBScript::MBSRuntimeException("Game path doesnt exist");
+			}
+		}
+		std::unique_ptr<MBScript::MBSObject> ReturnValue = std::make_unique<MBS_SlippiGame>(GamePath,this);
 		return(ReturnValue);
 	}
 	std::unique_ptr<MBScript::MBSObject> MBS_SlippiModule::ReplayInfo(MBScript::ArgumentList Arguments)
@@ -434,7 +458,54 @@ namespace MBSlippi
 		OutStream << JSONToWrite.ToString();
 		return(ReturnValue);
 	}
+	std::unique_ptr<MBScript::MBSObject> MBS_SlippiModule::GetGameQuery(MBScript::ArgumentList Arguments)
+	{
+		if (Arguments.Arguments.size() != 1)
+		{
+			throw MBScript::MBSRuntimeException("GetGameQuery requires exactly one argument: an SQL query to execute");
+		}
+		std::unique_ptr<MBScript::MBSObject> ReturnValue = std::make_unique<MBScript::MBSObject_List>();
+		MBDB::MrBoboDatabase DataBase(m_Config.ReplaysDirectory + "/SlippiGames.db", uint64_t(MBDB::DBOpenOptions::ReadOnly));
+		std::string GameQuery = MBScript::CastObject<MBScript::MBSObject_String>(*Arguments.Arguments[0]).Value;
+		
+		MBDB::SQLStatement* Statement = DataBase.GetSQLStatement(GameQuery);
+		MBError ErrorResult = true;
+		std::vector<MBDB::MBDB_RowData> Result = DataBase.GetAllRows(Statement, &ErrorResult);
+		if (!ErrorResult)
+		{
+			throw MBScript::MBSRuntimeException("Error executing querry: "+ErrorResult.ErrorMessage);
+		}
+		for (auto const& Row : Result)
+		{
+				std::unique_ptr<MBScript::MBSObject> NewList = std::make_unique<MBScript::MBSObject_List>();
+			for (int i = 0; i < Row.GetNumberOfColumns(); i++)
+			{
+				if (Row.GetColumnValueType(i) == MBDB::MBDB_ColumnValueTypes::Int32)
+				{
+					*NewList += std::make_unique<MBScript::MBSObject_Integer>(Row.GetColumnData<int>(i));
+				}
+				else if (Row.GetColumnValueType(i) == MBDB::MBDB_ColumnValueTypes::Int64)
+				{
+					*NewList += std::make_unique<MBScript::MBSObject_Integer>(Row.GetColumnData<long long>(i));
+				}
+				else if (Row.GetColumnValueType(i) == MBDB::MBDB_ColumnValueTypes::Double)
+				{
+					assert(false);
+				}
+				else if (Row.GetColumnValueType(i) == MBDB::MBDB_ColumnValueTypes::Float)
+				{
+					assert(false);
+				}
+				else if (Row.GetColumnValueType(i) == MBDB::MBDB_ColumnValueTypes::Text)
+				{
+					*NewList += std::make_unique<MBScript::MBSObject_String>(Row.GetColumnData<std::string>(i));
+				}
+			}
+			*ReturnValue += std::move(NewList);
+		}
 
+		return(ReturnValue);
+	}
 	std::unique_ptr<MBScript::MBSObject> MBS_SlippiModule::RecordReplay(MBScript::ArgumentList Arguments)
 	{
 		if (Arguments.Arguments.size() < 2 || (Arguments.Arguments[0]->GetType() != MBScript::ObjectType::String || Arguments.Arguments[1]->GetType() != MBScript::ObjectType::String))
@@ -447,7 +518,7 @@ namespace MBSlippi
 		DolphinConfigParser OriginalIni;
 		DolphinConfigParser OriginalGFX;
 		std::string DumpDirectory = p_UpdateDolphinConfigs(&OriginalIni, &OriginalGFX);
-		std::string DolphinCommand = "\"\"" + m_ReplayDolphinDirectory + "\\SlippiMBFix.exe\"" + " -b -e " + "\"" + m_MeleeISOPath + "\" -i " + ReplayInfoFile+"\"";
+		std::string DolphinCommand = "\"\"" + m_Config.ReplayDolphinDirectory + "\\SlippiMBFix.exe\"" + " -b -e " + "\"" + m_Config.MeleeISOPath + "\" -i " + ReplayInfoFile+"\"";
 		int DolphinResult = std::system(DolphinCommand.c_str());
 		std::string FFMPEGCommand = "ffmpeg -y -i " + DumpDirectory + "/Frames/framedump0.avi -i " + DumpDirectory + "/Audio/dspdump.wav -map 0:v:0 -map 1:a:0 " + OutputVideo+" > nul 2> nul";
 		int FFMPEGResult = std::system(FFMPEGCommand.c_str());
@@ -461,16 +532,16 @@ namespace MBSlippi
 		
 		std::string AbsoluteDumpPath = MBUnicode::PathToUTF8(std::filesystem::absolute(DumpPath));
 		
-		if (!std::filesystem::exists(m_ReplayDolphinDirectory + "/User/Config/Dolphin.ini") || !std::filesystem::exists(m_ReplayDolphinDirectory + "/User/Config/GFX.ini"))
+		if (!std::filesystem::exists(m_Config.ReplayDolphinDirectory + "/User/Config/Dolphin.ini") || !std::filesystem::exists(m_Config.ReplayDolphinDirectory + "/User/Config/GFX.ini"))
 		{
 			throw MBScript::MBSRuntimeException("Dolphin configs doesnt exist. Invalid dolphin replay path specified?");
 		}
-		DolphinConfigParser DolphinIniConfigs = DolphinConfigParser(m_ReplayDolphinDirectory + "/User/Config/Dolphin.ini");
+		DolphinConfigParser DolphinIniConfigs = DolphinConfigParser(m_Config.ReplayDolphinDirectory + "/User/Config/Dolphin.ini");
 		if (OutOriginalIni)
 		{
 			*OutOriginalIni = DolphinIniConfigs;
 		}
-		DolphinConfigParser DolphinGFXConfigs = DolphinConfigParser(m_ReplayDolphinDirectory + "/User/Config/GFX.ini");
+		DolphinConfigParser DolphinGFXConfigs = DolphinConfigParser(m_Config.ReplayDolphinDirectory + "/User/Config/GFX.ini");
 		if (OutOriginalGFX)
 		{
 			*OutOriginalGFX = DolphinGFXConfigs;
@@ -488,27 +559,26 @@ namespace MBSlippi
 		//DolphinIniConfigs.InsertValue("Display", "RenderWindowHeight", "1052");
 		//DolphinIniConfigs.InsertValue("Display", "RenderWindowAutoSize", "True");
 
-		//DolphinGFXConfigs.InsertValue("Settings", "EFBScale", "8");
+		//DolphinGFXConfigs.InsertValue("Settings", "EFBScale", "1");
 		DolphinGFXConfigs.InsertValue("Settings", "BitrateKbps", "10000");
 
-		DolphinGFXConfigs.WriteValues(m_ReplayDolphinDirectory + "/User/Config/GFX.ini");
-		DolphinIniConfigs.WriteValues(m_ReplayDolphinDirectory + "/User/Config/Dolphin.ini");
+		DolphinGFXConfigs.WriteValues(m_Config.ReplayDolphinDirectory + "/User/Config/GFX.ini");
+		DolphinIniConfigs.WriteValues(m_Config.ReplayDolphinDirectory + "/User/Config/Dolphin.ini");
 		return(DumpPath);
 	}
 	void MBS_SlippiModule::p_RestoreDolphinConfigs(std::string const& DumpDirectory, DolphinConfigParser const& DolphinINI, DolphinConfigParser const& DolphinGFX)
 	{
 		std::filesystem::remove_all(DumpDirectory);
-		if (!std::filesystem::exists(m_ReplayDolphinDirectory + "/User/Config/Dolphin.ini") || !std::filesystem::exists(m_ReplayDolphinDirectory + "/User/Config/GFX.ini"))
+		if (!std::filesystem::exists(m_Config.ReplayDolphinDirectory + "/User/Config/Dolphin.ini") || !std::filesystem::exists(m_Config.ReplayDolphinDirectory + "/User/Config/GFX.ini"))
 		{
 			throw MBScript::MBSRuntimeException("Dolphin configs doesnt exist. Invalid dolphin replay path specified?");
 		}
-		DolphinGFX.WriteValues(m_ReplayDolphinDirectory + "/User/Config/GFX.ini");
-		DolphinINI.WriteValues(m_ReplayDolphinDirectory + "/User/Config/Dolphin.ini");
+		DolphinGFX.WriteValues(m_Config.ReplayDolphinDirectory + "/User/Config/GFX.ini");
+		DolphinINI.WriteValues(m_Config.ReplayDolphinDirectory + "/User/Config/Dolphin.ini");
 	}
-	MBS_SlippiModule::MBS_SlippiModule(MBParsing::JSONObject const& ConfigObject)
+	MBS_SlippiModule::MBS_SlippiModule(MBSlippiConfig ConfigObject)
 	{
-		m_MeleeISOPath = ConfigObject.GetAttribute("MeleeISOPath").GetStringData();
-		m_ReplayDolphinDirectory = ConfigObject.GetAttribute("ReplayDolphinDirectory").GetStringData();
+		m_Config = std::move(ConfigObject);
 	}
 	MBScript::ObjectType MBS_SlippiModule::GetTypeConversion(MBSSlippiTypes TypeToConvert)
 	{

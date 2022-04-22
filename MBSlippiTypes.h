@@ -193,6 +193,20 @@ namespace MBSlippi
 		}
 	};
 
+	struct GameInfoBlock
+	{
+		StageID Stage;
+
+		GameInfoBlock() {};
+		GameInfoBlock(const void* Data, size_t DataSize)
+		{
+			size_t ParseOffset = 0;
+			//lat, vill bara ha stage
+			ParseOffset = 0x0e;
+			Stage = StageID(MBParsing::ParseBigEndianInteger(Data, 2,0,nullptr));
+		}
+	};
+
 	class Event_GameStart : public EventData
 	{
 	public:

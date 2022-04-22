@@ -1,6 +1,8 @@
+#pragma once
 #include "MBSlippiTypes.h"
 #include "MBSlippiParsing.h"
 #include <MBScript/MBScript.h>
+#include "MBSlippiConfig.h"
 namespace MBSlippi
 {
 	class MBS_SlippiModule;
@@ -116,16 +118,15 @@ namespace MBSlippi
 		std::unique_ptr<MBScript::MBSObject> LoadGame(MBScript::ArgumentList Argumnets);
 		std::unique_ptr<MBScript::MBSObject> ReplayInfo(MBScript::ArgumentList Arguments);
 		std::unique_ptr<MBScript::MBSObject> WriteReplayInfo(MBScript::ArgumentList Arguments);
+		std::unique_ptr<MBScript::MBSObject> GetGameQuery(MBScript::ArgumentList Arguments);
 		
 		std::unique_ptr<MBScript::MBSObject> RecordReplay(MBScript::ArgumentList Arguments);
 
 		//returns the relative path for the dump directory
 		std::string p_UpdateDolphinConfigs(DolphinConfigParser* OriginalDolphinINI,DolphinConfigParser* OriginalDolphinGFX);
 		void p_RestoreDolphinConfigs(std::string const& DumpPath,DolphinConfigParser const& DolphinINI,DolphinConfigParser const& DolphinGFX);
-
-		std::string m_ReplayDolphinDirectory;
-		std::string m_MeleeISOPath;
-
+		
+		MBSlippiConfig m_Config;
 
 		std::unordered_map<MBSSlippiTypes, MBScript::ObjectType> m_TypeMap = {};
 		
@@ -133,14 +134,16 @@ namespace MBSlippi
 		{
 			{"ActionableFrames",&MBS_SlippiModule::ActionableFrames},
 			{"InShieldStun",&MBS_SlippiModule::InShieldStun},
+
 			{"LoadGame",&MBS_SlippiModule::LoadGame},
 			{"ReplayInfo",&MBS_SlippiModule::ReplayInfo},
 			{"WriteReplayInfo",&MBS_SlippiModule::WriteReplayInfo},
 			{"RecordReplay",&MBS_SlippiModule::RecordReplay},
+			{"GetGameQuery",&MBS_SlippiModule::GetGameQuery},
 
 		};
 	public:
-		MBS_SlippiModule(MBParsing::JSONObject const& ConfigObject);
+		MBS_SlippiModule(MBSlippiConfig ConfigToUse);
 
 		MBScript::ObjectType GetTypeConversion(MBSSlippiTypes TypeToConvert);
 		std::vector<std::string> GetExportedFunctions() const override;

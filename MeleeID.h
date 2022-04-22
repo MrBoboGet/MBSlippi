@@ -1112,6 +1112,12 @@ namespace MBSlippi
 	    Battlefield           =     0x01F,
 	    FinalDestination      =     0x020,
     };
+
+	inline std::string StageIDToString(StageID IDToConvert)
+	{
+		return("");
+	}
+
 	static const const char* __InternalCharacterStringMap[33] =
 	{
 		"Mario",

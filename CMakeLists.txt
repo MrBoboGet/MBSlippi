@@ -2,10 +2,19 @@ project(MBSlippi)
 set(PROJECT_NAME "MBSlippi")
 ##BEGIN MBPM_VARIABLES
 set(MBPM_DEPENDENCIES 
-	"MBParsing"
+	"MrBoboDatabase"
+	"sqlite3"
 	"MBUtility"
-	"MBScript"
 	"MBUnicode"
+	"MBScript"
+	"MBParsing"
+	"MBPacketManager"
+	"MBCLI"
+	"MBCrypto"
+	"cryptopp"
+	"MrBigInt"
+	"MrBoboSockets"
+	"MBMime"
 )
 set(MBPM_SystemLibraries
 Ws2_32.lib
@@ -130,6 +139,8 @@ set(PROJECT_SOURCES
 	"${CMAKE_CURRENT_SOURCE_DIR}/MBSlippiParsing.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/MBSlippiTypes.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/MBSlippiScript.cpp"
+	"${CMAKE_CURRENT_SOURCE_DIR}/MBSlippi_CLI.cpp"
+	"${CMAKE_CURRENT_SOURCE_DIR}/MBSlippiConfig.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/MBMeleeID.cpp"
 )
 set(PROJECT_HEADERS 
@@ -138,7 +149,7 @@ set(PROJECT_HEADERS
 
 set(EXECUTABLE_FILES
 	${PROJECT_SOURCES}
-	"MBSlippiTest.cpp"
+	"${CMAKE_CURRENT_SOURCE_DIR}/MBSlippi_CLIMain.cpp"
 )
 
 set(COMMON_FILES ${PROJECT_SOURCES} ${PROJECT_HEADERS})
