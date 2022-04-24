@@ -172,6 +172,6 @@ target_link_libraries("MBSlippi_SR" ${COMMON_LIBRARIES})
 
 
 add_executable("mbslippitest" ${EXECUTABLE_FILES})
-MBPM_ApplyTargetConfiguration("mbslippitest" "STATIC" "DEBUG")
+MBPM_ApplyTargetConfiguration("mbslippitest" "STATIC" "RELEASE")
 target_compile_features("mbslippitest" PRIVATE cxx_std_17)
 MBPM_LinkTargetPacketLibraries("mbslippitest")

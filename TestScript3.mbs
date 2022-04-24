@@ -1,0 +1,25 @@
+RecentMayGames = GetGameQuery("SELECT * FROM Games WHERE Date >= strftime('%s','2022-01-01') AND (Player1Code LIKE 'trans#0' OR Player2Code LIKE 'trans#0');");
+TotalGameSpecs = list();
+for(i = 0; i < RecentMayGames.size;i+=1)
+{
+    CurrentGameInfo = LoadGame(RecentMayGames[i][0]);
+    PeachPlayerIndex = 0;
+    NewGame = ReplayInfo(CurrentGameInfo.Path,list());
+    if(CurrentGameInfo.MetaData.Players[1].Character == "Peach")
+    {
+        PeachPlayerIndex = 1;
+    }
+    for(j = 0; j < CurrentGameInfo.Frames.size;j+=1)
+    {
+        if(CurrentGameInfo.Frames[j].PlayerInfo[PeachPlayerIndex].InShieldStun)
+	    {
+		    NewGame.Intervalls += list(CurrentGameInfo.Frames[j].PlayerInfo[0].FrameNumber-90,CurrentGameInfo.Frames[j].PlayerInfo[0].FrameNumber+90);
+	    }
+    }
+    if(NewGame.Intervalls.size > 0)
+    {
+        TotalGameSpecs += NewGame;
+    } 
+}
+WriteReplayInfo(TotalGameSpecs,"./MayShieldPressure.json");
+RecordReplay("./MayShieldPressure.json","MayShieldPressure.mp4");

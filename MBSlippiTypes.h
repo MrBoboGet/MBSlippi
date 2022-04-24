@@ -779,7 +779,7 @@ namespace MBSlippi
 			RandomSeed = MBParsing::ParseBigEndianInteger(Data, 4, ParseOffset, &ParseOffset);
 			if (CurrentVersion < ParseVersion{ 3,10,0 })
 				return ParseOffset;
-			SceneFrameCounter = MBParsing::ParseBigEndianInteger(Data, 1, ParseOffset, &ParseOffset);
+			SceneFrameCounter = MBParsing::ParseBigEndianInteger(Data, 4, ParseOffset, &ParseOffset);
 			return(ParseOffset);
 		}
 		std::string Serialize(ParseVersion const& Version)const override

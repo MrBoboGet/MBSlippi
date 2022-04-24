@@ -10,6 +10,17 @@ for(i = 0; i < MeleeGameData.Frames.size; i += 1)
 	{
 		print(MeleeGameData.Frames[i].PlayerInfo[1].Attack);		
 	}
+    MeleeGameData = LoadGame("./Original.slp");
+    Data = LoadGame("./Original.slp");
+    Data = LoadGame("./Original.slp");
+    Data = LoadGame("./Original.slp");
+
+    MeleeGameData = LoadGame("./Original.slp");
+    MeleeGameData = LoadGame("./Original.slp"); 
+    for(i = 0; i < MeleeGameData.MetaData.Players.size;i += 1)
+    {
+        print(MeleeGameData.MetaData.Players[i].Character);
+    }
 }
 
 GamesToSerialize = list();

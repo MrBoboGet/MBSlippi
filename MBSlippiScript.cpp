@@ -5,6 +5,9 @@
 #include <MBUtility/MBStrings.h>
 
 #include <MrBoboDatabase/MrBoboDatabase.h>
+
+#include <chrono>
+#include <sstream>
 namespace MBSlippi
 {
 	//BEGIN MBS_Slippi Objects
@@ -137,7 +140,7 @@ namespace MBSlippi
 			{
 				PlayerData["Tag"] = MBScript::MBSObjectStore(std::make_unique<MBScript::MBSObject_String>(Element.second.GetAttribute("names").GetAttribute("netplay").GetStringData()));
 			}
-			if (Element.second["names"].HasAttribute("characters"))
+			if (Element.second.HasAttribute("characters"))
 			{
 				PlayerData["Character"] = MBScript::MBSObjectStore(std::make_unique<MBScript::MBSObject_String>(CharacterToString(InternalCharacterID(std::stoi(Element.second.GetAttribute("characters").GetMapData().begin()->first)))));
 			}
@@ -505,6 +508,19 @@ namespace MBSlippi
 		}
 
 		return(ReturnValue);
+	}
+	std::unique_ptr<MBScript::MBSObject> MBS_SlippiModule::Date(MBScript::ArgumentList Arguments)
+	{
+		if (Arguments.Arguments.size() != 1 || Arguments.Arguments[0]->GetType() != MBScript::ObjectType::String)
+		{
+			throw MBScript::MBSRuntimeException("Date requires exactly 1 argument of string type");
+		}
+		std::string DateString = MBScript::CastObject<MBScript::MBSObject_String>(*Arguments.Arguments[0]).Value;
+		std::tm TimeObject{};
+		std::istringstream(DateString) >> std::get_time(&TimeObject, "%Y-%m-%d");
+		TimeObject.tm_isdst = -1;
+		int64_t Result = uint64_t(std::mktime(&TimeObject));		
+		return(std::make_unique<MBScript::MBSObject_Integer>(Result));
 	}
 	std::unique_ptr<MBScript::MBSObject> MBS_SlippiModule::RecordReplay(MBScript::ArgumentList Arguments)
 	{

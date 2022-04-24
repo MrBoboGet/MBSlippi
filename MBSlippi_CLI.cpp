@@ -98,10 +98,15 @@ namespace MBSlippi
 	}
 	void MBSlippiCLIHandler::p_UpdateGameSQLDatabase(std::string const& ReplayDirectory, MBPM::MBPP_FileInfoReader const& FileInfo)
 	{
-		std::vector<SlippiGameInfo> NewGames = {};
 		auto FileIterator = FileInfo.GetDirectoryInfo("/")->begin();
 		auto End = FileInfo.GetDirectoryInfo("/")->end();
+		uint32_t ParsedFiles = 0;
 		uint32_t TotalFiles = 0;
+		if (!std::filesystem::exists(ReplayDirectory + "/SlippiGames.db") || !std::filesystem::directory_entry(ReplayDirectory + "/SlippiGames.db").is_regular_file())
+		{
+			p_CreateDatabase(ReplayDirectory);
+		}
+		MBDB::MrBoboDatabase Database(ReplayDirectory + "/SlippiGames.db", uint64_t(MBDB::DBOpenOptions::ReadWrite));
 		for(;FileIterator != End;FileIterator++)
 		{
 			if (!std::filesystem::exists(ReplayDirectory + FileIterator.GetCurrentDirectory() + "/" + FileIterator->FileName))
@@ -135,15 +140,8 @@ namespace MBSlippi
 				continue;
 			}
 			NewGame.RelativePath =  FileIterator.GetCurrentDirectory() + "/" + FileIterator->FileName;
-			NewGames.push_back(std::move(NewGame));
-		}
-		if (!std::filesystem::exists(ReplayDirectory + "/SlippiGames.db") || !std::filesystem::directory_entry(ReplayDirectory + "/SlippiGames.db").is_regular_file())
-		{
-			p_CreateDatabase(ReplayDirectory);
-		}
-		for (auto const& NewGame : NewGames)
-		{
-			MBDB::MrBoboDatabase Database(ReplayDirectory + "/SlippiGames.db",0);
+			
+			
 			std::string QuerryToInsert = "INSERT INTO GAMES VALUES(?,?,?,?,?,?,?,?,?,?);";
 			MBDB::SQLStatement* Statement = Database.GetSQLStatement(QuerryToInsert);
 			Statement->BindString(NewGame.RelativePath, 1);
@@ -154,15 +152,17 @@ namespace MBSlippi
 			Statement->BindString(NewGame.Player1Character, 6);
 			Statement->BindString(NewGame.Player2Code, 7);
 			Statement->BindString(NewGame.Player2Tag, 8);
-			Statement->BindString(NewGame.Player2Character,9);
+			Statement->BindString(NewGame.Player2Character, 9);
 			Statement->BindInt(NewGame.FrameDuration, 10);
 			MBError Result = true;
-			Database.GetAllRows(Statement,&Result);
+			Database.GetAllRows(Statement, &Result);
 			Database.FreeSQLStatement(Statement);
+
+			ParsedFiles += 1;
 		}
-		if (TotalFiles > NewGames.size())
+		if (TotalFiles > ParsedFiles)
 		{
-			m_Terminal.PrintLine("Totalfiles: " + std::to_string(TotalFiles) + " Parsed Files: " + std::to_string(NewGames.size()));
+			m_Terminal.PrintLine("Totalfiles: " + std::to_string(TotalFiles) + " Parsed Files: " + std::to_string(ParsedFiles));
 		}
 
 	}

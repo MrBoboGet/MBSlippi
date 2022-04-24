@@ -121,6 +121,7 @@ namespace MBSlippi
 		std::unique_ptr<MBScript::MBSObject> GetGameQuery(MBScript::ArgumentList Arguments);
 		
 		std::unique_ptr<MBScript::MBSObject> RecordReplay(MBScript::ArgumentList Arguments);
+		std::unique_ptr<MBScript::MBSObject> Date(MBScript::ArgumentList Arguments);
 
 		//returns the relative path for the dump directory
 		std::string p_UpdateDolphinConfigs(DolphinConfigParser* OriginalDolphinINI,DolphinConfigParser* OriginalDolphinGFX);
@@ -140,6 +141,7 @@ namespace MBSlippi
 			{"WriteReplayInfo",&MBS_SlippiModule::WriteReplayInfo},
 			{"RecordReplay",&MBS_SlippiModule::RecordReplay},
 			{"GetGameQuery",&MBS_SlippiModule::GetGameQuery},
+			{"Date",&MBS_SlippiModule::Date},
 
 		};
 	public:
