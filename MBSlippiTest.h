@@ -10,10 +10,10 @@
 
 namespace MBSlippi
 {
-	inline int RunTests()
+	inline int NewArgvRunTests()
 	{
 		//std::filesystem::current_path(std::filesystem::current_path().parent_path());
-		MBUtility::MBFileInputStream InputStream("./Game_20200630T190553.slp");
+		MBUtility::MBFileInputStream InputStream(std::string("./Game_20200630T190553.slp"));
 		MBParsing::JSONObject ResultObject = MBParsing::ParseUBJSON(&InputStream, nullptr);
 		std::cout << ResultObject["metadata"].ToString() << std::endl;
 		std::string const& EventData = ResultObject["raw"].GetStringData();
@@ -89,7 +89,7 @@ namespace MBSlippi
 		//MBParsing::SerialiseUBJSON(OutStream, TestCopy.GetAttribute("metadata"));
 		MBParsing::SerialiseUBJSON(OutStream, TestCopy);
 
-		MBUtility::MBFileInputStream CopiedInputStream("TestTest.slp");
+		MBUtility::MBFileInputStream CopiedInputStream(std::string("TestTest.slp"));
 		MBParsing::JSONObject CopiedResultObject = MBParsing::ParseUBJSON(&CopiedInputStream, nullptr);
 		std::cout << CopiedResultObject.GetAttribute("metadata").ToString() << std::endl;
 		assert(CopiedResultObject.GetAttribute("raw").GetStringData() == TotalRawData);
@@ -98,7 +98,7 @@ namespace MBSlippi
 
 
 		//Varannan sekund test
-		MBUtility::MBFileInputStream OriginalInputStream("./Game_20200630T190553.slp");
+		MBUtility::MBFileInputStream OriginalInputStream(std::string("./Game_20200630T190553.slp"));
 		MBParsing::JSONObject OriginalJSONData = MBParsing::ParseUBJSON(&OriginalInputStream, nullptr);
 		MBUtility::MBBufferInputStream BufferInput(OriginalJSONData.GetAttribute("raw").GetStringData().data(), OriginalJSONData.GetAttribute("raw").GetStringData().size());
 

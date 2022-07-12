@@ -1,0 +1,42 @@
+I recently got motivated to start analysing some games, and after a long detour
+of creating MBDoc to be able to write the documentation for the analysises, I
+returned to this project. Having forgotten a bit of the implementation and all
+that was done I came back with fresh eyes and realised that there are a couple
+of things that have to be improved.
+
+The first observation is the following: Working with MBScript sucks. While the
+goal of MBScript has never been to be a good programming language, so has one of
+the goals from the beginning been to easily integrate with C++. This is
+something I think is still relativly successful , however, the execution here is
+taking the wrong direction, mainly because the C++ side of the code is
+impossibly to work with.
+
+All of the information is still meant to be available in MBScript, but the
+original assumption that the majority of the coding is done in it is probably
+false.
+
+When returning to analysing replays, I realised that there are a couple of
+metrics/parts that one wants to extract from the games, no matter which player or
+character are in it. As this is something that is to be reused, some sort of
+library facility is needed. Ignoring the fact that MBScript still doesn't have
+any form of library support so is it still better to implement it in C++ for 2
+reasons: It's potentially faster, and it is *much* easier.
+
+Atleast thats how it should be.
+
+The main problem now is that the information is only exposed through aggregate
+MBScript classes, and reading from them is extremly inconvenient. In order to
+effiecently implement common functions so should there for every MBSlippiScript
+object exist an equivalent represented in C++. This does take more memory, but
+should not be enough to cause a problem. Besides, MBScript already has about ~8
+bytes of overhead *per object* already, memory is already wasted.
+
+Another reason to have this intrinsic C++ representation is that it's 1, free
+documentation for the structure of the MBSlippiScript objects, and 2, it
+formalizes the MBMelee abstraction. Dealing with raw Melee ID's provides very
+little information, alot of animations and states still have to be translated
+into a form that provides the semantics Melee players are used to. Providing a
+clear and usable abstraction might make it easier to both serialize games in a
+more compact and easier to parse format, and make the subsequent analysis much
+easier. The current goal is therefore to expand upon the C++ representation of
+the replay files and their info, and translate more of the raw Melee ID info.

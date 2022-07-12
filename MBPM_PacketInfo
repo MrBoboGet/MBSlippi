@@ -1,10 +1,7 @@
 {
 	"PacketName":"MBSlippi",
+    "PacketType":"C++",
 	"Attributes":["Embeddable"],
-	"OutputConfigurations":["StaticDebug","StaticRelease"],
-	"OutputTargetNames": {
-		"StaticRelease": "MBSlippi_SR",
-		"StaticDebug": "MBSlippi_SD"
-	},
+    "ExportedExecutableTargets":["mbslippi"],
     "Dependancies":["MBParsing","MBPacketManager","MBScript","MBUnicode","MrBoboDatabase"]
 }

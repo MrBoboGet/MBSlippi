@@ -7,6 +7,7 @@
 #include "MeleeID.h"
 
 #include <chrono>
+#include <filesystem>
 #include <sstream>
 namespace MBSlippi
 {
@@ -174,7 +175,7 @@ namespace MBSlippi
 			m_Terminal.Print("Cannot update Index: filesystem object doesnt exist or isn't a directory");
 			return;
 		}
-		if (!std::filesystem::exists(m_Config.ReplaysDirectory+"/MBPM_FileInfo"))
+		if (!std::filesystem::exists(m_Config.ReplaysDirectory+"/MBPM_FileInfo") || Input.CommandOptions.find("override") != Input.CommandOptions.end())
 		{
 			MBPM::MBPP_FileInfoReader ReplayFileInfo;
 			MBPM::MBPP_FileInfoReader::CreateFileInfo(m_Config.ReplaysDirectory,&ReplayFileInfo);
@@ -191,16 +192,25 @@ namespace MBSlippi
 		}
 		else
 		{
-			MBPM::MBPP_FileInfoReader UpdatedFiles = MBPM::MBPP_FileInfoReader::GetLocalInfoDifference(m_Config.ReplaysDirectory);
+			MBPM::MBPP_FileInfoReader UpdatedFiles = MBPM::MBPP_FileInfoReader::GetLocalUpdatedFiles(m_Config.ReplaysDirectory);
 			if (UpdatedFiles.GetDirectoryInfo("/") == nullptr)
 			{
 				m_Terminal.SetTextColor(MBCLI::ANSITerminalColor::Red);
 				m_Terminal.Print("Error getting local file info difference");
 				return;
 			}
+			MBPM::MBPP_DirectoryInfoNode const* TopDirectory = UpdatedFiles.GetDirectoryInfo("/");
+			MBPM::MBPP_FileInfoDiff FileDiff = MBPM::MBPP_FileInfoReader::GetLocalInfoDiff(m_Config.ReplaysDirectory);
+			if ((TopDirectory->Files.size() == 0 && TopDirectory->Directories.size() == 0) && (FileDiff.RemovedFiles.size() == 0 && FileDiff.DeletedDirectories.size() == 0))
+			{
+				m_Terminal.Print("Index already up to date");
+				return;
+			}
 			p_UpdateGameSQLDatabase(m_Config.ReplaysDirectory, UpdatedFiles);
 			MBPM::MBPP_FileInfoReader OldInfo = MBPM::MBPP_FileInfoReader(m_Config.ReplaysDirectory + "/MBPM_FileInfo");
 			OldInfo.UpdateInfo(UpdatedFiles);
+			OldInfo.DeleteObjects(FileDiff.RemovedFiles);
+			OldInfo.DeleteObjects(FileDiff.DeletedDirectories);
 			std::ofstream OutFile(m_Config.ReplaysDirectory+"/MBPM_FileInfo", std::ios::out | std::ios::binary);
 			MBUtility::MBFileOutputStream OutStream(&OutFile);
 			OldInfo.WriteData(&OutStream);
@@ -270,8 +280,30 @@ namespace MBSlippi
 		{
 			m_Terminal.SetTextColor(MBCLI::ANSITerminalColor::Red);
 			m_Terminal.Print("Query needs exactly 1 argument: SQL querry to run");
+			m_Terminal.SetTextColor(MBCLI::ANSITerminalColor::White);
 			std::exit(1);
 		}
+        if(!std::filesystem::exists(m_Config.ReplaysDirectory+"/SlippiGames.db") || !std::filesystem::is_regular_file(m_Config.ReplaysDirectory+"/SlippiGames.db"))
+        {
+            m_Terminal.PrintLine("Can't find database, try to run mbslippi index-update");
+            return;
+        }
+		MBDB::MrBoboDatabase Database(m_Config.ReplaysDirectory + "/SlippiGames.db", uint64_t(MBDB::DBOpenOptions::ReadOnly));
+        MBError QueryResult = true;
+        std::vector<MBDB::MBDB_RowData> QuerryRows = Database.GetAllRows(Input.TopCommandArguments[0],&QueryResult);
+        if(!QueryResult)
+        {
+            m_Terminal.PrintLine("Error executing query: " + QueryResult.ErrorMessage);
+            return;
+        }
+        for(MBDB::MBDB_RowData const& Row : QuerryRows)
+        {
+            for(int i = 0; i < Row.GetNumberOfColumns();i++)
+            {
+                m_Terminal.Print(Row.ColumnToString(i)+" ");
+            }   
+            m_Terminal.PrintLine("");
+        }
 	}
 	void MBSlippiCLIHandler::Run(int argc, const char** argv)
 	{

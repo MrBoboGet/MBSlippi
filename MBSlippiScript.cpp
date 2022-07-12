@@ -1,5 +1,6 @@
 #include "MBSlippiScript.h"
 #include "MBMeleeID.h"
+#include "MBScript/MBScript.h"
 #include <filesystem>
 #include <MBUnicode/MBUnicode.h>
 #include <MBUtility/MBStrings.h>
@@ -40,16 +41,12 @@ namespace MBSlippi
 		m_Fields["State"] = MBScript::MBSObjectStore(std::make_unique<MBScript::MBSObject_String>(ActionStateToString(EventData.ActionStateID)));
 		m_Fields["MBState"] = MBScript::MBSObjectStore(std::make_unique<MBScript::MBSObject_String>(MBActionStateToString(StateToMBActionState(EventData))));
 		m_Fields["Attack"] = MBScript::MBSObjectStore(std::make_unique<MBScript::MBSObject_String>(MBAttackIDToString(StateToMBAttackID(EventData))));
-		m_Fields["LastHitBy"] = MBScript::MBSObjectStore(std::make_unique<MBScript::MBSObject_String>(MBAttackIDToString(StateToMBAttackID(EventData))));
+		//m_Fields["LastHitBy"] = MBScript::MBSObjectStore(std::make_unique<MBScript::MBSObject_String>(MBAttackIDToString(StateToMBAttackID(EventData))));
 		m_Fields["FrameNumber"] = MBScript::MBSObjectStore(std::make_unique<MBScript::MBSObject_Integer>(EventData.FrameNumber));
 		m_Fields["Shielding"] = MBScript::MBSObjectStore(std::make_unique<MBScript::MBSObject_Bool>(EventData.StateBitFlags & uint64_t(StateBitFlags::ShieldActive)));
 		m_Fields["InHitlag"] = MBScript::MBSObjectStore(std::make_unique<MBScript::MBSObject_Bool>(EventData.StateBitFlags & uint64_t(StateBitFlags::InHitlag)));
 		m_Fields["InHitstun"] = MBScript::MBSObjectStore(std::make_unique<MBScript::MBSObject_Bool>(EventData.StateBitFlags & uint64_t(StateBitFlags::InHitstun)));
 		m_Fields["InShieldStun"] = MBScript::MBSObjectStore(std::make_unique<MBScript::MBSObject_Bool>(EventData.ActionStateID == ActionState::GuardSetOff));
-		if (EventData.ActionStateID == ActionState::GuardSetOff)
-		{
-			int hej = 2;
-		}
 	}
 	std::unique_ptr<MBScript::MBSObject> MBS_SlippiPlayerFrameInfo::Copy() const
 	{
@@ -461,6 +458,22 @@ namespace MBSlippi
 		OutStream << JSONToWrite.ToString();
 		return(ReturnValue);
 	}
+    std::unique_ptr<MBScript::MBSObject> MBS_SlippiModule::BiggestPunishes(MBScript::ArgumentList Arguments)
+    {
+        std::unique_ptr<MBScript::MBSObject> ReturnValue = std::make_unique<MBScript::MBSObject>();
+        if(Arguments.Arguments.size() < 3)
+        {
+            throw MBScript::MBSRuntimeException("BiggestPunishes requires atleast 3 arguments");        
+        }
+        MBScript::MBSObject_List const& GameInfos = MBScript::CastObject<MBScript::MBSObject_List>(*Arguments.Arguments[0]);
+        for(size_t i = 0; i < GameInfos.size();i++)
+        {
+            MBS_SlippiGame const& CurrentGame = MBScript::CastObject<MBS_SlippiGame>(GameInfos[i]);
+
+        }
+
+        return(ReturnValue);
+    }
 	std::unique_ptr<MBScript::MBSObject> MBS_SlippiModule::GetGameQuery(MBScript::ArgumentList Arguments)
 	{
 		if (Arguments.Arguments.size() != 1)

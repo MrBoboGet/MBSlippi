@@ -119,6 +119,8 @@ namespace MBSlippi
 		std::unique_ptr<MBScript::MBSObject> ReplayInfo(MBScript::ArgumentList Arguments);
 		std::unique_ptr<MBScript::MBSObject> WriteReplayInfo(MBScript::ArgumentList Arguments);
 		std::unique_ptr<MBScript::MBSObject> GetGameQuery(MBScript::ArgumentList Arguments);
+		std::unique_ptr<MBScript::MBSObject> BiggestPunishes(MBScript::ArgumentList Arguments);
+		
 		
 		std::unique_ptr<MBScript::MBSObject> RecordReplay(MBScript::ArgumentList Arguments);
 		std::unique_ptr<MBScript::MBSObject> Date(MBScript::ArgumentList Arguments);
@@ -136,6 +138,7 @@ namespace MBSlippi
 			{"ActionableFrames",&MBS_SlippiModule::ActionableFrames},
 			{"InShieldStun",&MBS_SlippiModule::InShieldStun},
 
+            {"BiggestPunishes",&MBS_SlippiModule::BiggestPunishes},
 			{"LoadGame",&MBS_SlippiModule::LoadGame},
 			{"ReplayInfo",&MBS_SlippiModule::ReplayInfo},
 			{"WriteReplayInfo",&MBS_SlippiModule::WriteReplayInfo},

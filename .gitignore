@@ -20,3 +20,8 @@
 /MBSlippiResult.mp4
 /_*
 /May*
+/KAES*
+\.*
+compile_commands.json
+/MBPM_BuildFiles/
+/MBSourceInfo.json
