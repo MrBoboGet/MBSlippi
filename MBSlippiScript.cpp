@@ -459,6 +459,20 @@ namespace MBSlippi
 		int PunishBeginFrame = -123;
 		for (FrameInfo const& Frame : GameToInspect.Frames)
 		{
+			if (Frame.PlayerInfo[PunisheeIndex].Percent == 0 && PunisheeLastPercent > 0 || Frame.PlayerInfo[PunisherIndex].Percent == 0 && PunisherLastPercent > 0)
+			{
+				PunisherLastPercent = Frame.PlayerInfo[PunisherIndex].Percent;
+				PunisheeLastPercent = Frame.PlayerInfo[PunisheeIndex].Percent;
+				if (TotalPunishPercent >= PercentThreshold)
+				{
+					i_PunishInfo NewInfo;
+					NewInfo.TotalRecievedPercent = TotalPunishPercent;
+					NewInfo.PunishIntervall.FirstFrame = PunishBeginFrame;
+					NewInfo.PunishIntervall.LastFrame = Frame.FrameNumber;
+					ReturnValue.push_back(NewInfo);
+				}
+				TotalPunishPercent = 0;
+			}
 			if (PunisherLastPercent < Frame.PlayerInfo[PunisherIndex].Percent)
 			{
 				PunisherLastPercent = Frame.PlayerInfo[PunisherIndex].Percent;
