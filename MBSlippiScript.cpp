@@ -33,20 +33,23 @@ namespace MBSlippi
 		return(m_Fields[FieldName].GetReferenceObject());
 	}
 	//
-	MBS_SlippiPlayerFrameInfo::MBS_SlippiPlayerFrameInfo(Event PostFrameUpdate, MBS_SlippiModule& AssociatedModule)
-	{
+	MBS_SlippiPlayerFrameInfo::MBS_SlippiPlayerFrameInfo(PlayerFrameInfo const& InfoToConvert, MBS_SlippiModule& AssociatedModule)
+    {
 		m_Type = AssociatedModule.GetTypeConversion(MBSSlippiTypes::PlayerFrameInfo);
-		Event_PostFrameUpdate const& EventData = PostFrameUpdate.GetEventData<Event_PostFrameUpdate>();
-		//m_Fields["State"] = ;
-		m_Fields["State"] = MBScript::MBSObjectStore(std::make_unique<MBScript::MBSObject_String>(ActionStateToString(EventData.ActionStateID)));
-		m_Fields["MBState"] = MBScript::MBSObjectStore(std::make_unique<MBScript::MBSObject_String>(MBActionStateToString(StateToMBActionState(EventData))));
-		m_Fields["Attack"] = MBScript::MBSObjectStore(std::make_unique<MBScript::MBSObject_String>(MBAttackIDToString(StateToMBAttackID(EventData))));
-		//m_Fields["LastHitBy"] = MBScript::MBSObjectStore(std::make_unique<MBScript::MBSObject_String>(MBAttackIDToString(StateToMBAttackID(EventData))));
-		m_Fields["FrameNumber"] = MBScript::MBSObjectStore(std::make_unique<MBScript::MBSObject_Integer>(EventData.FrameNumber));
-		m_Fields["Shielding"] = MBScript::MBSObjectStore(std::make_unique<MBScript::MBSObject_Bool>(EventData.StateBitFlags & uint64_t(StateBitFlags::ShieldActive)));
-		m_Fields["InHitlag"] = MBScript::MBSObjectStore(std::make_unique<MBScript::MBSObject_Bool>(EventData.StateBitFlags & uint64_t(StateBitFlags::InHitlag)));
-		m_Fields["InHitstun"] = MBScript::MBSObjectStore(std::make_unique<MBScript::MBSObject_Bool>(EventData.StateBitFlags & uint64_t(StateBitFlags::InHitstun)));
-		m_Fields["InShieldStun"] = MBScript::MBSObjectStore(std::make_unique<MBScript::MBSObject_Bool>(EventData.ActionStateID == ActionState::GuardSetOff));
+		std::string DEBUG_StateString = MBActionStateToString(InfoToConvert.ActionState);
+		if (DEBUG_StateString == "ShieldStun")
+		{
+			int hej = 2;
+		}
+		if (DEBUG_StateString != "None" && DEBUG_StateString != "Tumbling")
+		{
+			int hej = 2;
+		}
+		m_Fields["State"] = MBScript::MBSObjectStore(std::make_unique<MBScript::MBSObject_String>(MBActionStateToString(InfoToConvert.ActionState)));
+		m_Fields["Attack"] = MBScript::MBSObjectStore(std::make_unique<MBScript::MBSObject_String>(MBAttackIDToString(InfoToConvert.ActiveAttack)));
+        m_Fields["InHitlag"] =MBScript::MBSObjectStore(std::make_unique<MBScript::MBSObject_Bool>(InfoToConvert.StateFlags.InHitlag)); 
+        m_Fields["FastFalling"] =MBScript::MBSObjectStore(std::make_unique<MBScript::MBSObject_Bool>(InfoToConvert.StateFlags.FastFalling)); 
+        m_Fields["Airborne"] =MBScript::MBSObjectStore(std::make_unique<MBScript::MBSObject_Bool>(InfoToConvert.StateFlags.Airborne)); 
 	}
 	std::unique_ptr<MBScript::MBSObject> MBS_SlippiPlayerFrameInfo::Copy() const
 	{
@@ -68,24 +71,15 @@ namespace MBSlippi
 	{
 		return(Left.GetEventData<Event_PostFrameUpdate>().PlayerIndex < Right.GetEventData<Event_PostFrameUpdate>().PlayerIndex);
 	}
-	MBS_SlippiFrame::MBS_SlippiFrame(std::vector<Event> FrameEvents, MBS_SlippiModule& AssociatedModule)
+	MBS_SlippiFrame:: MBS_SlippiFrame(FrameInfo const& FrameToConvert,MBS_SlippiModule& AssociatedModule)
 	{
-		std::vector<Event> PostFrameUpdates;
-		for (size_t i = 0; i < FrameEvents.size(); i++)
-		{
-			if (FrameEvents[i].GetType() == EventType::PostFrameUpdate)
-			{
-				PostFrameUpdates.push_back(std::move(FrameEvents[i]));
-			}
-		}
-		std::sort(PostFrameUpdates.begin(), PostFrameUpdates.end(), h_PlayerCompare);
 		std::unique_ptr<MBSObject> PlayerFrameDataList = std::make_unique<MBScript::MBSObject_List>();
-		for (size_t i = 0; i < PostFrameUpdates.size(); i++)
+		for (PlayerFrameInfo const& CurrentFrameInfo : FrameToConvert.PlayerInfo)
 		{
-			*PlayerFrameDataList += std::make_unique<MBS_SlippiPlayerFrameInfo>(std::move(PostFrameUpdates[i]),AssociatedModule);
-			
+			*PlayerFrameDataList += std::make_unique<MBS_SlippiPlayerFrameInfo>(CurrentFrameInfo,AssociatedModule);
 		}
 		m_Fields["PlayerInfo"] = MBScript::MBSObjectStore(std::move(PlayerFrameDataList));
+        m_Fields["FrameNumber"] = MBScript::MBSObjectStore(std::make_unique<MBScript::MBSObject_Integer>(FrameToConvert.FrameNumber));
 	}
 	std::unique_ptr<MBScript::MBSObject> MBS_SlippiFrame::Copy() const
 	{
@@ -103,72 +97,38 @@ namespace MBSlippi
 		return(m_Fields[FieldName].GetReferenceObject());
 	}
 	//
-	MBS_SlippiGame::MBS_SlippiGame(std::string const& GamePath, MBS_SlippiModule* AssociatedModule)
-	{
-		std::ifstream FileStream = std::ifstream(GamePath, std::ios::in | std::ios::binary);
-		MBUtility::MBFileInputStream InputStream= MBUtility::MBFileInputStream(&FileStream);
+    MBS_SlippiGame::MBS_SlippiGame(MeleeGame GameToConvert, MBS_SlippiModule* AssociatedModule)
+    {
 		MBError Result = true;
-		MBParsing::JSONObject TotalFileData = MBParsing::ParseUBJSON(&InputStream,&Result);
-		if (!Result)
-		{
-			return;
-		}
-		std::string const& raw = TotalFileData["raw"].GetStringData();
-		std::unique_ptr<MBUtility::MBBufferInputStream> BufferStream = std::unique_ptr<MBUtility::MBBufferInputStream>(new MBUtility::MBBufferInputStream(raw.data(), raw.size()));
-		SlippiEventParser EventParser(std::move(BufferStream));
-		EventParser.GetNextEvent();
-		Event GameStart = EventParser.GetNextEvent();
-		if (GameStart.GetType() != EventType::GameStart)
-		{
-			return;
-		}
+		
 		std::unordered_map < std::string, MBScript::MBSObjectStore> MetaData = {};
-		std::map<std::string, MBParsing::JSONObject> const& PlayerArray = TotalFileData["metadata"]["players"].GetMapData();
 		std::unique_ptr<MBScript::MBSObject> PlayerList = std::make_unique<MBScript::MBSObject_List>();
-		for (auto const& Element : PlayerArray)
+		for (PlayerInfo const& Player : GameToConvert.Players)
 		{
 			//kanske borde göra en aggregate klass...
 			std::unordered_map<std::string, MBScript::MBSObjectStore> PlayerData;
-			if (Element.second["names"].HasAttribute("code"))
-			{
-				PlayerData["Code"] = MBScript::MBSObjectStore(std::make_unique<MBScript::MBSObject_String>(Element.second.GetAttribute("names").GetAttribute("code").GetStringData()));
-			}
-			if (Element.second["names"].HasAttribute("tag"))
-			{
-				PlayerData["Tag"] = MBScript::MBSObjectStore(std::make_unique<MBScript::MBSObject_String>(Element.second.GetAttribute("names").GetAttribute("netplay").GetStringData()));
-			}
-			if (Element.second.HasAttribute("characters"))
-			{
-				PlayerData["Character"] = MBScript::MBSObjectStore(std::make_unique<MBScript::MBSObject_String>(CharacterToString(InternalCharacterID(std::stoi(Element.second.GetAttribute("characters").GetMapData().begin()->first)))));
-			}
+		    PlayerData["Code"] = MBScript::MBSObjectStore(std::make_unique<MBScript::MBSObject_String>(Player.Code));
+		    PlayerData["Tag"] = MBScript::MBSObjectStore(std::make_unique<MBScript::MBSObject_String>(Player.Tag));
+		    PlayerData["Character"] = MBScript::MBSObjectStore(std::make_unique<MBScript::MBSObject_String>(MBCharacterToString(Player.Character)));
 			*PlayerList += std::make_unique<MBS_SlippiPlayerMetadata>(AssociatedModule->GetTypeConversion(MBSSlippiTypes::PlayerMetadata),std::move(PlayerData));
 		}
-		MetaData["Players"] = std::move(PlayerList);
-		m_Fields["MetaData"] = MBScript::MBSObjectStore(std::make_unique<MBS_SlippiPlayerMetadata>(AssociatedModule->GetTypeConversion(MBSSlippiTypes::PlayerMetadata), std::move(MetaData)));
-		m_Fields["Path"] = MBScript::MBSObjectStore(std::make_unique<MBScript::MBSObject_String>(MBUnicode::PathToUTF8(std::filesystem::absolute(GamePath))));
+        m_Fields["Players"] = std::move(PlayerList);
+        
+		m_Fields["Path"] = MBScript::MBSObjectStore(std::make_unique<MBScript::MBSObject_String>(GameToConvert.Metadata.GamePath));
 
 		//frames grejer
 		std::unique_ptr<MBScript::MBSObject> FrameList = std::make_unique<MBScript::MBSObject_List>();
-		FrameParser LocalFrameParser;
-		LocalFrameParser.SetVersion(EventParser.GetVersion());
-		while (true)
-		{
-			Event NewEvent = EventParser.GetNextEvent();
-			if (NewEvent.GetType() == EventType::Null)
-			{
-				break;
-			}
-			LocalFrameParser.InsertEvent(std::move(NewEvent));
-			if (LocalFrameParser.AvailableFrames() > 0)
-			{
-				*FrameList += std::make_unique<MBS_SlippiFrame>(LocalFrameParser.ExtractFrame(),*AssociatedModule);
-			}
-		}
-		if (LocalFrameParser.AvailableFrames() > 0)
-		{
-			*FrameList += std::make_unique<MBS_SlippiFrame>(LocalFrameParser.ExtractFrame(),*AssociatedModule);
-		}
+        for(FrameInfo const& Frame : GameToConvert.Frames)
+        {
+            *FrameList += std::make_unique<MBS_SlippiFrame>(Frame,*AssociatedModule);
+        }
 		m_Fields["Frames"] = MBScript::MBSObjectStore(std::move(FrameList));
+
+		m_GameInfo = std::move(GameToConvert);
+    }
+	MeleeGame const& MBS_SlippiGame::GetGameInfo() const
+	{
+		return(m_GameInfo);
 	}
 	std::unique_ptr<MBScript::MBSObject> MBS_SlippiGame::Copy() const
 	{
@@ -204,6 +164,21 @@ namespace MBSlippi
 			m_Fields["Intervalls"] = std::move(Arguments.Arguments[1]);
 		}
 		
+	}
+	MBS_SlippiReplayInfo::MBS_SlippiReplayInfo(std::string Path, std::vector<std::pair<int, int>> Intervalls)
+	{
+		m_Fields["Path"] = MBScript::MBSObjectStore(std::make_unique<MBScript::MBSObject_String>(std::move(Path)));
+		std::unique_ptr<MBScript::MBSObject> IntervallList= std::make_unique<MBScript::MBSObject_List>();
+		MBScript::MBSObject_List& IntervallListData = MBScript::CastObject<MBScript::MBSObject_List>(*IntervallList);
+		for (auto const& IntervallToConvert : Intervalls)
+		{
+			std::unique_ptr<MBScript::MBSObject> Intervall = std::make_unique<MBScript::MBSObject_List>();
+			MBScript::MBSObject_List& IntervallData = MBScript::CastObject<MBScript::MBSObject_List>(*Intervall);
+			IntervallData += std::make_unique<MBScript::MBSObject_Integer>(IntervallToConvert.first);
+			IntervallData += std::make_unique<MBScript::MBSObject_Integer>(IntervallToConvert.second);
+			IntervallListData += std::move(Intervall);
+		}
+		m_Fields["Intervalls"] = MBScript::MBSObjectStore(std::move(IntervallList));
 	}
 	std::unique_ptr<MBScript::MBSObject> MBS_SlippiReplayInfo::Copy() const 
 	{
@@ -372,7 +347,17 @@ namespace MBSlippi
 				throw MBScript::MBSRuntimeException("Game path doesnt exist");
 			}
 		}
-		std::unique_ptr<MBScript::MBSObject> ReturnValue = std::make_unique<MBS_SlippiGame>(GamePath,this);
+		std::ifstream FileToRead = std::ifstream(GamePath, std::ios::in | std::ios::binary);
+		MBUtility::MBFileInputStream InputStream(&FileToRead);
+		MeleeGame Result;
+		MBError ParseResult = MeleeGame::ParseSlippiGame(InputStream,Result);
+		if (!ParseResult)
+		{
+			throw MBScript::MBSRuntimeException("Error parsing SlippiReplay: " + ParseResult.ErrorMessage);
+		}
+		//Result.Metadata.GamePath = MBUnicode::PathToUTF8(std::filesystem::absolute(GamePath));
+		Result.Metadata.GamePath = GamePath;
+		std::unique_ptr<MBScript::MBSObject> ReturnValue = std::make_unique<MBS_SlippiGame>(Result,this);
 		return(ReturnValue);
 	}
 	std::unique_ptr<MBScript::MBSObject> MBS_SlippiModule::ReplayInfo(MBScript::ArgumentList Arguments)
@@ -458,20 +443,133 @@ namespace MBSlippi
 		OutStream << JSONToWrite.ToString();
 		return(ReturnValue);
 	}
+	struct i_PunishInfo
+	{
+		float TotalRecievedPercent = 0;
+		ReplayIntervall PunishIntervall;
+	};
+	std::vector<i_PunishInfo> h_ExtractPunishes(MeleeGame const& GameToInspect, int PunisherIndex, int PunisheeIndex, float PercentThreshold)
+	{
+		std::vector<i_PunishInfo> ReturnValue;
+
+		float PunisheeLastPercent = 0;
+		float PunisherLastPercent = 0;
+		float TotalPunishPercent = 0;
+		
+		int PunishBeginFrame = -123;
+		for (FrameInfo const& Frame : GameToInspect.Frames)
+		{
+			if (PunisherLastPercent < Frame.PlayerInfo[PunisherIndex].Percent)
+			{
+				PunisherLastPercent = Frame.PlayerInfo[PunisherIndex].Percent;
+				if (TotalPunishPercent >= PercentThreshold)
+				{
+					i_PunishInfo NewInfo;
+					NewInfo.TotalRecievedPercent = TotalPunishPercent;
+					NewInfo.PunishIntervall.FirstFrame = PunishBeginFrame;
+					NewInfo.PunishIntervall.LastFrame = Frame.FrameNumber;
+					ReturnValue.push_back(NewInfo);
+				}
+				TotalPunishPercent = 0;
+			}
+			if (PunisheeLastPercent < Frame.PlayerInfo[PunisheeIndex].Percent)
+			{
+				if (TotalPunishPercent == 0)
+				{
+					PunishBeginFrame = Frame.FrameNumber;
+				}
+				TotalPunishPercent += Frame.PlayerInfo[PunisheeIndex].Percent - PunisheeLastPercent;
+				PunisheeLastPercent = Frame.PlayerInfo[PunisheeIndex].Percent;
+			}
+		}
+		//Mutally exclusive with GameToInspect.Frames.size() == 0
+		//if (TotalPunishPercent >= PercentThreshold)
+		//{
+		//	i_PunishInfo NewInfo;
+		//	NewInfo.TotalRecievedPercent = TotalPunishPercent;
+		//	NewInfo.PunishIntervall.FirstFrame = PunishBeginFrame;
+		//	NewInfo.PunishIntervall.LastFrame = GameToInspect.Frames.back().FrameNumber;
+		//	ReturnValue.push_back(NewInfo);
+		//}
+		return(ReturnValue);
+	}
+	bool h_PunishCompare(i_PunishInfo const& Left, i_PunishInfo const& Right)
+	{
+		//reverse, largets punish first
+		return(Left.TotalRecievedPercent >= Right.TotalRecievedPercent);
+	}
+	struct i_GamePunishes
+	{
+		std::string GamePath;
+		std::vector<i_PunishInfo> Punishes;
+	};
+
+	std::vector<std::pair<std::string,std::vector<std::pair<int,int>>>> h_ExtractBiggestPunishes(std::vector<i_GamePunishes> const& Punishes,int PunishCount)
+	{
+		std::vector<std::pair<std::string, std::vector<std::pair<int, int>>>> ReturnValue;
+		std::vector<std::vector<i_PunishInfo>::const_iterator> Begins;
+		std::vector<std::vector<i_PunishInfo>::const_iterator> Ends;
+
+		for (auto const& Punish : Punishes)
+		{
+			Begins.push_back(Punish.Punishes.begin());
+			Ends.push_back(Punish.Punishes.end());
+		}
+
+		std::unordered_map<std::string, std::vector<std::pair<int, int>>> PunishesToReturn;
+
+		int RetrievedPunishes = 0;
+		while (RetrievedPunishes < PunishCount)
+		{
+			float BiggestPunishPercent = 0;
+			int NextIntervallIndex = -1;
+			for (size_t i = 0; i < Begins.size(); i++)
+			{
+				if (Begins[i] != Ends[i] && Begins[i]->TotalRecievedPercent >= BiggestPunishPercent)
+				{
+					NextIntervallIndex = i;
+					BiggestPunishPercent = Begins[i]->TotalRecievedPercent;
+				}
+			}
+			if (NextIntervallIndex == -1)
+			{
+				break;
+			}
+			PunishesToReturn[Punishes[NextIntervallIndex].GamePath].push_back({ Begins[NextIntervallIndex]->PunishIntervall.FirstFrame,Begins[NextIntervallIndex]->PunishIntervall.LastFrame });
+			Begins[NextIntervallIndex]++;
+			RetrievedPunishes++;
+		}
+		for (auto& PunishInfo : PunishesToReturn)
+		{
+			ReturnValue.push_back({ PunishInfo.first, std::move(PunishInfo.second) });
+		}
+		return(ReturnValue);
+	}
     std::unique_ptr<MBScript::MBSObject> MBS_SlippiModule::BiggestPunishes(MBScript::ArgumentList Arguments)
     {
-        std::unique_ptr<MBScript::MBSObject> ReturnValue = std::make_unique<MBScript::MBSObject>();
+        std::unique_ptr<MBScript::MBSObject> ReturnValue = std::make_unique<MBScript::MBSObject_List>();
         if(Arguments.Arguments.size() < 3)
         {
             throw MBScript::MBSRuntimeException("BiggestPunishes requires atleast 3 arguments");        
         }
         MBScript::MBSObject_List const& GameInfos = MBScript::CastObject<MBScript::MBSObject_List>(*Arguments.Arguments[0]);
+		std::vector<i_GamePunishes> GamePunishes;
         for(size_t i = 0; i < GameInfos.size();i++)
         {
             MBS_SlippiGame const& CurrentGame = MBScript::CastObject<MBS_SlippiGame>(GameInfos[i]);
-
+			MeleeGame const& RawGameInfo = CurrentGame.GetGameInfo();
+			i_GamePunishes PunishInfo;
+			PunishInfo.GamePath = RawGameInfo.Metadata.GamePath;
+			PunishInfo.Punishes = h_ExtractPunishes(RawGameInfo, 0, 1, 40);
+			std::sort(PunishInfo.Punishes.begin(), PunishInfo.Punishes.end(), h_PunishCompare);
+			GamePunishes.push_back(std::move(PunishInfo));
         }
-
+		std::vector<std::pair<std::string, std::vector<std::pair<int, int>>>> BiggestPunishes = h_ExtractBiggestPunishes(GamePunishes, 10);
+		MBScript::MBSObject_List& ListToReturn = MBScript::CastObject<MBScript::MBSObject_List>(*ReturnValue);
+		for(std::pair<std::string, std::vector<std::pair<int, int>>> const& Punish : BiggestPunishes)
+		{
+			ListToReturn += std::unique_ptr<MBS_SlippiReplayInfo>(new MBS_SlippiReplayInfo(Punish.first,Punish.second));
+		}
         return(ReturnValue);
     }
 	std::unique_ptr<MBScript::MBSObject> MBS_SlippiModule::GetGameQuery(MBScript::ArgumentList Arguments)

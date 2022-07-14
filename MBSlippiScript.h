@@ -3,6 +3,8 @@
 #include "MBSlippiParsing.h"
 #include <MBScript/MBScript.h>
 #include "MBSlippiConfig.h"
+
+#include <MBMeleeID.h>
 namespace MBSlippi
 {
 	class MBS_SlippiModule;
@@ -29,7 +31,7 @@ namespace MBSlippi
 
 	public:
 		MBS_SlippiPlayerFrameInfo() {};
-		MBS_SlippiPlayerFrameInfo(Event PostFrameUpdate, MBS_SlippiModule& AssociatedModule);
+		MBS_SlippiPlayerFrameInfo(PlayerFrameInfo const& InfoToConvert, MBS_SlippiModule& AssociatedModule);
 		virtual MBScript::ObjectType GetType() const override
 		{
 			return(m_Type);
@@ -44,7 +46,7 @@ namespace MBSlippi
 		std::unordered_map<std::string, MBScript::MBSObjectStore> m_Fields = {};
 	public:
 		MBS_SlippiFrame() {};
-		MBS_SlippiFrame(std::vector<Event> FrameEvents,MBS_SlippiModule& AssociatedModule);
+		MBS_SlippiFrame(FrameInfo const& FrameToConvert,MBS_SlippiModule& AssociatedModule);
 		virtual MBScript::ObjectType GetType() const override
 		{
 			return(m_Type);
@@ -55,11 +57,14 @@ namespace MBSlippi
 	class MBS_SlippiGame : public MBScript::MBSObject
 	{
 	private:
+        MeleeGame m_GameInfo;
 		MBScript::ObjectType m_Type = MBScript::ObjectType::Null;
 		std::unordered_map<std::string, MBScript::MBSObjectStore> m_Fields = {};
 	public:
 		MBS_SlippiGame() {};
-		MBS_SlippiGame(std::string const& GamePath, MBS_SlippiModule* AssociatedModule);
+
+        MeleeGame const& GetGameInfo() const;
+		MBS_SlippiGame(MeleeGame GameToConvert, MBS_SlippiModule* AssociatedModule);
 		virtual MBScript::ObjectType GetType() const override
 		{
 			return(m_Type);
@@ -79,6 +84,7 @@ namespace MBSlippi
 			return(m_Type);
 		}
 		MBS_SlippiReplayInfo() {};
+		MBS_SlippiReplayInfo(std::string Path, std::vector<std::pair<int,int>> Intervalls);
 		MBS_SlippiReplayInfo(MBS_SlippiModule& AssociatedModule, MBScript::ArgumentList Arguments);
 		virtual std::unique_ptr<MBScript::MBSObject> Copy() const override;
 		virtual std::unique_ptr<MBScript::MBSObject> DotOperator(std::string const& FieldName) override;

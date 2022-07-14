@@ -20,6 +20,7 @@ namespace MBSlippi
 			{
 				m_Terminal.SetTextColor(MBCLI::ANSITerminalColor::Red);
 				m_Terminal.Print("Couldnt find or load data from MBSlippiConfig.json");
+				m_Terminal.SetTextColor(MBCLI::ANSITerminalColor::White);
 				std::exit(1);
 			}
 			MBError ParseResult = true;
@@ -28,6 +29,7 @@ namespace MBSlippi
 			{
 				m_Terminal.SetTextColor(MBCLI::ANSITerminalColor::Red);
 				m_Terminal.Print("Error parsing MBSlippiConfig file: " + ParseResult.ErrorMessage);
+				m_Terminal.SetTextColor(MBCLI::ANSITerminalColor::White);
 				std::exit(1);
 			}
 			m_Config = MBSlippiConfig(ConfigJSON);
@@ -36,6 +38,7 @@ namespace MBSlippi
 		{
 			m_Terminal.SetTextColor(MBCLI::ANSITerminalColor::Red);
 			m_Terminal.Print("Error loading config: " +std::string(e.what()));
+			m_Terminal.SetTextColor(MBCLI::ANSITerminalColor::White);
 			std::exit(1);
 		}
 	}
@@ -232,6 +235,7 @@ namespace MBSlippi
 		{
 			m_Terminal.SetTextColor(MBCLI::ANSITerminalColor::Red);
 			m_Terminal.Print("Error parsing MBScript file: " + Result.ErrorMessage);
+			m_Terminal.SetTextColor(MBCLI::ANSITerminalColor::White);
 			std::exit(1);
 		}
 		MBScript::ExecutionEnvironment ExecutionEnvironment;
@@ -243,6 +247,7 @@ namespace MBSlippi
 			{
 				m_Terminal.SetTextColor(MBCLI::ANSITerminalColor::Red);
 				m_Terminal.Print("Error executing MBScript file" + ExecutionResult.ErrorMessage);
+				m_Terminal.SetTextColor(MBCLI::ANSITerminalColor::White);
 				std::exit(1);
 			}
 		}
@@ -250,18 +255,21 @@ namespace MBSlippi
 		{
 			m_Terminal.SetTextColor(MBCLI::ANSITerminalColor::Red);
 			m_Terminal.Print("Unhandled MBScript runtime error: " + std::string(e.what()));
+			m_Terminal.SetTextColor(MBCLI::ANSITerminalColor::White);
 			std::exit(1);
 		}
 		catch (std::runtime_error const& e)
 		{
 			m_Terminal.SetTextColor(MBCLI::ANSITerminalColor::Red);
 			m_Terminal.Print("Error with MBScript implementation: " + std::string(e.what()));
+			m_Terminal.SetTextColor(MBCLI::ANSITerminalColor::White);
 			std::exit(1);
 		}
 		catch (std::exception const& e)
 		{
 			m_Terminal.SetTextColor(MBCLI::ANSITerminalColor::Red);
 			m_Terminal.Print("Unkown error occured: " + std::string(e.what()));
+			m_Terminal.SetTextColor(MBCLI::ANSITerminalColor::White);
 			std::exit(1);
 		}
 	}

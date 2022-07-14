@@ -2,6 +2,8 @@
 #include <cstdint>
 #include <stdint.h>
 #include <string>
+
+#include <stdexcept>
 namespace MBSlippi
 {
 	enum class ActionState : uint16_t
@@ -1162,7 +1164,7 @@ namespace MBSlippi
 		}
 		return(__InternalCharacterStringMap[uint64_t(IdToConvert)]);
 	}
-	static const const char* __ExternalCharacterStringMap[34] =
+	static const char* __ExternalCharacterStringMap[34] =
 	{
 		"CaptainFalcon"     ,
         "DonkeyKong"        ,
