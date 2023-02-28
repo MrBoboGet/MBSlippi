@@ -1,9 +1,9 @@
 #include "MBSlippiScript.h"
 #include "MBMeleeID.h"
-#include "MBScript/MBScript.h"
 #include <filesystem>
 #include <MBUnicode/MBUnicode.h>
 #include <MBUtility/MBStrings.h>
+#include <MBScript/MBScript.h>
 
 #include <MrBoboDatabase/MrBoboDatabase.h>
 

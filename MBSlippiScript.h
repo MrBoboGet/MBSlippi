@@ -1,10 +1,10 @@
 #pragma once
 #include "MBSlippiTypes.h"
 #include "MBSlippiParsing.h"
-#include <MBScript/MBScript.h>
 #include "MBSlippiConfig.h"
+#include "MBMeleeID.h"
 
-#include <MBMeleeID.h>
+#include <MBScript/MBScript.h>
 namespace MBSlippi
 {
 	class MBS_SlippiModule;

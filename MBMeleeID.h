@@ -1,7 +1,7 @@
 #pragma once
 #include "MBSlippiTypes.h"
-#include "MBUtility/MBErrorHandling.h"
-#include "MBUtility/MBInterfaces.h"
+#include <MBUtility/MBErrorHandling.h>
+#include <MBUtility/MBInterfaces.h>
 #include "MeleeID.h"
 namespace MBSlippi
 {

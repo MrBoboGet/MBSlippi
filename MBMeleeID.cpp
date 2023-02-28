@@ -4,7 +4,7 @@
 
 #include <assert.h>
 
-#include <MBSlippiParsing.h>
+#include "MBSlippiParsing.h"
 namespace MBSlippi
 {
 	inline MBAttackID StateToMBAttackID_Fox(Event_PostFrameUpdate const& AssociatedState)

@@ -392,7 +392,7 @@ namespace MBSlippi
 		ThrownKirbyDrinkSShot	= 381,    //
 		ThrownKirbySpitSShot	= 382,    //
 	};
-    static const const char* __ActionStateStringMap[] = 
+    static const char* __ActionStateStringMap[] = 
     {        
         "DeadDown",			    
         "DeadLeft",				
@@ -902,7 +902,7 @@ namespace MBSlippi
 		SuperScope_Charged					= 92, 
 		Hammer								= 93, 
 	};
-	static const const char* __AttackIDMap[] =
+	static const char* __AttackIDMap[] =
 	{
 		"None",
 		"NonStaling",
@@ -1120,7 +1120,7 @@ namespace MBSlippi
 		return("");
 	}
 
-	static const const char* __InternalCharacterStringMap[33] =
+	static const char* __InternalCharacterStringMap[33] =
 	{
 		"Mario",
 		"Fox",
