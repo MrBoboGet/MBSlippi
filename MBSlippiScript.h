@@ -143,8 +143,8 @@ namespace MBSlippi
 		{
 			{"ActionableFrames",&MBS_SlippiModule::ActionableFrames},
 			{"InShieldStun",&MBS_SlippiModule::InShieldStun},
-
             {"BiggestPunishes",&MBS_SlippiModule::BiggestPunishes},
+
 			{"LoadGame",&MBS_SlippiModule::LoadGame},
 			{"ReplayInfo",&MBS_SlippiModule::ReplayInfo},
 			{"WriteReplayInfo",&MBS_SlippiModule::WriteReplayInfo},

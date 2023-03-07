@@ -593,7 +593,7 @@ namespace MBSlippi
 			throw MBScript::MBSRuntimeException("GetGameQuery requires exactly one argument: an SQL query to execute");
 		}
 		std::unique_ptr<MBScript::MBSObject> ReturnValue = std::make_unique<MBScript::MBSObject_List>();
-		MBDB::MrBoboDatabase DataBase(m_Config.ReplaysDirectory + "/SlippiGames.db", uint64_t(MBDB::DBOpenOptions::ReadOnly));
+		MBDB::MrBoboDatabase DataBase(m_Config.ReplaysDirectory + "/SlippiGames.db", MBDB::DBOpenOptions::ReadOnly);
 		std::string GameQuery = MBScript::CastObject<MBScript::MBSObject_String>(*Arguments.Arguments[0]).Value;
 		
 		MBDB::SQLStatement* Statement = DataBase.GetSQLStatement(GameQuery);

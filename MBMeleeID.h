@@ -109,7 +109,8 @@ namespace MBSlippi
 
 	MBAttackID StringToMBAttackID(std::string const& StringToConvert);
 	MBActionState StringToMBActionState(std::string const& StringToConvert);
-
+    
+    bool StateIsActionable(MBActionState StateToInspect);
     struct PlayerInfo
     {
         std::string Tag;
@@ -121,6 +122,7 @@ namespace MBSlippi
         MBActionState ActionState = MBActionState::None;
         MBActionStateFlags StateFlags;
         MBAttackID ActiveAttack = MBAttackID::None;
+        int ActionableFrames = 0;
         float Percent = 0;
     };
     struct FrameInfo
@@ -140,5 +142,4 @@ namespace MBSlippi
         std::vector<FrameInfo> Frames;
         static MBError ParseSlippiGame(MBUtility::MBOctetInputStream& InputStream,MeleeGame& OutGame);
     };
-    
 }

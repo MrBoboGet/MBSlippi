@@ -7,7 +7,17 @@
 #include "MBSlippiParsing.h"
 namespace MBSlippi
 {
-	inline MBAttackID StateToMBAttackID_Fox(Event_PostFrameUpdate const& AssociatedState)
+    bool StateIsActionable(MBActionState StateToInspect)
+    {
+        bool ReturnValue = false;       
+        ReturnValue = (StateToInspect == MBActionState::None ||
+               StateToInspect == MBActionState::Running ||
+               StateToInspect == MBActionState::Dashing ||
+               StateToInspect == MBActionState::Shielding ||
+               StateToInspect == MBActionState::Walking);
+        return(ReturnValue);
+    }
+    inline MBAttackID StateToMBAttackID_Fox(Event_PostFrameUpdate const& AssociatedState)
 	{
 		assert(AssociatedState.InternalCharID == InternalCharacterID::Fox);
         MBAttackID ReturnValue = MBAttackID::None;
@@ -568,6 +578,7 @@ namespace MBSlippi
             }
 
             FrameParser LocalFrameParser;
+            int ActionableFrameCount[4] = {0,0,0,0};
             while (true)
             {
                 Event NewEvent = EventParser.GetNextEvent();
@@ -580,6 +591,19 @@ namespace MBSlippi
                 {
                     std::vector<Event> FrameEvents = LocalFrameParser.ExtractFrame();
                     Result.Frames.push_back(h_ParseFrameInfo(FrameEvents));
+                    auto& CurrentFrame = Result.Frames.back();
+                    for(int i = 0; i < 4; i++)
+                    {
+                        if(StateIsActionable(CurrentFrame.PlayerInfo[i].ActionState))
+                        {
+                            ActionableFrameCount[i] += 1;    
+                        }
+                        else
+                        {
+                            ActionableFrameCount[i] = 0;   
+                        }
+                        CurrentFrame.PlayerInfo[i].ActionableFrames = ActionableFrameCount[i];
+                    }
                 }
             }
         } 
