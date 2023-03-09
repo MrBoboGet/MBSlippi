@@ -2,6 +2,5 @@
 	"PacketName":"MBSlippi",
     "PacketType":"C++",
 	"Attributes":["Embeddable"],
-    "ExportedExecutableTargets":["mbslippi"],
-    "Dependancies":["MBParsing","MBPacketManager","MBScript","MBUnicode","MrBoboDatabase"]
+    "Dependancies":["MBParsing","MBPacketManager","MBScript","MBUnicode","MrBoboDatabase","MBCC"]
 }

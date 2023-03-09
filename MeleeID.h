@@ -1164,7 +1164,7 @@ namespace MBSlippi
 		}
 		return(__InternalCharacterStringMap[uint64_t(IdToConvert)]);
 	}
-	static const char* __ExternalCharacterStringMap[34] =
+	static inline const char* __ExternalCharacterStringMap[34] =
 	{
 		"CaptainFalcon"     ,
         "DonkeyKong"        ,

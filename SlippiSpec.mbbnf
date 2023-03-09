@@ -1,0 +1,142 @@
+term lpar = "\(";
+term rpar = "\)";
+term lcurl = "\{";
+term rcurl = "\}";
+term lsquare = "\[";
+term rsquare = "\]";
+term semicolon = ";";
+
+term number = "[[:digit:]]+";
+term string = "\"(\\.|[^\"\\])*\"";
+term bool = "true|false";
+
+
+term WITH = "WITH";
+term SELECT = "SELECT";
+term RECORD = "RECORD";
+term FILTER = "FILTER";
+
+term idf = "[[:alpha:]_]+[[:alnum:]_]*";
+
+term less = "<";
+term great = ">";
+term colon = ":";
+term comma = ",";
+term eq = "=";
+term OR = "\|\|";
+term pipe = "\|";
+term AND = "&&";
+term add = "&";
+term que = "\?";
+skip "( |\t|\n|\r)*";
+
+struct Operator
+{
+    string Op;
+}
+struct GameSelection
+{
+    GameInfoPredicate GameCondition;
+}
+struct GameInfoPredicate_Conjunction
+{
+    string Conjunction;
+    GameInfoPredicate RHS;
+}
+struct GameInfoPredicate
+{
+    List<string> Attribute;
+    string Value;
+    string Operator;
+    List<GameInfoPredicate> ExtraTerms;
+}
+
+struct PlayerAssignment
+{
+    string AffectedPlayer;
+    GameInfoPredicate PlayerCondition;
+}
+
+struct Filter_ArgList
+{
+    List<Filter_Arg> Arguments;    
+}
+struct Filter_Arg
+{
+}
+struct Filter_Arg_Positional : Filter_Arg
+{
+    string Value; 
+}
+struct Filter_Arg_Named : Filter_Arg
+{
+    string Name;
+    string Value;
+}
+struct Filter_Component
+{
+    string FilterName; 
+    Filter_ArgList ArgumentList;
+    string Operator;
+    List<Filter_Component> ExtraTerms;
+}
+struct Filter
+{
+    Filter_Component Component;
+}
+struct Result {}
+struct Result_Record : Result
+{
+    string OutFile;
+}
+struct Result_Tabulate : Result
+{
+        
+}
+struct SlippiSpec
+{
+    PlayerAssignment Assignment;
+    GameSelection Games;
+    Filter SituationFilter;
+    Result Output;
+}
+def SlippiSpec=SlippiSpec;
+def Result=Result_Record;
+def PlayerAssignment=PlayerAssignment;
+
+def GameSelection=GameSelection;
+def GameInfoPredicate=GameInfoPredicate;
+def GameInfoPredicate_Conjunction=GameInfoPredicate;
+def GameInfoPredicate_Base=GameInfoPredicate;
+
+def Filter=Filter;
+def Filter_Component_Conjunction=Filter_Component;
+def Filter_Component=Filter_Component;
+def Filter_Component_Base=Filter_Component;
+def Filter_Arg=Filter_Arg;
+def Filter_Arg_Named=Filter_Arg_Named;
+def Filter_Arg_Positional=Filter_Arg_Positional;
+def Filter_ArgList = Filter_ArgList;
+
+def Operator=Operator;
+
+Operator = Op=less|Op=pipe|Op=AND|Op=OR|Op=add|Op=great|Op=eq;
+Filter_Arg = this=Filter_Arg_Named | Filter_Arg_Positional;
+Filter_Arg_Named = Name=idf Value=string;
+Filter_Arg_Positional = Value=string;
+
+Filter_ArgList = lpar Arguments=Filter_Arg* rpar;
+
+Filter_Component_Conjunction = Operator=Operator.Op this=Filter_Component;
+Filter_Component_Base = lpar this=Filter_Component rpar | FilterName=idf ArgumentList=Filter_ArgList?;
+Filter_Component = this=Filter_Component_Base ExtraTerms=Filter_Component_Conjunction*;
+Filter= FILTER Component=Filter_Component;
+
+GameInfoPredicate_Conjunction = Operator=Operator.Op this=GameInfoPredicate;
+GameInfoPredicate_Base = lpar GameInfoPredicate rpar | Attribute=idf+ Operator=Operator.Op Value=string;
+GameInfoPredicate = this=GameInfoPredicate_Base ExtraTerms=GameInfoPredicate_Conjunction*; 
+GameSelection = SELECT GameCondition=GameInfoPredicate;
+
+PlayerAssignment = WITH AffectedPlayer=idf PlayerCondition=GameInfoPredicate;
+Result = RECORD OutFile=string;
+SlippiSpec= Assignment=PlayerAssignment? Games=GameSelection SituationFilter=Filter? Output=Result;

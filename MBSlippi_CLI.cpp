@@ -9,6 +9,8 @@
 #include <chrono>
 #include <filesystem>
 #include <sstream>
+
+#include "SlippiSpecParser.h"
 namespace MBSlippi
 {
 	void MBSlippiCLIHandler::p_LoadGlobalConfig()
@@ -92,7 +94,7 @@ namespace MBSlippi
 		{
 			throw std::runtime_error("Invalid replay directory");
 		}
-		MBDB::MrBoboDatabase Database(DirectoryToCreate + "\\SlippiGames.db",uint64_t(MBDB::DBOpenOptions::ReadWrite));
+		MBDB::MrBoboDatabase Database(DirectoryToCreate + "\\SlippiGames.db",MBDB::DBOpenOptions::ReadWrite);
 		std::string DatabaseStatement = "CREATE TABLE GAMES (RelativePath VARCHAR(65535),Date INTEGER,Stage VARCHAR(255),Player1Code VARCHAR(255),Player1Tag VARCHAR(255),Player1Character VARCHAR(255),"
 			"Player2Code VARCHAR(255),Player2Tag VARCHAR(255),Player2Character VARCHAR(255), FrameDuration INTEGER);";
 
@@ -110,7 +112,7 @@ namespace MBSlippi
 		{
 			p_CreateDatabase(ReplayDirectory);
 		}
-		MBDB::MrBoboDatabase Database(ReplayDirectory + "/SlippiGames.db", uint64_t(MBDB::DBOpenOptions::ReadWrite));
+		MBDB::MrBoboDatabase Database(ReplayDirectory + "/SlippiGames.db", MBDB::DBOpenOptions::ReadWrite);
 		for(;FileIterator != End;FileIterator++)
 		{
 			if (!std::filesystem::exists(ReplayDirectory + FileIterator.GetCurrentDirectory() + "/" + FileIterator->FileName))
@@ -296,7 +298,7 @@ namespace MBSlippi
             m_Terminal.PrintLine("Can't find database, try to run mbslippi index-update");
             return;
         }
-		MBDB::MrBoboDatabase Database(m_Config.ReplaysDirectory + "/SlippiGames.db", uint64_t(MBDB::DBOpenOptions::ReadOnly));
+		MBDB::MrBoboDatabase Database(m_Config.ReplaysDirectory + "/SlippiGames.db", MBDB::DBOpenOptions::ReadOnly);
         MBError QueryResult = true;
         std::vector<MBDB::MBDB_RowData> QuerryRows = Database.GetAllRows(Input.TopCommandArguments[0],&QueryResult);
         if(!QueryResult)
