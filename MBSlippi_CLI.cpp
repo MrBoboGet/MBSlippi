@@ -73,18 +73,18 @@ namespace MBSlippi
 
 		if (TotalGameData["metadata"]["players"]["0"]["names"].HasAttribute("code"))
 		{
-			ReturnValue.Player1Code = TotalGameData["metadata"]["players"]["0"]["names"]["code"].GetStringData();
-			ReturnValue.Player2Code = TotalGameData["metadata"]["players"]["1"]["names"]["code"].GetStringData();
+			ReturnValue.PlayerInfo[0].Code = TotalGameData["metadata"]["players"]["0"]["names"]["code"].GetStringData();
+			ReturnValue.PlayerInfo[1].Code = TotalGameData["metadata"]["players"]["1"]["names"]["code"].GetStringData();
 		}
 		if (TotalGameData["metadata"]["players"]["0"]["names"].HasAttribute("netplay"))
 		{
-			ReturnValue.Player1Tag = TotalGameData["metadata"]["players"]["0"]["names"]["netplay"].GetStringData();
-			ReturnValue.Player2Tag = TotalGameData["metadata"]["players"]["1"]["names"]["netplay"].GetStringData();
+			ReturnValue.PlayerInfo[0].Tag = TotalGameData["metadata"]["players"]["0"]["names"]["netplay"].GetStringData();
+			ReturnValue.PlayerInfo[1].Tag = TotalGameData["metadata"]["players"]["1"]["names"]["netplay"].GetStringData();
 		}
 		if (TotalGameData["metadata"]["players"]["0"].HasAttribute("characters"))
 		{
-			ReturnValue.Player1Character = MBSlippi::CharacterToString(InternalCharacterID(std::stoi(TotalGameData["metadata"]["players"]["0"]["characters"].GetMapData().begin()->first)));
-			ReturnValue.Player2Character = MBSlippi::CharacterToString(InternalCharacterID(std::stoi(TotalGameData["metadata"]["players"]["1"]["characters"].GetMapData().begin()->first)));
+			ReturnValue.PlayerInfo[0].Character = MBSlippi::CharacterToString(InternalCharacterID(std::stoi(TotalGameData["metadata"]["players"]["0"]["characters"].GetMapData().begin()->first)));
+			ReturnValue.PlayerInfo[1].Character = MBSlippi::CharacterToString(InternalCharacterID(std::stoi(TotalGameData["metadata"]["players"]["1"]["characters"].GetMapData().begin()->first)));
 		}
 		return(ReturnValue);
 	}
@@ -101,6 +101,7 @@ namespace MBSlippi
 		MBDB::SQLStatement* Statement = Database.GetSQLStatement(DatabaseStatement);
 		MBError Result = true;
 		Database.GetAllRows(Statement,&Result);
+        Database.FreeSQLStatement(Statement);
 	}
 	void MBSlippiCLIHandler::p_UpdateGameSQLDatabase(std::string const& ReplayDirectory, MBPM::MBPP_FileInfoReader const& FileInfo)
 	{
@@ -153,12 +154,12 @@ namespace MBSlippi
 			Statement->BindString(NewGame.RelativePath, 1);
 			Statement->BindInt(NewGame.Date, 2);
 			Statement->BindString(NewGame.Stage, 3);
-			Statement->BindString(NewGame.Player1Code, 4);
-			Statement->BindString(NewGame.Player1Tag, 5);
-			Statement->BindString(NewGame.Player1Character, 6);
-			Statement->BindString(NewGame.Player2Code, 7);
-			Statement->BindString(NewGame.Player2Tag, 8);
-			Statement->BindString(NewGame.Player2Character, 9);
+			Statement->BindString(NewGame.PlayerInfo[0].Code, 4);
+			Statement->BindString(NewGame.PlayerInfo[0].Tag, 5);
+			Statement->BindString(NewGame.PlayerInfo[0].Character, 6);
+			Statement->BindString(NewGame.PlayerInfo[1].Code, 7);
+			Statement->BindString(NewGame.PlayerInfo[1].Tag, 8);
+			Statement->BindString(NewGame.PlayerInfo[1].Character, 9);
 			Statement->BindInt(NewGame.FrameDuration, 10);
 			MBError Result = true;
 			Database.GetAllRows(Statement, &Result);

@@ -6,18 +6,18 @@
 namespace MBSlippi
 {
 	
-
+    struct SlippiGamePlayerInfo
+    {
+        std::string Code;
+        std::string Tag;
+        std::string Character;
+    };
 	struct SlippiGameInfo
 	{
 		std::string RelativePath;
 		uint64_t Date;
 		std::string Stage;
-		std::string Player1Code = "";
-		std::string Player1Tag= "";
-		std::string Player1Character = "";
-		std::string Player2Code = "";
-		std::string Player2Tag = "";
-		std::string Player2Character = "";
+        SlippiGamePlayerInfo PlayerInfo[2];
 		uint64_t FrameDuration = 0;
 	};
 
