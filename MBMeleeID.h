@@ -142,4 +142,18 @@ namespace MBSlippi
         std::vector<FrameInfo> Frames;
         static MBError ParseSlippiGame(MBUtility::MBOctetInputStream& InputStream,MeleeGame& OutGame);
     };
+    struct SlippiGamePlayerInfo
+    {
+        std::string Code;
+        std::string Tag;
+        std::string Character;
+    };
+	struct SlippiGameInfo
+	{
+		std::string RelativePath;
+		uint64_t Date;
+		std::string Stage;
+        SlippiGamePlayerInfo PlayerInfo[2];
+		uint64_t FrameDuration = 0;
+	};
 }

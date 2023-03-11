@@ -11,8 +11,136 @@
 #include <sstream>
 
 #include "SlippiSpecParser.h"
+#include "SlippiSpec.h"
 namespace MBSlippi
 {
+    std::vector<SlippiGameInfo> MBSlippiCLIHandler::RetrieveGames(std::string const& WhereCondition)
+    {
+        std::vector<SlippiGameInfo> ReturnValue;
+        MBDB::MrBoboDatabase Database(m_Config.ReplaysDirectory + "/SlippiGames.db", MBDB::DBOpenOptions::ReadWrite);
+        std::string QueryString = "SELECT * FROM GAMES";
+        if(WhereCondition != "")
+        {
+            QueryString += "WHERE "+WhereCondition;   
+        }
+        MBError QueryError = true;
+        std::vector<MBDB::MBDB_RowData> Result = Database.GetAllRows(QueryString,&QueryError);
+        for(MBDB::MBDB_RowData const& Row : Result)
+        {
+            SlippiGameInfo NewGameInfo;
+            NewGameInfo.RelativePath =m_Config.ReplaysDirectory + "/" + Row.GetColumnData<std::string>(0);
+            NewGameInfo.Date = Row.GetColumnData<long long>(1);
+            NewGameInfo.Stage = Row.GetColumnData<std::string>(2);
+            NewGameInfo.PlayerInfo[0].Code = Row.GetColumnData<std::string>(3);
+            NewGameInfo.PlayerInfo[0].Tag = Row.GetColumnData<std::string>(4);
+            NewGameInfo.PlayerInfo[0].Character = Row.GetColumnData<std::string>(5);
+            NewGameInfo.PlayerInfo[1].Code = Row.GetColumnData<std::string>(6);
+            NewGameInfo.PlayerInfo[1].Tag = Row.GetColumnData<std::string>(7);
+            NewGameInfo.PlayerInfo[1].Character = Row.GetColumnData<std::string>(8);
+            NewGameInfo.FrameDuration = Row.GetColumnData<long long>(9);
+        }
+        return(ReturnValue);
+    }
+    
+    void MBSlippiCLIHandler::p_WriteReplayInfo(std::vector<RecordingInfo> const& RecordingsToWrite,MBUtility::MBOctetOutputStream& OutStream)
+    {
+		MBParsing::JSONObject JSONToWrite(MBParsing::JSONObjectType::Aggregate);
+		JSONToWrite["mode"] = "queue";
+		JSONToWrite["replay"] = "";
+		JSONToWrite["isRealTimeMode"] = false;
+		JSONToWrite["outputOverlayFiles"] = true;
+		std::vector<MBParsing::JSONObject> QueueElements;
+		for(auto const& Recording : RecordingsToWrite)
+		{
+			std::string Path = Recording.GamePath;
+			for (auto const& Intervall : Recording.IntervallsToRecord)
+			{
+				MBParsing::JSONObject NewQueueElement(MBParsing::JSONObjectType::Aggregate);
+				NewQueueElement["path"] = Path;
+				NewQueueElement["startFrame"] =int64_t(Intervall.FirstFrame);
+				NewQueueElement["endFrame"] = int64_t(Intervall.LastFrame);
+				QueueElements.push_back(std::move(NewQueueElement));
+			}
+		}
+		JSONToWrite["queue"] = std::move(QueueElements);
+        OutStream<<JSONToWrite.ToString();
+        OutStream.Flush();
+    }
+	void MBSlippiCLIHandler::p_RestoreDolphinConfigs(std::string const& DumpDirectory, DolphinConfigParser const& DolphinINI, DolphinConfigParser const& DolphinGFX)
+	{
+		std::filesystem::remove_all(DumpDirectory);
+		if (!std::filesystem::exists(m_Config.ReplayDolphinDirectory + "/User/Config/Dolphin.ini") || !std::filesystem::exists(m_Config.ReplayDolphinDirectory + "/User/Config/GFX.ini"))
+		{
+			throw MBScript::MBSRuntimeException("Dolphin configs doesnt exist. Invalid dolphin replay path specified?");
+		}
+		DolphinGFX.WriteValues(m_Config.ReplayDolphinDirectory + "/User/Config/GFX.ini");
+		DolphinINI.WriteValues(m_Config.ReplayDolphinDirectory + "/User/Config/Dolphin.ini");
+	}
+    std::string MBSlippiCLIHandler::p_UpdateDolphinConfigs(DolphinConfigParser* OutOriginalIni,DolphinConfigParser* OutOriginalGFX)
+    {
+        std::string DumpPath = ".__DolphinDumpDirectory";
+        std::filesystem::create_directory(DumpPath);
+
+        std::string AbsoluteDumpPath = MBUnicode::PathToUTF8(std::filesystem::absolute(DumpPath));
+
+        if (!std::filesystem::exists(m_Config.ReplayDolphinDirectory + "/User/Config/Dolphin.ini") || !std::filesystem::exists(m_Config.ReplayDolphinDirectory + "/User/Config/GFX.ini"))
+        {
+            throw std::runtime_error("Dolphin configs doesnt exist. Invalid dolphin replay path specified?");
+        }
+        DolphinConfigParser DolphinIniConfigs = DolphinConfigParser(m_Config.ReplayDolphinDirectory + "/User/Config/Dolphin.ini");
+        if (OutOriginalIni)
+        {
+            *OutOriginalIni = DolphinIniConfigs;
+        }
+        DolphinConfigParser DolphinGFXConfigs = DolphinConfigParser(m_Config.ReplayDolphinDirectory + "/User/Config/GFX.ini");
+        if (OutOriginalGFX)
+        {
+            *OutOriginalGFX = DolphinGFXConfigs;
+        }
+        DolphinIniConfigs.InsertValue("Core", "SlippiPlaybackExitOnFinished", "True");
+        DolphinIniConfigs.InsertValue("Core", "EmulationSpeed", "0.00000000");
+        DolphinIniConfigs.InsertValue("Movie", "DumpFrames", "True");
+        DolphinIniConfigs.InsertValue("Movie", "DumpFramesSilent", "True");
+        DolphinIniConfigs.InsertValue("DSP", "DumpAudio", "True");
+        DolphinIniConfigs.InsertValue("DSP", "DumpAudioSilent", "True");
+        DolphinIniConfigs.InsertValue("DSP", "Volume", "0");
+        DolphinIniConfigs.InsertValue("General", "DumpPath", AbsoluteDumpPath);
+
+        //DolphinIniConfigs.InsertValue("Display", "RenderWindowWidth", "1280");
+        //DolphinIniConfigs.InsertValue("Display", "RenderWindowHeight", "1052");
+        //DolphinIniConfigs.InsertValue("Display", "RenderWindowAutoSize", "True");
+
+        //DolphinGFXConfigs.InsertValue("Settings", "EFBScale", "1");
+        DolphinGFXConfigs.InsertValue("Settings", "BitrateKbps", "10000");
+
+        DolphinGFXConfigs.WriteValues(m_Config.ReplayDolphinDirectory + "/User/Config/GFX.ini");
+        DolphinIniConfigs.WriteValues(m_Config.ReplayDolphinDirectory + "/User/Config/Dolphin.ini");
+        return(DumpPath);
+    }
+    void MBSlippiCLIHandler::RecordGames(std::vector<RecordingInfo> const& GamesToRecord,std::filesystem::path const& OutPath)
+    {
+        std::unique_ptr<MBScript::MBSObject> ReturnValue = std::make_unique<MBScript::MBSObject>();
+        //std::string ReplayInfoFile = MBUnicode::PathToUTF8(OutPath);
+        std::string OutputVideo = MBUnicode::PathToUTF8(OutPath);
+        DolphinConfigParser OriginalIni;
+        DolphinConfigParser OriginalGFX;
+        std::string DumpDirectory = p_UpdateDolphinConfigs(&OriginalIni, &OriginalGFX);
+        
+        {
+            std::ofstream ReplayInfoFile = std::ofstream(".__DolphinDumpDirectory/ReplayInfo.json");
+            if(!ReplayInfoFile.is_open())
+            {
+                throw std::runtime_error("Error opening \".__DolphinDumpDirectory/ReplayInfo.json\", needed to create replay file");
+            }
+            MBUtility::MBFileOutputStream OutStream(&ReplayInfoFile);
+            p_WriteReplayInfo(GamesToRecord,OutStream);
+        }
+        std::string DolphinCommand = "\"\"" + m_Config.ReplayDolphinDirectory + "\\SlippiMBFix.exe\"" + " -b -e " + "\"" + m_Config.MeleeISOPath + "\" -i " + ".__DolphinDumpDirectory/ReplayInfo.json"+"\"";
+        int DolphinResult = std::system(DolphinCommand.c_str());
+        std::string FFMPEGCommand = "ffmpeg -y -i " + DumpDirectory + "/Frames/framedump0.avi -i " + DumpDirectory + "/Audio/dspdump.wav -map 0:v:0 -map 1:a:0 " + OutputVideo+" > nul 2> nul";
+        int FFMPEGResult = std::system(FFMPEGCommand.c_str());
+        p_RestoreDolphinConfigs(DumpDirectory,OriginalIni,OriginalGFX);
+    }
 	void MBSlippiCLIHandler::p_LoadGlobalConfig()
 	{
 		try
@@ -223,7 +351,42 @@ namespace MBSlippi
 
 		}
 	}
-	void MBSlippiCLIHandler::p_Handle_Execute(MBCLI::ProcessedCLInput const& Input)
+    void MBSlippiCLIHandler::p_Handle_Execute(MBCLI::ProcessedCLInput const& Input)
+    {
+		if (Input.TopCommandArguments.size() != 1)
+		{
+			m_Terminal.SetTextColor(MBCLI::ANSITerminalColor::Red);
+			m_Terminal.Print("execute needs exactly 1 argument: the path to a MBScript file");
+			std::exit(1);
+		}
+		std::string SlippiScriptToExecute = Input.TopCommandArguments[0];
+        SlippiSpec SpecToEvaluate;
+        SpecEvaluator Evaluator;
+        auto Tokenizer = GetTokenizer();
+        try
+        {
+            Evaluator.SetDBAdapter(this);
+            Evaluator.SetRecorder(this);
+            Tokenizer.SetText(MBUtility::ReadWholeFile(SlippiScriptToExecute));
+            SpecToEvaluate = ParseSlippiSpec(Tokenizer);
+            std::vector<MBLSP::Diagnostic> Diagnostics;
+            Evaluator.EvaluateSpec(SpecToEvaluate,Diagnostics);
+            if(Diagnostics.size() > 0)
+            {
+                m_Terminal.PrintLine("Semantic error evaluating SlippiSpec:");
+                for(auto const& Diagnostic : Diagnostics)
+                {
+                    m_Terminal.PrintLine(Diagnostic.message);
+                }   
+            }
+        }
+        catch(std::exception const& e)
+        {
+            m_Terminal.PrintLine("Error parsing SlippiSpec file: "+std::string(e.what()));
+            std::exit(1);
+        }
+    }
+    void MBSlippiCLIHandler::p_Handle_Execute_Legacy(MBCLI::ProcessedCLInput const& Input)
 	{
 		if (Input.TopCommandArguments.size() != 1)
 		{

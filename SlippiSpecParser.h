@@ -20,70 +20,6 @@ class GameInfoPredicate
     std::vector<GameInfoPredicate> ExtraTerms;
     
 };
-class Filter_Arg_Base
-{
-    public:
-    
-};
-class Filter_Arg
-{
-    private:
-     std::unique_ptr<Filter_Arg_Base> m_Data;
-    size_t m_TypeID = 0;
-    template<typename T> static size_t p_GetTypeID(){return size_t(&p_GetTypeID<T>);}
-    public:
-    template<typename T> void Accept(T& Visitor);
-    template<typename T> void Accept(T& Visitor) const;
-    template<typename T> Filter_Arg(T ObjectToStore)
-    {
-        m_Data = std::unique_ptr<Filter_Arg_Base>(new T(std::move(ObjectToStore)));
-        m_TypeID = p_GetTypeID<T>();
-    }
-    Filter_Arg() = default;
-    Filter_Arg(Filter_Arg&&) = default;
-    template<typename T> bool IsType() const
-    {
-        return m_TypeID == p_GetTypeID<T>();
-    }
-    bool IsEmpty() const
-    {
-        return m_Data == nullptr;
-    }
-    void operator=(Filter_Arg&& StructToMove)
-    {
-        std::swap(m_TypeID,StructToMove.m_TypeID);
-        std::swap(m_Data,StructToMove.m_Data);
-    }
-    template<typename T> T const& GetType() const
-    {
-        if(!IsType<T>() || m_Data == nullptr)
-        {
-            throw std::runtime_error("Invalid type access for abstract AST class");
-        }return static_cast<T const&>(*m_Data);
-    }
-    template<typename T> T& GetType()
-    {
-        if(!IsType<T>() || m_Data == nullptr)
-        {
-            throw std::runtime_error("Invalid type access for abstract AST class");
-        }return static_cast<T&>(*m_Data);
-    }
-    Filter_Arg_Base& GetBase()
-    {
-        if(m_Data == nullptr)
-        {
-            throw std::runtime_error("Invalid type access for abstract AST class: data is null");
-        }return static_cast<Filter_Arg_Base&>(*m_Data);
-    }
-    Filter_Arg_Base const& GetBase() const
-    {
-        if(m_Data == nullptr)
-        {
-            throw std::runtime_error("Invalid type access for abstract AST class: data is null");
-        }return static_cast<Filter_Arg_Base const&>(*m_Data);
-    }
-    
-};
 class Result_Base
 {
     public:
@@ -148,36 +84,85 @@ class Result
     }
     
 };
+class Filter_Arg_Base
+{
+    public:
+    
+};
+class Filter_Arg
+{
+    private:
+     std::unique_ptr<Filter_Arg_Base> m_Data;
+    size_t m_TypeID = 0;
+    template<typename T> static size_t p_GetTypeID(){return size_t(&p_GetTypeID<T>);}
+    public:
+    template<typename T> void Accept(T& Visitor);
+    template<typename T> void Accept(T& Visitor) const;
+    template<typename T> Filter_Arg(T ObjectToStore)
+    {
+        m_Data = std::unique_ptr<Filter_Arg_Base>(new T(std::move(ObjectToStore)));
+        m_TypeID = p_GetTypeID<T>();
+    }
+    Filter_Arg() = default;
+    Filter_Arg(Filter_Arg&&) = default;
+    template<typename T> bool IsType() const
+    {
+        return m_TypeID == p_GetTypeID<T>();
+    }
+    bool IsEmpty() const
+    {
+        return m_Data == nullptr;
+    }
+    void operator=(Filter_Arg&& StructToMove)
+    {
+        std::swap(m_TypeID,StructToMove.m_TypeID);
+        std::swap(m_Data,StructToMove.m_Data);
+    }
+    template<typename T> T const& GetType() const
+    {
+        if(!IsType<T>() || m_Data == nullptr)
+        {
+            throw std::runtime_error("Invalid type access for abstract AST class");
+        }return static_cast<T const&>(*m_Data);
+    }
+    template<typename T> T& GetType()
+    {
+        if(!IsType<T>() || m_Data == nullptr)
+        {
+            throw std::runtime_error("Invalid type access for abstract AST class");
+        }return static_cast<T&>(*m_Data);
+    }
+    Filter_Arg_Base& GetBase()
+    {
+        if(m_Data == nullptr)
+        {
+            throw std::runtime_error("Invalid type access for abstract AST class: data is null");
+        }return static_cast<Filter_Arg_Base&>(*m_Data);
+    }
+    Filter_Arg_Base const& GetBase() const
+    {
+        if(m_Data == nullptr)
+        {
+            throw std::runtime_error("Invalid type access for abstract AST class: data is null");
+        }return static_cast<Filter_Arg_Base const&>(*m_Data);
+    }
+    
+};
 class GameSelection
 {
     public:
     GameInfoPredicate GameCondition;
     
 };
-class GameInfoPredicate_Conjunction
+class Result_Tabulate : public Result_Base
 {
     public:
-    std::string Conjunction;
-    GameInfoPredicate RHS;
     
 };
-class PlayerAssignment
+class Result_Record : public Result_Base
 {
     public:
-    std::string AffectedPlayer;
-    GameInfoPredicate PlayerCondition;
-    
-};
-class Filter_ArgList
-{
-    public:
-    std::vector<Filter_Arg> Arguments;
-    
-};
-class Filter_Arg_Positional : public Filter_Arg_Base
-{
-    public:
-    std::string Value;
+    std::string OutFile;
     
 };
 class Filter_Arg_Named : public Filter_Arg_Base
@@ -187,15 +172,36 @@ class Filter_Arg_Named : public Filter_Arg_Base
     std::string Value;
     
 };
-class Result_Record : public Result_Base
+class Filter_Arg_Positional : public Filter_Arg_Base
 {
     public:
-    std::string OutFile;
+    std::string Value;
     
 };
-class Result_Tabulate : public Result_Base
+class Filter_ArgList
 {
     public:
+    std::vector<Filter_Arg> Arguments;
+    
+};
+class PlayerAssignment
+{
+    public:
+    std::string AffectedPlayer;
+    GameInfoPredicate PlayerCondition;
+    
+};
+class GameInfoPredicate_OperatorList
+{
+    public:
+    std::vector<GameInfoPredicate> Terms;
+    
+};
+class GameInfoPredicate_Conjunction
+{
+    public:
+    std::string Conjunction;
+    GameInfoPredicate RHS;
     
 };
 class Filter_Component
@@ -205,6 +211,12 @@ class Filter_Component
     Filter_ArgList ArgumentList;
     std::string Operator;
     std::vector<Filter_Component> ExtraTerms;
+    
+};
+class Filter_OperatorList
+{
+    public:
+    std::vector<Filter_Component> Components;
     
 };
 class Filter
@@ -222,38 +234,6 @@ class SlippiSpec
     Result Output;
     
 };
-template<typename T> void Filter_Arg::Accept(T& Visitor)
-{
-    if(p_GetTypeID<Filter_Arg_Positional>() == m_TypeID)
-    {
-        Visitor(static_cast<Filter_Arg_Positional&>(*m_Data));
-    }
-    else if(p_GetTypeID<Filter_Arg_Named>() == m_TypeID)
-    {
-        Visitor(static_cast<Filter_Arg_Named&>(*m_Data));
-    }
-    else 
-    {
-        throw std::runtime_error("Invalid object stored in AST abstract class");
-    }
-    
-}
-template<typename T> void Filter_Arg::Accept(T& Visitor) const
-{
-    if(p_GetTypeID<Filter_Arg_Positional>() == m_TypeID)
-    {
-        Visitor(static_cast<Filter_Arg_Positional const&>(*m_Data));
-    }
-    else if(p_GetTypeID<Filter_Arg_Named>() == m_TypeID)
-    {
-        Visitor(static_cast<Filter_Arg_Named const&>(*m_Data));
-    }
-    else 
-    {
-        throw std::runtime_error("Invalid object stored in AST abstract class");
-    }
-    
-}
 template<typename T> void Result::Accept(T& Visitor)
 {
     if(p_GetTypeID<Result_Record>() == m_TypeID)
@@ -286,6 +266,38 @@ template<typename T> void Result::Accept(T& Visitor) const
     }
     
 }
+template<typename T> void Filter_Arg::Accept(T& Visitor)
+{
+    if(p_GetTypeID<Filter_Arg_Positional>() == m_TypeID)
+    {
+        Visitor(static_cast<Filter_Arg_Positional&>(*m_Data));
+    }
+    else if(p_GetTypeID<Filter_Arg_Named>() == m_TypeID)
+    {
+        Visitor(static_cast<Filter_Arg_Named&>(*m_Data));
+    }
+    else 
+    {
+        throw std::runtime_error("Invalid object stored in AST abstract class");
+    }
+    
+}
+template<typename T> void Filter_Arg::Accept(T& Visitor) const
+{
+    if(p_GetTypeID<Filter_Arg_Positional>() == m_TypeID)
+    {
+        Visitor(static_cast<Filter_Arg_Positional const&>(*m_Data));
+    }
+    else if(p_GetTypeID<Filter_Arg_Named>() == m_TypeID)
+    {
+        Visitor(static_cast<Filter_Arg_Named const&>(*m_Data));
+    }
+    else 
+    {
+        throw std::runtime_error("Invalid object stored in AST abstract class");
+    }
+    
+}
 Operator ParseOperator(MBCC::Tokenizer& Tokenizer);
 Operator ParseOperator_0(MBCC::Tokenizer& Tokenizer);
 Operator ParseOperator_1(MBCC::Tokenizer& Tokenizer);
@@ -303,8 +315,13 @@ Filter_Arg_Positional ParseFilter_Arg_Positional(MBCC::Tokenizer& Tokenizer);
 Filter_Arg_Positional ParseFilter_Arg_Positional_0(MBCC::Tokenizer& Tokenizer);
 Filter_ArgList ParseFilter_ArgList(MBCC::Tokenizer& Tokenizer);
 Filter_ArgList ParseFilter_ArgList_0(MBCC::Tokenizer& Tokenizer);
-Filter_Component ParseFilter_Component_Conjunction(MBCC::Tokenizer& Tokenizer);
-Filter_Component ParseFilter_Component_Conjunction_0(MBCC::Tokenizer& Tokenizer);
+Filter_Component ParseFilter_Component_And(MBCC::Tokenizer& Tokenizer);
+Filter_Component ParseFilter_Component_And_0(MBCC::Tokenizer& Tokenizer);
+Filter_Component ParseFilter_Component_Or(MBCC::Tokenizer& Tokenizer);
+Filter_Component ParseFilter_Component_Or_0(MBCC::Tokenizer& Tokenizer);
+Filter_OperatorList ParseFilter_OperatorList(MBCC::Tokenizer& Tokenizer);
+Filter_OperatorList ParseFilter_OperatorList_0(MBCC::Tokenizer& Tokenizer);
+Filter_OperatorList ParseFilter_OperatorList_1(MBCC::Tokenizer& Tokenizer);
 Filter_Component ParseFilter_Component_Base(MBCC::Tokenizer& Tokenizer);
 Filter_Component ParseFilter_Component_Base_0(MBCC::Tokenizer& Tokenizer);
 Filter_Component ParseFilter_Component_Base_1(MBCC::Tokenizer& Tokenizer);
@@ -312,8 +329,13 @@ Filter_Component ParseFilter_Component(MBCC::Tokenizer& Tokenizer);
 Filter_Component ParseFilter_Component_0(MBCC::Tokenizer& Tokenizer);
 Filter ParseFilter(MBCC::Tokenizer& Tokenizer);
 Filter ParseFilter_0(MBCC::Tokenizer& Tokenizer);
-GameInfoPredicate ParseGameInfoPredicate_Conjunction(MBCC::Tokenizer& Tokenizer);
-GameInfoPredicate ParseGameInfoPredicate_Conjunction_0(MBCC::Tokenizer& Tokenizer);
+GameInfoPredicate ParseGameInfoPredicate_Or(MBCC::Tokenizer& Tokenizer);
+GameInfoPredicate ParseGameInfoPredicate_Or_0(MBCC::Tokenizer& Tokenizer);
+GameInfoPredicate ParseGameInfoPredicate_And(MBCC::Tokenizer& Tokenizer);
+GameInfoPredicate ParseGameInfoPredicate_And_0(MBCC::Tokenizer& Tokenizer);
+GameInfoPredicate_OperatorList ParseGameInfoPredicate_OperatorList(MBCC::Tokenizer& Tokenizer);
+GameInfoPredicate_OperatorList ParseGameInfoPredicate_OperatorList_0(MBCC::Tokenizer& Tokenizer);
+GameInfoPredicate_OperatorList ParseGameInfoPredicate_OperatorList_1(MBCC::Tokenizer& Tokenizer);
 GameInfoPredicate ParseGameInfoPredicate_Base(MBCC::Tokenizer& Tokenizer);
 GameInfoPredicate ParseGameInfoPredicate_Base_0(MBCC::Tokenizer& Tokenizer);
 GameInfoPredicate ParseGameInfoPredicate_Base_1(MBCC::Tokenizer& Tokenizer);

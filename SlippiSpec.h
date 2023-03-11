@@ -1,7 +1,7 @@
+#pragma once
 #include "SlippiSpecParser.h"
 #include <MBLSP/MBLSP.h>
-#include <MBMeleeID.h>
-#include "MBSlippi_CLI.h"
+#include "MBMeleeID.h"
 namespace MBSlippi
 {
     struct GameIntervall
@@ -44,8 +44,8 @@ namespace MBSlippi
 
         std::unordered_map<std::string,BuiltinFilterType> m_BuiltinFilters;
 
-        std::unique_ptr<MeleeGameDBAdapter> m_DBAdapter;
-        std::unique_ptr<MeleeGameRecorder> m_Recorder;
+        MeleeGameDBAdapter* m_DBAdapter;
+        MeleeGameRecorder* m_Recorder;
 
         void p_VerifyAttribute(std::vector<std::string> const& Attribute,bool IsPlayerAssignment,std::vector<MBLSP::Diagnostic>& OutDiagnostics);
         void p_VerifyFilterComponent(Filter_Component const& FilterToVerify,std::vector<MBLSP::Diagnostic>& OutDiagnostics);
@@ -59,8 +59,8 @@ namespace MBSlippi
         std::vector<MeleeGame> p_RetrieveSpecGames(SlippiSpec const& SpecToEvalaute);
         std::vector<GameIntervall> p_EvaluateGameIntervalls(Filter_Component const& FilterToUse,GameIntervall CurrentIntervall,MeleeGame const& GameToFilter);
     public:
-        void SetDBAdapter(std::unique_ptr<MeleeGameDBAdapter> NewAdapter);
-        void SetRecorder(std::unique_ptr<MeleeGameRecorder> NewRecorder);
+        void SetDBAdapter(MeleeGameDBAdapter* NewAdapter);
+        void SetRecorder(MeleeGameRecorder* NewRecorder);
         bool VerifySpec(SlippiSpec const& SpecToVerify,std::vector<MBLSP::Diagnostic>& OutDiagnostics);
         void EvaluateSpec(SlippiSpec const& SpecToEvaluate,std::vector<MBLSP::Diagnostic>& OutDiagnostics);
     };

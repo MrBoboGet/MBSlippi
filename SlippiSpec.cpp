@@ -2,6 +2,7 @@
 #include "SlippiSpecParser.h"
 #include <memory>
 #include <MBUtility/Merge.h>
+#include <assert.h>
 namespace MBSlippi
 {
     bool h_IsValidDate(std::string const& DateToVerify)
@@ -260,11 +261,11 @@ namespace MBSlippi
         }
         return(ReturnValue);
     }
-    void SpecEvaluator::SetDBAdapter(std::unique_ptr<MeleeGameDBAdapter> NewAdapter)
+    void SpecEvaluator::SetDBAdapter(MeleeGameDBAdapter* NewAdapter)
     {
         m_DBAdapter = std::move(NewAdapter);    
     }
-    void SpecEvaluator::SetRecorder(std::unique_ptr<MeleeGameRecorder> NewRecorder)
+    void SpecEvaluator::SetRecorder(MeleeGameRecorder* NewRecorder)
     {
         m_Recorder = std::move(NewRecorder);       
     }
