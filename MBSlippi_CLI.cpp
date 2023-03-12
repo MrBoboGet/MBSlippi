@@ -29,7 +29,7 @@ namespace MBSlippi
         {
             SlippiGameInfo NewGameInfo;
             NewGameInfo.RelativePath =m_Config.ReplaysDirectory + "/" + Row.GetColumnData<std::string>(0);
-            NewGameInfo.Date = Row.GetColumnData<long long>(1);
+            NewGameInfo.Date = Row.GetColumnData<int>(1);
             NewGameInfo.Stage = Row.GetColumnData<std::string>(2);
             NewGameInfo.PlayerInfo[0].Code = Row.GetColumnData<std::string>(3);
             NewGameInfo.PlayerInfo[0].Tag = Row.GetColumnData<std::string>(4);
@@ -37,7 +37,8 @@ namespace MBSlippi
             NewGameInfo.PlayerInfo[1].Code = Row.GetColumnData<std::string>(6);
             NewGameInfo.PlayerInfo[1].Tag = Row.GetColumnData<std::string>(7);
             NewGameInfo.PlayerInfo[1].Character = Row.GetColumnData<std::string>(8);
-            NewGameInfo.FrameDuration = Row.GetColumnData<long long>(9);
+            NewGameInfo.FrameDuration = Row.GetColumnData<int>(9);
+            ReturnValue.push_back(NewGameInfo);
         }
         return(ReturnValue);
     }
@@ -119,6 +120,11 @@ namespace MBSlippi
     }
     void MBSlippiCLIHandler::RecordGames(std::vector<RecordingInfo> const& GamesToRecord,std::filesystem::path const& OutPath)
     {
+        if(GamesToRecord.size() == 0)
+        {
+            m_Terminal.PrintLine("Empty list of games to record, skipping recording");
+            return;   
+        }
         std::unique_ptr<MBScript::MBSObject> ReturnValue = std::make_unique<MBScript::MBSObject>();
         //std::string ReplayInfoFile = MBUnicode::PathToUTF8(OutPath);
         std::string OutputVideo = MBUnicode::PathToUTF8(OutPath);
@@ -340,7 +346,15 @@ namespace MBSlippi
 				m_Terminal.Print("Index already up to date");
 				return;
 			}
-			p_UpdateGameSQLDatabase(m_Config.ReplaysDirectory, UpdatedFiles);
+            try
+            {
+                p_UpdateGameSQLDatabase(m_Config.ReplaysDirectory, UpdatedFiles);
+            }
+            catch(std::exception const& e)
+            {
+                m_Terminal.PrintLine("Error updating index: Error updateing SQL database: "+std::string(e.what()));   
+                return;
+            }
 			MBPM::MBPP_FileInfoReader OldInfo = MBPM::MBPP_FileInfoReader(m_Config.ReplaysDirectory + "/MBPM_FileInfo");
 			OldInfo.UpdateInfo(UpdatedFiles);
 			OldInfo.DeleteObjects(FileDiff.RemovedFiles);
@@ -482,23 +496,30 @@ namespace MBSlippi
 	void MBSlippiCLIHandler::Run(int argc, const char** argv)
 	{
 		MBCLI::ProcessedCLInput Input(argc, argv);
-		p_LoadGlobalConfig();
-		//DEPRECATED Input.TopCommand
-		if (Input.TopCommand == "update-index")
-		{
-			p_Handle_UpdateIndex(Input);
-		}
-		else if (Input.TopCommand == "execute")
-		{
-			p_Handle_Execute(Input);
-		}
-		else if (Input.TopCommand == "play")
-		{
-			p_Handle_Play(Input);
-		}
-		else if (Input.TopCommand == "query")
-		{
-			p_Handle_Query(Input);
-		}
+        try
+        {
+		    p_LoadGlobalConfig();
+            //DEPRECATED Input.TopCommand
+            if (Input.TopCommand == "update-index")
+            {
+                p_Handle_UpdateIndex(Input);
+            }
+            else if (Input.TopCommand == "execute")
+            {
+                p_Handle_Execute(Input);
+            }
+            else if (Input.TopCommand == "play")
+            {
+                p_Handle_Play(Input);
+            }
+            else if (Input.TopCommand == "query")
+            {
+                p_Handle_Query(Input);
+            }
+        }
+        catch(std::exception const& e)
+        {
+            m_Terminal.PrintLine("Uncaught exception executing command: "+std::string(e.what())); 
+        }
 	}
 }

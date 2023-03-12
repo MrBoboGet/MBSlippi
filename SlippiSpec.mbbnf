@@ -7,7 +7,7 @@ term rsquare = "\]";
 term semicolon = ";";
 
 term number = "[[:digit:]]+";
-term string = "\"(\\.|[^\"\\])*\"";
+term string = "$\"((\\.|[^\"\\])*)\"";
 term bool = "true|false";
 
 
@@ -18,11 +18,15 @@ term FILTER = "FILTER";
 
 term idf = "[[:alpha:]_]+[[:alnum:]_]*";
 
+term leq = "<=";
 term less = "<";
+term geq = ">=";
 term great = ">";
+term neq = "!=";
 term colon = ":";
 term comma = ",";
 term eq = "=";
+term dot = "\.";
 term OR = "\|\|";
 term pipe = "\|";
 term AND = "&&";
@@ -47,6 +51,8 @@ struct GameInfoPredicate
 {
     List<string> Attribute;
     string Value;
+    string Comparison;
+    {uint64_t} DateValue;
     string Operator;
     List<GameInfoPredicate> ExtraTerms;
 }
@@ -125,7 +131,7 @@ def Filter_Arg_Positional=Filter_Arg_Positional;
 def Filter_ArgList = Filter_ArgList;
 def Operator=Operator;
 
-Operator = Op=less|Op=pipe|Op=AND|Op=OR|Op=add|Op=great|Op=eq;
+Operator = Op=less|Op=pipe|Op=AND|Op=OR|Op=add|Op=great | Op=eq | Op=leq | Op=geq | Op=neq;
 Filter_Arg = this=Filter_Arg_Named | Filter_Arg_Positional;
 Filter_Arg_Named = Name=idf Value=string;
 Filter_Arg_Positional = Value=string;
@@ -152,7 +158,7 @@ def GameInfoPredicate_OperatorList=GameInfoPredicate_OperatorList;
 GameInfoPredicate_Or = Operator=OR this=GameInfoPredicate;
 GameInfoPredicate_And = Operator=AND this=GameInfoPredicate;
 GameInfoPredicate_OperatorList=Terms=GameInfoPredicate_Or+ | Terms=GameInfoPredicate_And+;
-GameInfoPredicate_Base = lpar GameInfoPredicate rpar | Attribute=idf+ Operator=Operator.Op Value=string;
+GameInfoPredicate_Base = lpar this=GameInfoPredicate rpar | Attribute=idf+ Comparison=Operator.Op Value=string;
 GameInfoPredicate = this=GameInfoPredicate_Base ExtraTerms=GameInfoPredicate_OperatorList.Terms?; 
 GameSelection = SELECT GameCondition=GameInfoPredicate;
 

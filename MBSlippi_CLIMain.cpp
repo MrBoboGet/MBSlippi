@@ -31,5 +31,5 @@ int main(int argc, const char** argv)
 	//const char* NewArgv[] = { "MBSlippi", "execute","KAESAnalysis.mbs"};
 	//argc = sizeof(NewArgv) / sizeof(const char*);
 	//argv = NewArgv;
-	HandlerToUse.Run(argc, argv);
+    HandlerToUse.Run(argc, argv);
 }

@@ -3,11 +3,107 @@
 #include <memory>
 #include <MBUtility/Merge.h>
 #include <assert.h>
+#include <sstream>
 namespace MBSlippi
 {
+
+    template<typename LHSType,typename RHSType>
+    bool h_Comp(LHSType const& lhs, std::string const& Operator,RHSType const& rhs)
+    {
+        bool ReturnValue = true;
+        if(Operator == "=" || Operator == "==")
+        {
+            ReturnValue = lhs == rhs;   
+        }
+        else if(Operator == "!=")
+        {
+            ReturnValue = lhs != rhs;   
+        }
+        else if(Operator == "<")
+        {
+            ReturnValue = lhs < rhs;   
+        }
+        else if(Operator == "<=")
+        {
+            ReturnValue = lhs <= rhs;   
+        }
+        else if(Operator == ">=")
+        {
+            ReturnValue = lhs >= rhs;   
+        }
+        else if(Operator == ">")
+        {
+            ReturnValue = lhs >= rhs;   
+        }
+        else
+        {
+            assert(false && "Invalid operator encountered");   
+        }
+
+        return(ReturnValue);
+    }
+    uint64_t h_GetPosixTime(std::string const& DateToVerify)
+    {
+        uint64_t ReturnValue = 0;
+		std::tm StoredTime{};
+		std::istringstream Stream(DateToVerify);
+        int DashCount = std::count(DateToVerify.begin(),DateToVerify.end(),'-');
+        if(DashCount == 0)
+        {
+            Stream >> std::get_time(&StoredTime, "%Y");
+        }
+        else if(DashCount == 1)
+        {
+            Stream >> std::get_time(&StoredTime, "%Y-%m");
+        }
+        else if(DashCount == 2)
+        {
+            Stream >> std::get_time(&StoredTime, "%Y-%m-%d");
+        }
+        else
+        {
+            assert(false && "Calling h_GetPosixTime with invalid date string");
+        }
+        StoredTime.tm_isdst = -1;
+        ReturnValue = uint64_t(std::mktime(&StoredTime));
+        return(ReturnValue);       
+    }
     bool h_IsValidDate(std::string const& DateToVerify)
     {
-        return(true);       
+        bool ReturnValue = true;
+		std::tm StoredTime{};
+		std::istringstream Stream(DateToVerify);
+        int DashCount = std::count(DateToVerify.begin(),DateToVerify.end(),'-');
+        if(DashCount == 0)
+        {
+            Stream >> std::get_time(&StoredTime, "%Y");
+            if(Stream.fail())
+            {
+                ReturnValue = false;   
+            }
+        }
+        else if(DashCount == 1)
+        {
+            Stream >> std::get_time(&StoredTime, "%Y-%m");
+            if(Stream.fail())
+            {
+                ReturnValue = false;   
+            }
+               
+        }
+        else if(DashCount == 2)
+        {
+            Stream >> std::get_time(&StoredTime, "%Y-%m-%d");
+            if(Stream.fail())
+            {
+                ReturnValue = false;   
+            }
+        }
+        else
+        {
+            ReturnValue = false;
+        }
+        return(ReturnValue);       
     }
     bool h_IsValidStage(std::string const& StageToVerify)
     {
@@ -16,7 +112,7 @@ namespace MBSlippi
     void SpecEvaluator::p_VerifyAttribute(std::vector<std::string> const& Attribute,bool IsPlayerAssignment,std::vector<MBLSP::Diagnostic>& OutDiagnostics)
     {
     }
-    void SpecEvaluator::p_VerifyGameInfoPredicate(GameInfoPredicate const& PredicateToVerify,bool IsPlayerAssignment,std::vector<MBLSP::Diagnostic>& OutDiagnostics)
+    void SpecEvaluator::p_VerifyGameInfoPredicate(GameInfoPredicate& PredicateToVerify,bool IsPlayerAssignment,std::vector<MBLSP::Diagnostic>& OutDiagnostics)
     {
         std::vector<std::string> const& Attribute = PredicateToVerify.Attribute;
         if(Attribute.size() == 0)
@@ -55,6 +151,11 @@ namespace MBSlippi
                     NewDiagnostic.message = "Invalid date for predicate string";
                     OutDiagnostics.emplace_back(std::move(NewDiagnostic));
                 }
+                else
+                {
+                    PredicateToVerify.DateValue = h_GetPosixTime(PredicateToVerify.Value);
+                }
+                return;
             }
             else if(Attribute[0] == "Stage")
             {
@@ -64,6 +165,7 @@ namespace MBSlippi
                     NewDiagnostic.message = "Invalid date for predicate string";
                     OutDiagnostics.emplace_back(std::move(NewDiagnostic));
                 }
+                return;
             }
             else if(!(Attribute[0] == "Player1" || Attribute[0] == "Player2"))
             {
@@ -83,14 +185,14 @@ namespace MBSlippi
             OutDiagnostics.emplace_back(std::move(NewDiagnostic));
         }
         //Guaranteed to be player attributes at this point
-        if(Attribute[AttributeOffset] != "Character" || Attribute[AttributeOffset] != "Tag" || Attribute[AttributeOffset] != "Code")
+        if(!(Attribute[AttributeOffset] == "Character" || Attribute[AttributeOffset] == "Tag" || Attribute[AttributeOffset] == "Code"))
         {
             MBLSP::Diagnostic NewDiagnostic;
             NewDiagnostic.message = "Invalid player member: \""+Attribute[AttributeOffset]+"\"";
 
             OutDiagnostics.emplace_back(std::move(NewDiagnostic));
         }
-        for(auto const& SubPredicate : PredicateToVerify.ExtraTerms)
+        for(auto& SubPredicate : PredicateToVerify.ExtraTerms)
         {
             p_VerifyGameInfoPredicate(SubPredicate,IsPlayerAssignment,OutDiagnostics);
         }
@@ -113,13 +215,13 @@ namespace MBSlippi
     {
         p_VerifyFilterComponent(FilterToVerify.Component,OutDiagnostics);
     }
-    bool SpecEvaluator::VerifySpec(SlippiSpec const& SpecToVerify,std::vector<MBLSP::Diagnostic>& OutDiagnostics)
+    bool SpecEvaluator::VerifySpec(SlippiSpec& SpecToVerify,std::vector<MBLSP::Diagnostic>& OutDiagnostics)
     {
-        bool ReturnValue = false;
+        bool ReturnValue = true;
         std::vector<MBLSP::Diagnostic> Diagnostics;
         if(SpecToVerify.Assignment.AffectedPlayer != "")
         {
-            if(SpecToVerify.Assignment.AffectedPlayer != "Player1" || SpecToVerify.Assignment.AffectedPlayer != "Player2")
+            if(!(SpecToVerify.Assignment.AffectedPlayer == "Player1" || SpecToVerify.Assignment.AffectedPlayer == "Player2"))
             {
                 MBLSP::Diagnostic NewDiagnostic;
                 NewDiagnostic.message = "Only Player1/Player2 is allowed in player assignment";
@@ -150,19 +252,22 @@ namespace MBSlippi
             PlayerToEvaluatePointer = Player2Pointer;
         }
         SlippiGamePlayerInfo const& CurrentPlayer = *PlayerToEvaluatePointer;
-        if(PredicateToEvaluate.Attribute[0] == "Player1" || PredicateToEvaluate.Attribute[1] == "Player2")
+        if(PredicateToEvaluate.Attribute[0] == "Player1" || PredicateToEvaluate.Attribute[0] == "Player2")
         {
             if(PredicateToEvaluate.Attribute[1] == "Character")
             {
-                ReturnValue = CurrentPlayer.Character == PredicateToEvaluate.Value;   
+                //ReturnValue = CurrentPlayer.Character == PredicateToEvaluate.Value;   
+                ReturnValue = h_Comp(CurrentPlayer.Character,PredicateToEvaluate.Comparison,PredicateToEvaluate.Value);
             } 
             else if(PredicateToEvaluate.Attribute[1] == "Code")
             {
-                ReturnValue = CurrentPlayer.Code == PredicateToEvaluate.Value;   
+                //ReturnValue = CurrentPlayer.Code == PredicateToEvaluate.Value;   
+                ReturnValue = h_Comp(CurrentPlayer.Code,PredicateToEvaluate.Comparison,PredicateToEvaluate.Value);
             }
             else if(PredicateToEvaluate.Attribute[1] == "Tag")
             {
-                ReturnValue = CurrentPlayer.Tag == PredicateToEvaluate.Value;   
+                //ReturnValue = CurrentPlayer.Tag == PredicateToEvaluate.Value;   
+                ReturnValue = h_Comp(CurrentPlayer.Tag,PredicateToEvaluate.Comparison,PredicateToEvaluate.Value);
             }
             else
             {
@@ -177,7 +282,8 @@ namespace MBSlippi
             }
             else if(PredicateToEvaluate.Attribute[0] == "Date")
             {
-                assert(false && "Date not implemented yet B)");   
+                ReturnValue = h_Comp(GameInfo.Date,PredicateToEvaluate.Comparison,PredicateToEvaluate.DateValue);
+                //ReturnValue = h_Comp(GameInfo.Date,PredicateToEvaluate.Operator,
             }
         }
         for(auto const& ExtraTerm : PredicateToEvaluate.ExtraTerms)
@@ -217,7 +323,7 @@ namespace MBSlippi
         }
         else if(PredicateToEvaluate.Attribute[0] == "Code")
         {
-            ReturnValue = PlayerInfo.Tag == PredicateToEvaluate.Value;
+            ReturnValue = PlayerInfo.Code == PredicateToEvaluate.Value;
         }
         else
         {
@@ -250,7 +356,7 @@ namespace MBSlippi
     }
     bool SpecEvaluator::p_IsPlayersSwapped(SlippiGameInfo const& GameInfo, GameInfoPredicate const& PredicateToEvaluate,bool& IsSwapped)
     {
-        bool ReturnValue = true;        
+        bool ReturnValue = false;        
         if(h_SatisfiesPlayerAssignment(GameInfo.PlayerInfo[1],PredicateToEvaluate))
         {
            IsSwapped = true;   
@@ -258,6 +364,10 @@ namespace MBSlippi
         else
         {
             ReturnValue = h_SatisfiesPlayerAssignment(GameInfo.PlayerInfo[0],PredicateToEvaluate);   
+            if(ReturnValue)
+            {
+               IsSwapped = false;    
+            }
         }
         return(ReturnValue);
     }
@@ -295,6 +405,7 @@ namespace MBSlippi
                         MBUtility::MBFileInputStream InStream(&GameData);
                         MeleeGame GameToAdd;
                         MBError ParseResult = MeleeGame::ParseSlippiGame(InStream,GameToAdd);
+                        GameToAdd.Metadata.GamePath = Candidate.RelativePath;
                         if(ParseResult)
                         {
                             if(IsSwapped)
@@ -347,8 +458,8 @@ namespace MBSlippi
         }
         return(ReturnValue);
     }
-    void SpecEvaluator::EvaluateSpec(SlippiSpec const& SpecToEvaluate,std::vector<MBLSP::Diagnostic>& OutDiagnostics)
-    {
+    void SpecEvaluator::EvaluateSpec(SlippiSpec& SpecToEvaluate,std::vector<MBLSP::Diagnostic>& OutDiagnostics)
+    {       
         if(m_DBAdapter == nullptr)
         {
             throw std::runtime_error("DBAdapter need to be set in order to evaluate SlippiSpec");  

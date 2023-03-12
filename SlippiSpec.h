@@ -50,7 +50,7 @@ namespace MBSlippi
         void p_VerifyAttribute(std::vector<std::string> const& Attribute,bool IsPlayerAssignment,std::vector<MBLSP::Diagnostic>& OutDiagnostics);
         void p_VerifyFilterComponent(Filter_Component const& FilterToVerify,std::vector<MBLSP::Diagnostic>& OutDiagnostics);
         void p_VerifyFilter(Filter const& FilterToVerify,std::vector<MBLSP::Diagnostic>& OutDiagnostics);
-        void p_VerifyGameInfoPredicate(GameInfoPredicate const& PredicateToVerify,bool IsPlayerAssignment,std::vector<MBLSP::Diagnostic>& OutDiagnostics);
+        void p_VerifyGameInfoPredicate(GameInfoPredicate& PredicateToVerify,bool IsPlayerAssignment,std::vector<MBLSP::Diagnostic>& OutDiagnostics);
 
         bool p_EvaluateGameSelection(SlippiGameInfo const& GameInfo,bool IsSwapped,GameInfoPredicate const& PredicateToEvaluate);
         //Retunrs wheter or not any player satisfies the condition
@@ -61,7 +61,7 @@ namespace MBSlippi
     public:
         void SetDBAdapter(MeleeGameDBAdapter* NewAdapter);
         void SetRecorder(MeleeGameRecorder* NewRecorder);
-        bool VerifySpec(SlippiSpec const& SpecToVerify,std::vector<MBLSP::Diagnostic>& OutDiagnostics);
-        void EvaluateSpec(SlippiSpec const& SpecToEvaluate,std::vector<MBLSP::Diagnostic>& OutDiagnostics);
+        bool VerifySpec(SlippiSpec& SpecToVerify,std::vector<MBLSP::Diagnostic>& OutDiagnostics);
+        void EvaluateSpec(SlippiSpec& SpecToEvaluate,std::vector<MBLSP::Diagnostic>& OutDiagnostics);
     };
 }

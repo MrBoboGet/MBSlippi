@@ -1,5 +1,5 @@
 #include "SlippiSpecParser.h"
-const bool LOOKTable[51][1][26] = {{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,true,false,false,true,true,true,true,true,false,false,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,},},{{false,false,false,false,false,false,false,false,true,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,},},{{false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,},},{{false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},},{{false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},},{{true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},},{{true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,true,false,false,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,},},{{true,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,},},{{true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,},},{{true,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,},},{{true,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,true,false,false,false,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,},},{{true,false,false,false,false,false,false,false,false,false,false,false,false,false,true,true,true,false,false,true,true,true,true,true,false,false,},},{{true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,true,true,false,false,true,true,true,true,true,false,false,},},{{true,false,false,false,false,false,false,false,false,false,false,false,false,false,true,true,true,false,false,true,true,true,true,true,false,false,},},{{true,false,false,false,false,false,false,false,false,false,false,false,false,false,true,true,true,false,false,true,true,true,true,true,false,false,},},{{false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},},{{false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},},{{false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},},{{false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},},{{false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,},},{{false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,},},{{false,false,false,false,false,false,false,false,false,false,true,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},},{{false,false,false,false,false,false,false,false,false,false,true,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},},};
+const bool LOOKTable[54][1][30] = {{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,true,true,true,true,false,false,true,false,true,true,true,true,false,false,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,},},{{false,false,false,false,false,false,false,false,true,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},},{{false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},},{{false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},},{{false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},},{{true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},},{{true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,true,false,false,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,},},{{true,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},},{{true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},},{{true,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},},{{true,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,true,false,false,false,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,},},{{true,false,false,false,false,false,false,false,false,false,false,false,false,false,true,true,true,true,true,true,false,false,true,false,true,true,true,true,false,false,},},{{true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,true,true,true,true,true,false,false,true,false,true,true,true,true,false,false,},},{{true,false,false,false,false,false,false,false,false,false,false,false,false,false,true,true,true,true,true,true,false,false,true,false,true,true,true,true,false,false,},},{{true,false,false,false,false,false,false,false,false,false,false,false,false,false,true,true,true,true,true,true,false,false,true,false,true,true,true,true,false,false,},},{{false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},},{{false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},},{{false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},},{{false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},},{{false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},},{{false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},},{{false,false,false,false,false,false,false,false,false,false,true,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},},{{false,false,false,false,false,false,false,false,false,false,true,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},},};
 Operator ParseOperator(MBCC::Tokenizer& Tokenizer)
 {
     Operator ReturnValue;
@@ -31,6 +31,18 @@ Operator ParseOperator(MBCC::Tokenizer& Tokenizer)
     {
         ReturnValue = ParseOperator_6(Tokenizer);
     }
+    else if (LOOKTable[8][0][Tokenizer.Peek().Type])
+    {
+        ReturnValue = ParseOperator_7(Tokenizer);
+    }
+    else if (LOOKTable[9][0][Tokenizer.Peek().Type])
+    {
+        ReturnValue = ParseOperator_8(Tokenizer);
+    }
+    else if (LOOKTable[10][0][Tokenizer.Peek().Type])
+    {
+        ReturnValue = ParseOperator_9(Tokenizer);
+    }
     else
     {
          throw MBCC::ParsingException(Tokenizer.Peek().Position,"Operator","Operator");
@@ -40,7 +52,7 @@ Operator ParseOperator(MBCC::Tokenizer& Tokenizer)
 Operator ParseOperator_0(MBCC::Tokenizer& Tokenizer)
 {
     Operator ReturnValue;
-    if(Tokenizer.Peek().Type != 15)
+    if(Tokenizer.Peek().Type != 16)
     {
         throw MBCC::ParsingException(Tokenizer.Peek().Position,"Operator","less");
     }
@@ -51,7 +63,7 @@ Operator ParseOperator_0(MBCC::Tokenizer& Tokenizer)
 Operator ParseOperator_1(MBCC::Tokenizer& Tokenizer)
 {
     Operator ReturnValue;
-    if(Tokenizer.Peek().Type != 21)
+    if(Tokenizer.Peek().Type != 25)
     {
         throw MBCC::ParsingException(Tokenizer.Peek().Position,"Operator","pipe");
     }
@@ -62,7 +74,7 @@ Operator ParseOperator_1(MBCC::Tokenizer& Tokenizer)
 Operator ParseOperator_2(MBCC::Tokenizer& Tokenizer)
 {
     Operator ReturnValue;
-    if(Tokenizer.Peek().Type != 22)
+    if(Tokenizer.Peek().Type != 26)
     {
         throw MBCC::ParsingException(Tokenizer.Peek().Position,"Operator","AND");
     }
@@ -73,7 +85,7 @@ Operator ParseOperator_2(MBCC::Tokenizer& Tokenizer)
 Operator ParseOperator_3(MBCC::Tokenizer& Tokenizer)
 {
     Operator ReturnValue;
-    if(Tokenizer.Peek().Type != 20)
+    if(Tokenizer.Peek().Type != 24)
     {
         throw MBCC::ParsingException(Tokenizer.Peek().Position,"Operator","OR");
     }
@@ -84,7 +96,7 @@ Operator ParseOperator_3(MBCC::Tokenizer& Tokenizer)
 Operator ParseOperator_4(MBCC::Tokenizer& Tokenizer)
 {
     Operator ReturnValue;
-    if(Tokenizer.Peek().Type != 23)
+    if(Tokenizer.Peek().Type != 27)
     {
         throw MBCC::ParsingException(Tokenizer.Peek().Position,"Operator","add");
     }
@@ -95,7 +107,7 @@ Operator ParseOperator_4(MBCC::Tokenizer& Tokenizer)
 Operator ParseOperator_5(MBCC::Tokenizer& Tokenizer)
 {
     Operator ReturnValue;
-    if(Tokenizer.Peek().Type != 16)
+    if(Tokenizer.Peek().Type != 18)
     {
         throw MBCC::ParsingException(Tokenizer.Peek().Position,"Operator","great");
     }
@@ -106,9 +118,42 @@ Operator ParseOperator_5(MBCC::Tokenizer& Tokenizer)
 Operator ParseOperator_6(MBCC::Tokenizer& Tokenizer)
 {
     Operator ReturnValue;
-    if(Tokenizer.Peek().Type != 19)
+    if(Tokenizer.Peek().Type != 22)
     {
         throw MBCC::ParsingException(Tokenizer.Peek().Position,"Operator","eq");
+    }
+    ReturnValue.Op = Tokenizer.Peek().Value;
+    Tokenizer.ConsumeToken();
+    return(ReturnValue);
+}
+Operator ParseOperator_7(MBCC::Tokenizer& Tokenizer)
+{
+    Operator ReturnValue;
+    if(Tokenizer.Peek().Type != 15)
+    {
+        throw MBCC::ParsingException(Tokenizer.Peek().Position,"Operator","leq");
+    }
+    ReturnValue.Op = Tokenizer.Peek().Value;
+    Tokenizer.ConsumeToken();
+    return(ReturnValue);
+}
+Operator ParseOperator_8(MBCC::Tokenizer& Tokenizer)
+{
+    Operator ReturnValue;
+    if(Tokenizer.Peek().Type != 17)
+    {
+        throw MBCC::ParsingException(Tokenizer.Peek().Position,"Operator","geq");
+    }
+    ReturnValue.Op = Tokenizer.Peek().Value;
+    Tokenizer.ConsumeToken();
+    return(ReturnValue);
+}
+Operator ParseOperator_9(MBCC::Tokenizer& Tokenizer)
+{
+    Operator ReturnValue;
+    if(Tokenizer.Peek().Type != 19)
+    {
+        throw MBCC::ParsingException(Tokenizer.Peek().Position,"Operator","neq");
     }
     ReturnValue.Op = Tokenizer.Peek().Value;
     Tokenizer.ConsumeToken();
@@ -117,11 +162,11 @@ Operator ParseOperator_6(MBCC::Tokenizer& Tokenizer)
 Filter_Arg ParseFilter_Arg(MBCC::Tokenizer& Tokenizer)
 {
     Filter_Arg ReturnValue;
-    if (LOOKTable[9][0][Tokenizer.Peek().Type])
+    if (LOOKTable[12][0][Tokenizer.Peek().Type])
     {
         ReturnValue = ParseFilter_Arg_0(Tokenizer);
     }
-    else if (LOOKTable[10][0][Tokenizer.Peek().Type])
+    else if (LOOKTable[13][0][Tokenizer.Peek().Type])
     {
         ReturnValue = ParseFilter_Arg_1(Tokenizer);
     }
@@ -134,7 +179,7 @@ Filter_Arg ParseFilter_Arg(MBCC::Tokenizer& Tokenizer)
 Filter_Arg ParseFilter_Arg_0(MBCC::Tokenizer& Tokenizer)
 {
     Filter_Arg ReturnValue;
-    if(LOOKTable[11][0][Tokenizer.Peek().Type])
+    if(LOOKTable[14][0][Tokenizer.Peek().Type])
     {
         ReturnValue = ParseFilter_Arg_Named(Tokenizer);
     }
@@ -147,7 +192,7 @@ Filter_Arg ParseFilter_Arg_0(MBCC::Tokenizer& Tokenizer)
 Filter_Arg ParseFilter_Arg_1(MBCC::Tokenizer& Tokenizer)
 {
     Filter_Arg ReturnValue;
-    if(LOOKTable[13][0][Tokenizer.Peek().Type])
+    if(LOOKTable[16][0][Tokenizer.Peek().Type])
     {
         ParseFilter_Arg_Positional(Tokenizer);
     }
@@ -211,7 +256,7 @@ Filter_ArgList ParseFilter_ArgList_0(MBCC::Tokenizer& Tokenizer)
         throw MBCC::ParsingException(Tokenizer.Peek().Position,"Filter_ArgList","lpar");
     }
     Tokenizer.ConsumeToken();
-    while(LOOKTable[8][0][Tokenizer.Peek().Type])
+    while(LOOKTable[11][0][Tokenizer.Peek().Type])
     {
         ReturnValue.Arguments.push_back(ParseFilter_Arg(Tokenizer));
     }
@@ -232,13 +277,13 @@ Filter_Component ParseFilter_Component_And_0(MBCC::Tokenizer& Tokenizer)
 {
     Filter_Component ReturnValue;
     std::string Operator;
-    if(Tokenizer.Peek().Type != 23)
+    if(Tokenizer.Peek().Type != 27)
     {
         throw MBCC::ParsingException(Tokenizer.Peek().Position,"Filter_Component_And","add");
     }
     Operator = Tokenizer.Peek().Value;
     Tokenizer.ConsumeToken();
-    if(LOOKTable[27][0][Tokenizer.Peek().Type])
+    if(LOOKTable[30][0][Tokenizer.Peek().Type])
     {
         ReturnValue = ParseFilter_Component(Tokenizer);
     }
@@ -259,13 +304,13 @@ Filter_Component ParseFilter_Component_Or_0(MBCC::Tokenizer& Tokenizer)
 {
     Filter_Component ReturnValue;
     std::string Operator;
-    if(Tokenizer.Peek().Type != 21)
+    if(Tokenizer.Peek().Type != 25)
     {
         throw MBCC::ParsingException(Tokenizer.Peek().Position,"Filter_Component_Or","pipe");
     }
     Operator = Tokenizer.Peek().Value;
     Tokenizer.ConsumeToken();
-    if(LOOKTable[27][0][Tokenizer.Peek().Type])
+    if(LOOKTable[30][0][Tokenizer.Peek().Type])
     {
         ReturnValue = ParseFilter_Component(Tokenizer);
     }
@@ -279,11 +324,11 @@ Filter_Component ParseFilter_Component_Or_0(MBCC::Tokenizer& Tokenizer)
 Filter_OperatorList ParseFilter_OperatorList(MBCC::Tokenizer& Tokenizer)
 {
     Filter_OperatorList ReturnValue;
-    if (LOOKTable[22][0][Tokenizer.Peek().Type])
+    if (LOOKTable[25][0][Tokenizer.Peek().Type])
     {
         ReturnValue = ParseFilter_OperatorList_0(Tokenizer);
     }
-    else if (LOOKTable[23][0][Tokenizer.Peek().Type])
+    else if (LOOKTable[26][0][Tokenizer.Peek().Type])
     {
         ReturnValue = ParseFilter_OperatorList_1(Tokenizer);
     }
@@ -300,7 +345,7 @@ Filter_OperatorList ParseFilter_OperatorList_0(MBCC::Tokenizer& Tokenizer)
     {
         ReturnValue.Components.push_back(ParseFilter_Component_And(Tokenizer));
     }
-    while(LOOKTable[17][0][Tokenizer.Peek().Type]);
+    while(LOOKTable[20][0][Tokenizer.Peek().Type]);
     return(ReturnValue);
 }
 Filter_OperatorList ParseFilter_OperatorList_1(MBCC::Tokenizer& Tokenizer)
@@ -310,17 +355,17 @@ Filter_OperatorList ParseFilter_OperatorList_1(MBCC::Tokenizer& Tokenizer)
     {
         ReturnValue.Components.push_back(ParseFilter_Component_Or(Tokenizer));
     }
-    while(LOOKTable[19][0][Tokenizer.Peek().Type]);
+    while(LOOKTable[22][0][Tokenizer.Peek().Type]);
     return(ReturnValue);
 }
 Filter_Component ParseFilter_Component_Base(MBCC::Tokenizer& Tokenizer)
 {
     Filter_Component ReturnValue;
-    if (LOOKTable[25][0][Tokenizer.Peek().Type])
+    if (LOOKTable[28][0][Tokenizer.Peek().Type])
     {
         ReturnValue = ParseFilter_Component_Base_0(Tokenizer);
     }
-    else if (LOOKTable[26][0][Tokenizer.Peek().Type])
+    else if (LOOKTable[29][0][Tokenizer.Peek().Type])
     {
         ReturnValue = ParseFilter_Component_Base_1(Tokenizer);
     }
@@ -338,7 +383,7 @@ Filter_Component ParseFilter_Component_Base_0(MBCC::Tokenizer& Tokenizer)
         throw MBCC::ParsingException(Tokenizer.Peek().Position,"Filter_Component_Base","lpar");
     }
     Tokenizer.ConsumeToken();
-    if(LOOKTable[27][0][Tokenizer.Peek().Type])
+    if(LOOKTable[30][0][Tokenizer.Peek().Type])
     {
         ReturnValue = ParseFilter_Component(Tokenizer);
     }
@@ -362,7 +407,7 @@ Filter_Component ParseFilter_Component_Base_1(MBCC::Tokenizer& Tokenizer)
     }
     ReturnValue.FilterName = Tokenizer.Peek().Value;
     Tokenizer.ConsumeToken();
-    if(LOOKTable[15][0][Tokenizer.Peek().Type])
+    if(LOOKTable[18][0][Tokenizer.Peek().Type])
     {
         ReturnValue.ArgumentList = ParseFilter_ArgList(Tokenizer);
     }
@@ -377,7 +422,7 @@ Filter_Component ParseFilter_Component(MBCC::Tokenizer& Tokenizer)
 Filter_Component ParseFilter_Component_0(MBCC::Tokenizer& Tokenizer)
 {
     Filter_Component ReturnValue;
-    if(LOOKTable[24][0][Tokenizer.Peek().Type])
+    if(LOOKTable[27][0][Tokenizer.Peek().Type])
     {
         ReturnValue = ParseFilter_Component_Base(Tokenizer);
     }
@@ -386,7 +431,7 @@ Filter_Component ParseFilter_Component_0(MBCC::Tokenizer& Tokenizer)
          throw MBCC::ParsingException(Tokenizer.Peek().Position,"Filter_Component","Filter_Component_Base");
     }
     std::vector<Filter_Component> ExtraTerms;
-    if(LOOKTable[21][0][Tokenizer.Peek().Type])
+    if(LOOKTable[24][0][Tokenizer.Peek().Type])
     {
         ExtraTerms = ParseFilter_OperatorList(Tokenizer).Components;
     }
@@ -407,7 +452,7 @@ Filter ParseFilter_0(MBCC::Tokenizer& Tokenizer)
         throw MBCC::ParsingException(Tokenizer.Peek().Position,"Filter","FILTER");
     }
     Tokenizer.ConsumeToken();
-    if(LOOKTable[27][0][Tokenizer.Peek().Type])
+    if(LOOKTable[30][0][Tokenizer.Peek().Type])
     {
         ReturnValue.Component = ParseFilter_Component(Tokenizer);
     }
@@ -427,13 +472,13 @@ GameInfoPredicate ParseGameInfoPredicate_Or_0(MBCC::Tokenizer& Tokenizer)
 {
     GameInfoPredicate ReturnValue;
     std::string Operator;
-    if(Tokenizer.Peek().Type != 20)
+    if(Tokenizer.Peek().Type != 24)
     {
         throw MBCC::ParsingException(Tokenizer.Peek().Position,"GameInfoPredicate_Or","OR");
     }
     Operator = Tokenizer.Peek().Value;
     Tokenizer.ConsumeToken();
-    if(LOOKTable[41][0][Tokenizer.Peek().Type])
+    if(LOOKTable[44][0][Tokenizer.Peek().Type])
     {
         ReturnValue = ParseGameInfoPredicate(Tokenizer);
     }
@@ -454,13 +499,13 @@ GameInfoPredicate ParseGameInfoPredicate_And_0(MBCC::Tokenizer& Tokenizer)
 {
     GameInfoPredicate ReturnValue;
     std::string Operator;
-    if(Tokenizer.Peek().Type != 22)
+    if(Tokenizer.Peek().Type != 26)
     {
         throw MBCC::ParsingException(Tokenizer.Peek().Position,"GameInfoPredicate_And","AND");
     }
     Operator = Tokenizer.Peek().Value;
     Tokenizer.ConsumeToken();
-    if(LOOKTable[41][0][Tokenizer.Peek().Type])
+    if(LOOKTable[44][0][Tokenizer.Peek().Type])
     {
         ReturnValue = ParseGameInfoPredicate(Tokenizer);
     }
@@ -474,11 +519,11 @@ GameInfoPredicate ParseGameInfoPredicate_And_0(MBCC::Tokenizer& Tokenizer)
 GameInfoPredicate_OperatorList ParseGameInfoPredicate_OperatorList(MBCC::Tokenizer& Tokenizer)
 {
     GameInfoPredicate_OperatorList ReturnValue;
-    if (LOOKTable[36][0][Tokenizer.Peek().Type])
+    if (LOOKTable[39][0][Tokenizer.Peek().Type])
     {
         ReturnValue = ParseGameInfoPredicate_OperatorList_0(Tokenizer);
     }
-    else if (LOOKTable[37][0][Tokenizer.Peek().Type])
+    else if (LOOKTable[40][0][Tokenizer.Peek().Type])
     {
         ReturnValue = ParseGameInfoPredicate_OperatorList_1(Tokenizer);
     }
@@ -495,7 +540,7 @@ GameInfoPredicate_OperatorList ParseGameInfoPredicate_OperatorList_0(MBCC::Token
     {
         ReturnValue.Terms.push_back(ParseGameInfoPredicate_Or(Tokenizer));
     }
-    while(LOOKTable[31][0][Tokenizer.Peek().Type]);
+    while(LOOKTable[34][0][Tokenizer.Peek().Type]);
     return(ReturnValue);
 }
 GameInfoPredicate_OperatorList ParseGameInfoPredicate_OperatorList_1(MBCC::Tokenizer& Tokenizer)
@@ -505,17 +550,17 @@ GameInfoPredicate_OperatorList ParseGameInfoPredicate_OperatorList_1(MBCC::Token
     {
         ReturnValue.Terms.push_back(ParseGameInfoPredicate_And(Tokenizer));
     }
-    while(LOOKTable[33][0][Tokenizer.Peek().Type]);
+    while(LOOKTable[36][0][Tokenizer.Peek().Type]);
     return(ReturnValue);
 }
 GameInfoPredicate ParseGameInfoPredicate_Base(MBCC::Tokenizer& Tokenizer)
 {
     GameInfoPredicate ReturnValue;
-    if (LOOKTable[39][0][Tokenizer.Peek().Type])
+    if (LOOKTable[42][0][Tokenizer.Peek().Type])
     {
         ReturnValue = ParseGameInfoPredicate_Base_0(Tokenizer);
     }
-    else if (LOOKTable[40][0][Tokenizer.Peek().Type])
+    else if (LOOKTable[43][0][Tokenizer.Peek().Type])
     {
         ReturnValue = ParseGameInfoPredicate_Base_1(Tokenizer);
     }
@@ -533,9 +578,9 @@ GameInfoPredicate ParseGameInfoPredicate_Base_0(MBCC::Tokenizer& Tokenizer)
         throw MBCC::ParsingException(Tokenizer.Peek().Position,"GameInfoPredicate_Base","lpar");
     }
     Tokenizer.ConsumeToken();
-    if(LOOKTable[41][0][Tokenizer.Peek().Type])
+    if(LOOKTable[44][0][Tokenizer.Peek().Type])
     {
-        ParseGameInfoPredicate(Tokenizer);
+        ReturnValue = ParseGameInfoPredicate(Tokenizer);
     }
     else
     {
@@ -559,7 +604,7 @@ GameInfoPredicate ParseGameInfoPredicate_Base_1(MBCC::Tokenizer& Tokenizer)
     }
     if(LOOKTable[0][0][Tokenizer.Peek().Type])
     {
-        ReturnValue.Operator = ParseOperator(Tokenizer).Op;
+        ReturnValue.Comparison = ParseOperator(Tokenizer).Op;
     }
     else
     {
@@ -582,7 +627,7 @@ GameInfoPredicate ParseGameInfoPredicate(MBCC::Tokenizer& Tokenizer)
 GameInfoPredicate ParseGameInfoPredicate_0(MBCC::Tokenizer& Tokenizer)
 {
     GameInfoPredicate ReturnValue;
-    if(LOOKTable[38][0][Tokenizer.Peek().Type])
+    if(LOOKTable[41][0][Tokenizer.Peek().Type])
     {
         ReturnValue = ParseGameInfoPredicate_Base(Tokenizer);
     }
@@ -591,7 +636,7 @@ GameInfoPredicate ParseGameInfoPredicate_0(MBCC::Tokenizer& Tokenizer)
          throw MBCC::ParsingException(Tokenizer.Peek().Position,"GameInfoPredicate","GameInfoPredicate_Base");
     }
     std::vector<GameInfoPredicate> ExtraTerms;
-    if(LOOKTable[35][0][Tokenizer.Peek().Type])
+    if(LOOKTable[38][0][Tokenizer.Peek().Type])
     {
         ExtraTerms = ParseGameInfoPredicate_OperatorList(Tokenizer).Terms;
     }
@@ -612,7 +657,7 @@ GameSelection ParseGameSelection_0(MBCC::Tokenizer& Tokenizer)
         throw MBCC::ParsingException(Tokenizer.Peek().Position,"GameSelection","SELECT");
     }
     Tokenizer.ConsumeToken();
-    if(LOOKTable[41][0][Tokenizer.Peek().Type])
+    if(LOOKTable[44][0][Tokenizer.Peek().Type])
     {
         ReturnValue.GameCondition = ParseGameInfoPredicate(Tokenizer);
     }
@@ -642,7 +687,7 @@ PlayerAssignment ParsePlayerAssignment_0(MBCC::Tokenizer& Tokenizer)
     }
     ReturnValue.AffectedPlayer = Tokenizer.Peek().Value;
     Tokenizer.ConsumeToken();
-    if(LOOKTable[41][0][Tokenizer.Peek().Type])
+    if(LOOKTable[44][0][Tokenizer.Peek().Type])
     {
         ReturnValue.PlayerCondition = ParseGameInfoPredicate(Tokenizer);
     }
@@ -683,11 +728,11 @@ SlippiSpec ParseSlippiSpec(MBCC::Tokenizer& Tokenizer)
 SlippiSpec ParseSlippiSpec_0(MBCC::Tokenizer& Tokenizer)
 {
     SlippiSpec ReturnValue;
-    if(LOOKTable[45][0][Tokenizer.Peek().Type])
+    if(LOOKTable[48][0][Tokenizer.Peek().Type])
     {
         ReturnValue.Assignment = ParsePlayerAssignment(Tokenizer);
     }
-    if(LOOKTable[43][0][Tokenizer.Peek().Type])
+    if(LOOKTable[46][0][Tokenizer.Peek().Type])
     {
         ReturnValue.Games = ParseGameSelection(Tokenizer);
     }
@@ -695,11 +740,11 @@ SlippiSpec ParseSlippiSpec_0(MBCC::Tokenizer& Tokenizer)
     {
          throw MBCC::ParsingException(Tokenizer.Peek().Position,"SlippiSpec","GameSelection");
     }
-    if(LOOKTable[29][0][Tokenizer.Peek().Type])
+    if(LOOKTable[32][0][Tokenizer.Peek().Type])
     {
         ReturnValue.SituationFilter = ParseFilter(Tokenizer);
     }
-    if(LOOKTable[47][0][Tokenizer.Peek().Type])
+    if(LOOKTable[50][0][Tokenizer.Peek().Type])
     {
         ReturnValue.Output = ParseResult(Tokenizer);
     }

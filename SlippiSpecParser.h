@@ -16,6 +16,8 @@ class GameInfoPredicate
     public:
     std::vector<std::string> Attribute;
     std::string Value;
+    std::string Comparison;
+    uint64_t DateValue;
     std::string Operator;
     std::vector<GameInfoPredicate> ExtraTerms;
     
@@ -306,6 +308,9 @@ Operator ParseOperator_3(MBCC::Tokenizer& Tokenizer);
 Operator ParseOperator_4(MBCC::Tokenizer& Tokenizer);
 Operator ParseOperator_5(MBCC::Tokenizer& Tokenizer);
 Operator ParseOperator_6(MBCC::Tokenizer& Tokenizer);
+Operator ParseOperator_7(MBCC::Tokenizer& Tokenizer);
+Operator ParseOperator_8(MBCC::Tokenizer& Tokenizer);
+Operator ParseOperator_9(MBCC::Tokenizer& Tokenizer);
 Filter_Arg ParseFilter_Arg(MBCC::Tokenizer& Tokenizer);
 Filter_Arg ParseFilter_Arg_0(MBCC::Tokenizer& Tokenizer);
 Filter_Arg ParseFilter_Arg_1(MBCC::Tokenizer& Tokenizer);
@@ -351,6 +356,6 @@ SlippiSpec ParseSlippiSpec(MBCC::Tokenizer& Tokenizer);
 SlippiSpec ParseSlippiSpec_0(MBCC::Tokenizer& Tokenizer);
 inline MBCC::Tokenizer GetTokenizer()
 {
-    MBCC::Tokenizer ReturnValue("( |\\t|\\n|\\r)*",{"\\(","\\)","\\{","\\}","\\[","\\]",";","[[:digit:]]+","\"(\\\\.|[^\"\\\\])*\"","true|false","WITH","SELECT","RECORD","FILTER","[[:alpha:]_]+[[:alnum:]_]*","<",">",":",",","=","\\|\\|","\\|","&&","&","\\?",});
+    MBCC::Tokenizer ReturnValue("( |\\t|\\n|\\r)*",{"\\(","\\)","\\{","\\}","\\[","\\]",";","[[:digit:]]+","$\"((\\\\.|[^\"\\\\])*)\"","true|false","WITH","SELECT","RECORD","FILTER","[[:alpha:]_]+[[:alnum:]_]*","<=","<",">=",">","!=",":",",","=","\\.","\\|\\|","\\|","&&","&","\\?",});
     return(ReturnValue);
 }
