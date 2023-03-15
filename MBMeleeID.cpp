@@ -522,6 +522,10 @@ namespace MBSlippi
             {
                 Event_PostFrameUpdate const& PlayerFrameUpdate = FrameEvent.GetEventData<Event_PostFrameUpdate>();
                 ReturnValue.FrameNumber = PlayerFrameUpdate.FrameNumber;//updated many times but negligable
+                if(PlayerFrameUpdate.PlayerIndex >= 4 || PlayerFrameUpdate.PlayerIndex < 0)
+                {
+                    throw std::runtime_error("Player index out of bounds when parsing player data");
+                }
                 ReturnValue.PlayerInfo[PlayerFrameUpdate.PlayerIndex] = h_ParsePlayerFrameInfo(PlayerFrameUpdate);
             }
         }          

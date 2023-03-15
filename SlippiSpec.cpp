@@ -491,4 +491,83 @@ namespace MBSlippi
         }
         m_Recorder->RecordGames(GamesToRecord,SpecToEvaluate.Output.GetType<Result_Record>().OutFile);
     }
+	struct i_PunishInfo
+	{
+		float TotalRecievedPercent = 0;
+		GameIntervall PunishIntervall;
+	};
+    //temp name for refactor
+	std::vector<i_PunishInfo> h_ExtractPunishes2(MeleeGame const& GameToInspect, int PunisherIndex, int PunisheeIndex, float PercentThreshold)
+	{
+		std::vector<i_PunishInfo> ReturnValue;
+
+		float PunisheeLastPercent = 0;
+		float PunisherLastPercent = 0;
+		float TotalPunishPercent = 0;
+		
+		int PunishBeginFrame = -123;
+		for (FrameInfo const& Frame : GameToInspect.Frames)
+		{
+			if (Frame.PlayerInfo[PunisheeIndex].Percent == 0 && PunisheeLastPercent > 0 || Frame.PlayerInfo[PunisherIndex].Percent == 0 && PunisherLastPercent > 0)
+			{
+				PunisherLastPercent = Frame.PlayerInfo[PunisherIndex].Percent;
+				PunisheeLastPercent = Frame.PlayerInfo[PunisheeIndex].Percent;
+				if (TotalPunishPercent >= PercentThreshold)
+				{
+					i_PunishInfo NewInfo;
+					NewInfo.TotalRecievedPercent = TotalPunishPercent;
+					NewInfo.PunishIntervall.FirstFrame = PunishBeginFrame;
+					NewInfo.PunishIntervall.LastFrame = Frame.FrameNumber;
+					ReturnValue.push_back(NewInfo);
+				}
+				TotalPunishPercent = 0;
+			}
+			if (PunisherLastPercent < Frame.PlayerInfo[PunisherIndex].Percent)
+			{
+				PunisherLastPercent = Frame.PlayerInfo[PunisherIndex].Percent;
+				if (TotalPunishPercent >= PercentThreshold)
+				{
+					i_PunishInfo NewInfo;
+					NewInfo.TotalRecievedPercent = TotalPunishPercent;
+					NewInfo.PunishIntervall.FirstFrame = PunishBeginFrame;
+					NewInfo.PunishIntervall.LastFrame = Frame.FrameNumber;
+					ReturnValue.push_back(NewInfo);
+				}
+				TotalPunishPercent = 0;
+			}
+			if (PunisheeLastPercent < Frame.PlayerInfo[PunisheeIndex].Percent)
+			{
+				if (TotalPunishPercent == 0)
+				{
+					PunishBeginFrame = Frame.FrameNumber;
+				}
+				TotalPunishPercent += Frame.PlayerInfo[PunisheeIndex].Percent - PunisheeLastPercent;
+				PunisheeLastPercent = Frame.PlayerInfo[PunisheeIndex].Percent;
+			}
+		}
+		return(ReturnValue);
+	}
+    //std::vector<GameIntervall> h_GetBiggestPunishes(std::vector<i_PunishInfo> const& Punishes,int Count)
+    //{
+    //}
+    std::vector<GameIntervall> SpecEvaluator::BiggestPunishes(MeleeGame const& GameToInspect,Filter_ArgList const& ExtraArguments,GameIntervall IntervallToInspect)
+    {
+        std::vector<GameIntervall> ReturnValue;
+        float PercentThreshold = 40;
+        float PunisherIndex = 0;
+        float PunisheeIndex = 1;
+        float ExtractCount = 10;
+        std::vector<i_PunishInfo> Punishes = h_ExtractPunishes2(GameToInspect,PunisherIndex,PunisheeIndex,20);
+        std::sort(Punishes.begin(),Punishes.end(),
+                [](i_PunishInfo const& lhs,i_PunishInfo const& rhs){return(lhs.TotalRecievedPercent >= rhs.TotalRecievedPercent);});
+        if(Punishes.size() > ExtractCount)
+        {
+            Punishes.resize(ExtractCount);
+        }
+        for(auto const& Punish : Punishes)
+        {
+            ReturnValue.push_back(Punish.PunishIntervall);   
+        }
+        return(ReturnValue);
+    }
 }

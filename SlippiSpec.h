@@ -41,8 +41,11 @@ namespace MBSlippi
         typedef std::vector<GameIntervall> (* BuiltinFilterType)(MeleeGame const& GameToInspect,Filter_ArgList const& ExtraArguments,GameIntervall IntervallToInspect);
 
 
-
-        std::unordered_map<std::string,BuiltinFilterType> m_BuiltinFilters;
+        static std::vector<GameIntervall> BiggestPunishes(MeleeGame const& GameToInspect,Filter_ArgList const& ExtraArguments,GameIntervall IntervallToInspect);
+        std::unordered_map<std::string,BuiltinFilterType> m_BuiltinFilters = 
+        {
+            {"Punishes",BiggestPunishes}
+        };
 
         MeleeGameDBAdapter* m_DBAdapter;
         MeleeGameRecorder* m_Recorder;
