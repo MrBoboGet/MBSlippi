@@ -1,4 +1,5 @@
 #include "SlippiSpec.h"
+#include "MBMeleeID.h"
 #include "SlippiSpecParser.h"
 #include <memory>
 #include <MBUtility/Merge.h>
@@ -433,7 +434,7 @@ namespace MBSlippi
         ReturnValue = BuiltinFilter(GameToFilter,FilterToUse.ArgumentList,CurrentIntervall);
         for(auto const& ExtraFilter : FilterToUse.ExtraTerms)
         {
-            if(FilterToUse.Operator == "&")
+            if(ExtraFilter.Operator == "&")
             {
                 std::vector<GameIntervall> NewSituations = p_EvaluateGameIntervalls(ExtraFilter,CurrentIntervall,GameToFilter); 
                 std::vector<GameIntervall> NewReturnValue;
@@ -441,7 +442,7 @@ namespace MBSlippi
                 std::merge(NewSituations.begin(),NewSituations.end(),ReturnValue.begin(),ReturnValue.end(),NewReturnValue.begin());
                 ReturnValue = std::move(NewReturnValue);
             }       
-            else if(FilterToUse.Operator == "|")
+            else if(ExtraFilter.Operator == "|")
             {
                 std::vector<std::vector<GameIntervall>> NewIntervalls;
                 for(auto const& Intervall : ReturnValue)
@@ -550,7 +551,7 @@ namespace MBSlippi
     //std::vector<GameIntervall> h_GetBiggestPunishes(std::vector<i_PunishInfo> const& Punishes,int Count)
     //{
     //}
-    std::vector<GameIntervall> SpecEvaluator::BiggestPunishes(MeleeGame const& GameToInspect,Filter_ArgList const& ExtraArguments,GameIntervall IntervallToInspect)
+    std::vector<GameIntervall> SpecEvaluator::BiggestPunishes(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,GameIntervall IntervallToInspect)
     {
         std::vector<GameIntervall> ReturnValue;
         float PercentThreshold = 40;
@@ -567,6 +568,40 @@ namespace MBSlippi
         for(auto const& Punish : Punishes)
         {
             ReturnValue.push_back(Punish.PunishIntervall);   
+        }
+        return(ReturnValue);
+    }
+    std::vector<GameIntervall> SpecEvaluator::HasMove(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,GameIntervall IntervallToInspect)
+    {
+        std::vector<GameIntervall> ReturnValue;
+        if(ExtraArguments.PositionalArguments.size() == 0)
+        {
+            throw std::runtime_error("HasMove requires the move to search for as the first positional argument");
+        }
+        MBAttackID Attack = StringToMBAttackID(ExtraArguments.PositionalArguments[0]);
+        int PlayerIndex = 0;
+        if(auto const& PlayerIndexIt = ExtraArguments.KeyArguments.find("Player"); PlayerIndexIt != ExtraArguments.KeyArguments.end())
+        {
+            if(PlayerIndexIt->second == "0")
+            {
+                   
+            }
+            else if(PlayerIndexIt->second == "1")
+            {
+                PlayerIndex = 1;
+            }
+            else
+            {
+                throw std::runtime_error("PlayerIndex can only be 1 or 0");   
+            }
+        }
+        for(int i = IntervallToInspect.FirstFrame; i <= IntervallToInspect.LastFrame;i++)
+        {
+            if(GameToInspect.Frames[i].PlayerInfo[PlayerIndex].ActiveAttack == Attack)
+            {
+                ReturnValue.push_back(IntervallToInspect);
+                break;
+            }
         }
         return(ReturnValue);
     }

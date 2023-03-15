@@ -35,16 +35,42 @@ namespace MBSlippi
     public:
         virtual void RecordGames(std::vector<RecordingInfo> const& GamesToRecord,std::filesystem::path const& OutPath) = 0;
     };
+
+    class ArgumentList
+    {
+    public:
+        ArgumentList() = default;
+        ArgumentList(Filter_ArgList const& ListToConvert)
+        {
+            for(auto const& Argument : ListToConvert.Arguments)
+            {
+                if(Argument.IsType<Filter_Arg_Positional>())
+                {
+                    PositionalArguments.push_back(Argument.GetType<Filter_Arg_Positional>().Value);
+                }
+                else if(Argument.IsType<Filter_Arg_Named>())
+                {
+                    auto const& KeyArgument = Argument.GetType<Filter_Arg_Named>();
+                    KeyArguments[KeyArgument.Name] = KeyArgument.Value;
+                }
+            }   
+        }
+        std::vector<std::string>  PositionalArguments;
+        std::unordered_map<std::string,std::string> KeyArguments;
+    };
+
     class SpecEvaluator
     {
     private:
-        typedef std::vector<GameIntervall> (* BuiltinFilterType)(MeleeGame const& GameToInspect,Filter_ArgList const& ExtraArguments,GameIntervall IntervallToInspect);
+        typedef std::vector<GameIntervall> (* BuiltinFilterType)(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,GameIntervall IntervallToInspect);
 
 
-        static std::vector<GameIntervall> BiggestPunishes(MeleeGame const& GameToInspect,Filter_ArgList const& ExtraArguments,GameIntervall IntervallToInspect);
+        static std::vector<GameIntervall> BiggestPunishes(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,GameIntervall IntervallToInspect);
+        static std::vector<GameIntervall> HasMove(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,GameIntervall IntervallToInspect);
         std::unordered_map<std::string,BuiltinFilterType> m_BuiltinFilters = 
         {
-            {"Punishes",BiggestPunishes}
+            {"Punishes",BiggestPunishes},
+            {"HasMove",BiggestPunishes}
         };
 
         MeleeGameDBAdapter* m_DBAdapter;

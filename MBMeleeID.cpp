@@ -438,10 +438,23 @@ namespace MBSlippi
 
   
 
-
+    //TODO use binary search or something
 	MBAttackID StringToMBAttackID(std::string const& StringToConvert)
 	{
-		return(MBAttackID::None);
+        MBAttackID ReturnValue = MBAttackID::None;
+        for(int i = 0; i < sizeof(__MBAttackIDToStringMap)/sizeof(const char*);i++)
+        {
+            if(__MBAttackIDToStringMap[i] == StringToConvert)
+            {
+                ReturnValue = MBAttackID(i);
+                break;
+            }
+        }
+        if(ReturnValue == MBAttackID::None)
+        {
+            throw std::runtime_error("No attack ID with name \""+StringToConvert+"\"");
+        }
+        return(ReturnValue);
 	}
 	MBActionState StringToMBActionState(std::string const& StringToConvert)
 	{
