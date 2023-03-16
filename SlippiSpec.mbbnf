@@ -83,6 +83,19 @@ struct Filter_Arg_Named : Filter_Arg
     string Name;
     string Value;
 }
+struct ArgList
+{
+    List<Filter_Arg> Args;
+}
+
+struct AttributeLiteral
+{
+    string Attribute;
+}
+struct AttributeList
+{
+    List<string> Attributes;
+}
 struct Filter_Component
 {
     string FilterName; 
@@ -128,15 +141,18 @@ def Filter_Component_Base=Filter_Component;
 def Filter_Arg=Filter_Arg;
 def Filter_Arg_Named=Filter_Arg_Named;
 def Filter_Arg_Positional=Filter_Arg_Positional;
-def Filter_ArgList = Filter_ArgList;
+def Filter_ArgList = ArgList;
 def Operator=Operator;
 
 Operator = Op=less|Op=pipe|Op=AND|Op=OR|Op=add|Op=great | Op=eq | Op=leq | Op=geq | Op=neq;
+def Filter_Arg_Extra = Filter_Arg;
+Filter_Arg_Extra = comma this=Filter_Arg;
 Filter_Arg = this=Filter_Arg_Named | Filter_Arg_Positional;
-Filter_Arg_Named = Name=idf Value=string;
+Filter_Arg_Named = Name=idf eq Value=string;
 Filter_Arg_Positional = Value=string;
-
-Filter_ArgList = lpar Arguments=Filter_Arg* rpar;
+def Filter_ArgList_Arguments = ArgList;
+Filter_ArgList_Arguments = Args=Filter_Arg Args=Filter_Arg_Extra*;
+Filter_ArgList = lpar this=Filter_ArgList_Arguments? rpar;
 
 
 def Filter_Component_Or=Filter_Component;
@@ -146,7 +162,9 @@ def Filter_OperatorList=Filter_OperatorList;
 Filter_Component_And = Operator=add this=Filter_Component;
 Filter_Component_Or = Operator=pipe this=Filter_Component;
 Filter_OperatorList = Components=Filter_Component_And+ | Components=Filter_Component_Or+;
-Filter_Component_Base = lpar this=Filter_Component rpar | FilterName=idf ArgumentList=Filter_ArgList?;
+Filter_Component_Base = 
+    lpar this=Filter_Component rpar 
+    | FilterName=idf ArgumentList.Arguments=Filter_ArgList.Args?;
 Filter_Component = this=Filter_Component_Base ExtraTerms=Filter_OperatorList.Components?;
 Filter= FILTER Component=Filter_Component;
 
@@ -155,10 +173,20 @@ def GameInfoPredicate_Or=GameInfoPredicate;
 def GameInfoPredicate_And=GameInfoPredicate;
 def GameInfoPredicate_OperatorList=GameInfoPredicate_OperatorList;
 
+def Attribute_Extension = AttributeLiteral;
+def Attribute_Base = AttributeLiteral;
+def Attribute_List = AttributeList;
+Attribute_Base = Attribute=idf;
+Attribute_Extension = dot Attribute=idf;
+Attribute_List = Attributes=Attribute_Base.Attribute Attributes=Attribute_Extension.Attribute*;
+
 GameInfoPredicate_Or = Operator=OR this=GameInfoPredicate;
 GameInfoPredicate_And = Operator=AND this=GameInfoPredicate;
 GameInfoPredicate_OperatorList=Terms=GameInfoPredicate_Or+ | Terms=GameInfoPredicate_And+;
-GameInfoPredicate_Base = lpar this=GameInfoPredicate rpar | Attribute=idf+ Comparison=Operator.Op Value=string;
+GameInfoPredicate_Base = lpar this=GameInfoPredicate rpar | 
+    Attribute=Attribute_List.Attributes Comparison=Operator.Op Value=string;
+
+
 GameInfoPredicate = this=GameInfoPredicate_Base ExtraTerms=GameInfoPredicate_OperatorList.Terms?; 
 GameSelection = SELECT GameCondition=GameInfoPredicate;
 

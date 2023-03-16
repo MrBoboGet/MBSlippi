@@ -86,6 +86,12 @@ class Result
     }
     
 };
+class AttributeList
+{
+    public:
+    std::vector<std::string> Attributes;
+    
+};
 class Filter_Arg_Base
 {
     public:
@@ -150,6 +156,12 @@ class Filter_Arg
     }
     
 };
+class AttributeLiteral
+{
+    public:
+    std::string Attribute;
+    
+};
 class GameSelection
 {
     public:
@@ -165,6 +177,12 @@ class Result_Record : public Result_Base
 {
     public:
     std::string OutFile;
+    
+};
+class ArgList
+{
+    public:
+    std::vector<Filter_Arg> Args;
     
 };
 class Filter_Arg_Named : public Filter_Arg_Base
@@ -311,6 +329,8 @@ Operator ParseOperator_6(MBCC::Tokenizer& Tokenizer);
 Operator ParseOperator_7(MBCC::Tokenizer& Tokenizer);
 Operator ParseOperator_8(MBCC::Tokenizer& Tokenizer);
 Operator ParseOperator_9(MBCC::Tokenizer& Tokenizer);
+Filter_Arg ParseFilter_Arg_Extra(MBCC::Tokenizer& Tokenizer);
+Filter_Arg ParseFilter_Arg_Extra_0(MBCC::Tokenizer& Tokenizer);
 Filter_Arg ParseFilter_Arg(MBCC::Tokenizer& Tokenizer);
 Filter_Arg ParseFilter_Arg_0(MBCC::Tokenizer& Tokenizer);
 Filter_Arg ParseFilter_Arg_1(MBCC::Tokenizer& Tokenizer);
@@ -318,8 +338,10 @@ Filter_Arg_Named ParseFilter_Arg_Named(MBCC::Tokenizer& Tokenizer);
 Filter_Arg_Named ParseFilter_Arg_Named_0(MBCC::Tokenizer& Tokenizer);
 Filter_Arg_Positional ParseFilter_Arg_Positional(MBCC::Tokenizer& Tokenizer);
 Filter_Arg_Positional ParseFilter_Arg_Positional_0(MBCC::Tokenizer& Tokenizer);
-Filter_ArgList ParseFilter_ArgList(MBCC::Tokenizer& Tokenizer);
-Filter_ArgList ParseFilter_ArgList_0(MBCC::Tokenizer& Tokenizer);
+ArgList ParseFilter_ArgList_Arguments(MBCC::Tokenizer& Tokenizer);
+ArgList ParseFilter_ArgList_Arguments_0(MBCC::Tokenizer& Tokenizer);
+ArgList ParseFilter_ArgList(MBCC::Tokenizer& Tokenizer);
+ArgList ParseFilter_ArgList_0(MBCC::Tokenizer& Tokenizer);
 Filter_Component ParseFilter_Component_And(MBCC::Tokenizer& Tokenizer);
 Filter_Component ParseFilter_Component_And_0(MBCC::Tokenizer& Tokenizer);
 Filter_Component ParseFilter_Component_Or(MBCC::Tokenizer& Tokenizer);
@@ -334,6 +356,12 @@ Filter_Component ParseFilter_Component(MBCC::Tokenizer& Tokenizer);
 Filter_Component ParseFilter_Component_0(MBCC::Tokenizer& Tokenizer);
 Filter ParseFilter(MBCC::Tokenizer& Tokenizer);
 Filter ParseFilter_0(MBCC::Tokenizer& Tokenizer);
+AttributeLiteral ParseAttribute_Base(MBCC::Tokenizer& Tokenizer);
+AttributeLiteral ParseAttribute_Base_0(MBCC::Tokenizer& Tokenizer);
+AttributeLiteral ParseAttribute_Extension(MBCC::Tokenizer& Tokenizer);
+AttributeLiteral ParseAttribute_Extension_0(MBCC::Tokenizer& Tokenizer);
+AttributeList ParseAttribute_List(MBCC::Tokenizer& Tokenizer);
+AttributeList ParseAttribute_List_0(MBCC::Tokenizer& Tokenizer);
 GameInfoPredicate ParseGameInfoPredicate_Or(MBCC::Tokenizer& Tokenizer);
 GameInfoPredicate ParseGameInfoPredicate_Or_0(MBCC::Tokenizer& Tokenizer);
 GameInfoPredicate ParseGameInfoPredicate_And(MBCC::Tokenizer& Tokenizer);
