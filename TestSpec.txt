@@ -1,0 +1,2 @@
+WITH Player1 (Code = "BOBO#253" || Tag="MrBoboGet") SELECT Player2.Code="AB#177" && Date > "2023" && Player2.Character
+= "Captain" FILTER Punishes | HasMove("Nair",PlayerIndex="1") RECORD "TestAbbson.mp4"
