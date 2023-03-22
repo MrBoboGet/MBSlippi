@@ -79,18 +79,65 @@ namespace MBSlippi
         std::string ExecutableName;
         std::vector<std::string> ExecutableArguments;
     };
+
+    template <typename PredType>
+    std::vector<GameIntervall> ExtractSequences(MeleeGame const& GameToInspect, GameIntervall IntervallToInspect,PredType Predicate)
+    {
+        std::vector<GameIntervall> ReturnValue;
+        bool WasTrue = false;
+        int FirstTrue = IntervallToInspect.FirstFrame;
+        for(int i = IntervallToInspect.FirstFrame; i < IntervallToInspect.LastFrame;i++)
+        {
+            if(Predicate(GameToInspect.Frames[i]))
+            {
+                if(!WasTrue)
+                {
+                    FirstTrue = i;
+                }
+                WasTrue = true;
+            }
+            else
+            {
+                if(WasTrue)
+                {
+                    ReturnValue.push_back(GameIntervall(FirstTrue,i));   
+                }
+                WasTrue = false;
+            }
+        }
+        return(ReturnValue);
+    }
+
+
     class SpecEvaluator
     {
     private:
         typedef std::vector<GameIntervall> (* BuiltinFilterType)(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,GameIntervall IntervallToInspect);
 
-
+        static int GetPlayerIndex(ArgumentList const& ExtraArguments);
+    
         static std::vector<GameIntervall> BiggestPunishes(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,GameIntervall IntervallToInspect);
         static std::vector<GameIntervall> HasMove(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,GameIntervall IntervallToInspect);
+        static std::vector<GameIntervall> Move(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,GameIntervall IntervallToInspect);
+        static std::vector<GameIntervall> InShield(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,GameIntervall IntervallToInspect);
+        static std::vector<GameIntervall> Expand(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,GameIntervall IntervallToInspect);
+        static std::vector<GameIntervall> ActionState(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,GameIntervall IntervallToInspect);
+        static std::vector<GameIntervall> SpecialState(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,GameIntervall IntervallToInspect);
+        static std::vector<GameIntervall> HasProjectile(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,GameIntervall IntervallToInspect);
+        static std::vector<GameIntervall> HitBy(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,GameIntervall IntervallToInspect);
+        static std::vector<GameIntervall> HasHitBy(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,GameIntervall IntervallToInspect);
         std::unordered_map<std::string,BuiltinFilterType> m_BuiltinFilters = 
         {
             {"Punishes",BiggestPunishes},
-            {"HasMove",HasMove}
+            {"HasMove",HasMove},
+            {"Move",Move},
+            {"InShield",InShield},
+            {"Expand",Expand},
+            {"HitBy",HitBy},
+            {"HasHitBy",HitBy},
+            {"SpecialState",SpecialState},
+            {"HasProjectile",HasProjectile},
+            {"ActionState",ActionState},
         };
 
         std::vector<SpecServer> m_SpecServers;

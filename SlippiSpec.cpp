@@ -679,6 +679,26 @@ namespace MBSlippi
         }
         return(ReturnValue);
     }
+    int SpecEvaluator::GetPlayerIndex(ArgumentList const& ExtraArguments)
+    {
+        int ReturnValue = 0;
+        if(auto const& PlayerIndexIt = ExtraArguments.KeyArguments.find("Player"); PlayerIndexIt != ExtraArguments.KeyArguments.end())
+        {
+            if(PlayerIndexIt->second == "0")
+            {
+
+            }
+            else if(PlayerIndexIt->second == "1")
+            {
+                ReturnValue = 1;
+            }
+            else
+            {
+                throw std::runtime_error("PlayerIndex can only be 1 or 0");   
+            }
+        }
+        return(ReturnValue);
+    }
     std::vector<GameIntervall> SpecEvaluator::HasMove(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,GameIntervall IntervallToInspect)
     {
         std::vector<GameIntervall> ReturnValue;
@@ -687,22 +707,7 @@ namespace MBSlippi
             throw std::runtime_error("HasMove requires the move to search for as the first positional argument");
         }
         MBAttackID Attack = StringToMBAttackID(ExtraArguments.PositionalArguments[0]);
-        int PlayerIndex = 0;
-        if(auto const& PlayerIndexIt = ExtraArguments.KeyArguments.find("Player"); PlayerIndexIt != ExtraArguments.KeyArguments.end())
-        {
-            if(PlayerIndexIt->second == "0")
-            {
-                   
-            }
-            else if(PlayerIndexIt->second == "1")
-            {
-                PlayerIndex = 1;
-            }
-            else
-            {
-                throw std::runtime_error("PlayerIndex can only be 1 or 0");   
-            }
-        }
+        int PlayerIndex = GetPlayerIndex(ExtraArguments);
         for(int i = IntervallToInspect.FirstFrame; i <= IntervallToInspect.LastFrame;i++)
         {
             if(GameToInspect.Frames[i].PlayerInfo[PlayerIndex].ActiveAttack == Attack)
@@ -711,6 +716,161 @@ namespace MBSlippi
                 break;
             }
         }
+        return(ReturnValue);
+    }
+    std::vector<GameIntervall> SpecEvaluator::Move(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,GameIntervall IntervallToInspect)
+    {
+        std::vector<GameIntervall> ReturnValue;
+        if(ExtraArguments.PositionalArguments.size() != 0)
+        {
+            throw std::runtime_error("Move requries exactly 1 positional option, the name of the move to inspect");
+        }
+        MBAttackID Move = StringToMBAttackID(ExtraArguments.PositionalArguments[0]);
+        int PlayerIndex = GetPlayerIndex(ExtraArguments);
+        ReturnValue = ExtractSequences(GameToInspect,IntervallToInspect,
+                [&](FrameInfo const& Frame)
+                {
+                    return(Frame.PlayerInfo[PlayerIndex].ActiveAttack == Move);
+                });
+        return(ReturnValue);
+    }
+    std::vector<GameIntervall> SpecEvaluator::InShield(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,GameIntervall IntervallToInspect)
+    {
+        std::vector<GameIntervall> ReturnValue;
+        int PlayerIndex = GetPlayerIndex(ExtraArguments);
+        bool CheckShielding = true;
+        bool CheckShieldstun = true;
+        if(auto ShieldingIt = ExtraArguments.KeyArguments.find("Shielding"),ShieldstunIt = ExtraArguments.KeyArguments.find("Shieldstun");
+                ShieldingIt != ExtraArguments.KeyArguments.end() || ShieldstunIt != ExtraArguments.KeyArguments.end())
+        {
+            CheckShieldstun = ShieldstunIt != ExtraArguments.KeyArguments.end();
+            CheckShielding = ShieldingIt != ExtraArguments.KeyArguments.end();
+        }
+        ReturnValue = ExtractSequences(GameToInspect,IntervallToInspect,
+                [&](FrameInfo const& Frame)
+                {
+                    bool ReturnValue = false;
+                    if(CheckShielding)
+                    {
+                        ReturnValue = ReturnValue || Frame.PlayerInfo[PlayerIndex].ActionState == MBActionState::Shielding;
+                    }
+                    if(CheckShieldstun)
+                    {
+                        ReturnValue = ReturnValue || Frame.PlayerInfo[PlayerIndex].ActionState == MBActionState::ShieldStun;
+                    }
+                    return(ReturnValue);
+                });
+        return(ReturnValue);
+    }
+    std::vector<GameIntervall> SpecEvaluator::ActionState(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,GameIntervall IntervallToInspect)
+    {
+        std::vector<GameIntervall> ReturnValue;
+        if(ExtraArguments.PositionalArguments.size() != 1)
+        {
+            throw std::runtime_error("ActionState requires exactly 1 positional argument, the name of the action state");
+        }
+        int PlayerIndex = GetPlayerIndex(ExtraArguments);
+        MBActionState StateToCheck = StringToMBActionState(ExtraArguments.PositionalArguments[0]);
+        ReturnValue = ExtractSequences(GameToInspect,IntervallToInspect,
+                [&](FrameInfo const& Frame){return(Frame.PlayerInfo[PlayerIndex].ActionState == StateToCheck);});
+        return(ReturnValue);
+    }
+    int h_ParseExpandInteger(std::string const& StringToParse)
+    {
+        int ReturnValue = 0;
+        try
+        {
+            ReturnValue = std::stoi(StringToParse);
+        }   
+        catch(std::exception const& e)
+        {
+            throw std::runtime_error("Error parsing expand integer: "+std::string(e.what()));
+        }
+        return(ReturnValue);
+    }
+    std::vector<GameIntervall> SpecEvaluator::Expand(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,GameIntervall IntervallToInspect)
+    {
+        std::vector<GameIntervall> ReturnValue;
+        int LeftExpand = 0;
+        int RightExpand = 0;
+        if(ExtraArguments.PositionalArguments.size() > 0)
+        {
+            int TotalExpandSize = h_ParseExpandInteger(ExtraArguments.PositionalArguments[0]);
+            LeftExpand = -TotalExpandSize;
+            RightExpand = TotalExpandSize;
+        }
+        if(auto RightIt = ExtraArguments.KeyArguments.find("Right"); RightIt != ExtraArguments.KeyArguments.end())
+        {
+            RightExpand = h_ParseExpandInteger(RightIt->second);
+        }
+        else if(auto LeftIt = ExtraArguments.KeyArguments.find("Left"); LeftIt != ExtraArguments.KeyArguments.end())
+        {
+            LeftExpand = -h_ParseExpandInteger(LeftIt->second);   
+        }
+        IntervallToInspect.FirstFrame += LeftExpand;
+        IntervallToInspect.LastFrame += RightExpand;
+        if(IntervallToInspect.FirstFrame < IntervallToInspect.LastFrame)
+        {
+            ReturnValue = {IntervallToInspect};
+        }
+        return(ReturnValue);
+           
+    }
+    std::vector<GameIntervall> SpecEvaluator::HitBy(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,GameIntervall IntervallToInspect)
+    {
+        std::vector<GameIntervall> ReturnValue;
+        int PlayerIndex = GetPlayerIndex(ExtraArguments);
+        int OpponentIndex = PlayerIndex == 0 ? 1 : 0;
+        int Context = 10;
+        if(ExtraArguments.PositionalArguments.size() != 1)
+        {
+            throw std::runtime_error("HitBy requires exactly 1 positional argument, the name of the hit move");
+        }
+        MBAttackID Attack = StringToMBAttackID(ExtraArguments.PositionalArguments[0]);
+        if(auto ContextIt = ExtraArguments.KeyArguments.find("Context"); ContextIt != ExtraArguments.KeyArguments.end())
+        {
+            Context = std::stoi(ContextIt->second);
+        }
+        ReturnValue = ExtractSequences(GameToInspect,IntervallToInspect,[&]
+                (FrameInfo const& Frame)
+                {
+                    return((Frame.PlayerInfo[PlayerIndex].ActionState == MBActionState::ShieldStun || Frame.PlayerInfo[PlayerIndex].StateFlags.InHitlag)
+                            && Frame.PlayerInfo[OpponentIndex].ActiveAttack == Attack);
+                });
+        return(ReturnValue);
+    }
+    std::vector<GameIntervall> SpecEvaluator::HasHitBy(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,GameIntervall IntervallToInspect)
+    {
+        std::vector<GameIntervall> ReturnValue;
+        int PlayerIndex = GetPlayerIndex(ExtraArguments);
+        int OpponentIndex = PlayerIndex == 0 ? 1 : 0;
+        if(ExtraArguments.PositionalArguments.size() != 1)
+        {
+            throw std::runtime_error("HasHitBy requires exactly 1 positional argument, the name of the hit move");
+        }
+        MBAttackID Attack = StringToMBAttackID(ExtraArguments.PositionalArguments[0]);
+        for(int i = IntervallToInspect.FirstFrame; i < IntervallToInspect.LastFrame;i++)
+        {
+            FrameInfo const& Frame = GameToInspect.Frames[i];
+            if((Frame.PlayerInfo[PlayerIndex].ActionState == MBActionState::ShieldStun || Frame.PlayerInfo[PlayerIndex].StateFlags.InHitlag)
+                            && Frame.PlayerInfo[OpponentIndex].ActiveAttack == Attack)
+            {
+                ReturnValue = {IntervallToInspect};
+                break;
+            }
+        }
+        return(ReturnValue);
+    }
+    std::vector<GameIntervall> SpecEvaluator::SpecialState(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,GameIntervall IntervallToInspect)
+    {
+        std::vector<GameIntervall> ReturnValue;
+        ReturnValue = {IntervallToInspect};
+        return(ReturnValue);
+    }
+    std::vector<GameIntervall> SpecEvaluator::HasProjectile(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,GameIntervall IntervallToInspect)
+    {
+        std::vector<GameIntervall> ReturnValue;
+        ReturnValue = {IntervallToInspect};
         return(ReturnValue);
     }
 }
