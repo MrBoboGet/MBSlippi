@@ -3,6 +3,7 @@
 #include <MBUtility/MBErrorHandling.h>
 #include <MBUtility/MBInterfaces.h>
 #include "MeleeID.h"
+#include <MBParsing/MBParsing.h>
 namespace MBSlippi
 {
 	enum class MBAttackID : uint8_t
@@ -124,6 +125,19 @@ namespace MBSlippi
         MBAttackID ActiveAttack = MBAttackID::None;
         int ActionableFrames = 0;
         float Percent = 0;
+
+        MBParsing::JSONObject ToJSON() const
+        {
+            MBParsing::JSONObject ReturnValue(MBParsing::JSONObjectType::Aggregate);
+            ReturnValue["actionState"] = MBActionStateToString(ActionState);
+            ReturnValue["activeAttack"] = MBAttackIDToString(ActiveAttack);
+            ReturnValue["inHitlag"] = StateFlags.InHitlag;
+            ReturnValue["fastFalling"] = StateFlags.FastFalling;
+            ReturnValue["airborne"] = StateFlags.Airborne;
+            ReturnValue["actionableFrames"] = ActionableFrames;
+            ReturnValue["percent"] = Percent;
+            return(ReturnValue);
+        }
     };
     struct FrameInfo
     {

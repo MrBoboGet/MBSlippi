@@ -2,6 +2,7 @@
 #include "SlippiSpecParser.h"
 #include <MBLSP/MBLSP.h>
 #include "MBMeleeID.h"
+#include <MBSystem/BiDirectionalSubProcess.h>
 namespace MBSlippi
 {
     struct GameIntervall
@@ -58,7 +59,26 @@ namespace MBSlippi
         std::vector<std::string>  PositionalArguments;
         std::unordered_map<std::string,std::string> KeyArguments;
     };
+    
 
+    class SpecServer
+    {
+        std::unique_ptr<MBSystem::BiDirectionalSubProcess> m_SubProcess;
+        std::vector<std::string> m_ExportedFilters;
+
+        MBParsing::JSONObject p_SendRequest(MBParsing::JSONObject const& Request);
+        void p_SendInitialize();
+    public:
+        SpecServer(std::string const& ExecutableName,std::vector<std::string> const& Args);
+        std::vector<std::string> GetExportedFilters();
+        std::vector<GameIntervall> ExecuteFilter(std::string const& FilterName,MeleeGame const& GameToFilter,GameIntervall const& Intervall);
+    };
+    
+    struct ServerInitilizationData
+    {
+        std::string ExecutableName;
+        std::vector<std::string> ExecutableArguments;
+    };
     class SpecEvaluator
     {
     private:
@@ -70,8 +90,11 @@ namespace MBSlippi
         std::unordered_map<std::string,BuiltinFilterType> m_BuiltinFilters = 
         {
             {"Punishes",BiggestPunishes},
-            {"HasMove",BiggestPunishes}
+            {"HasMove",HasMove}
         };
+
+        std::vector<SpecServer> m_SpecServers;
+        std::unordered_map<std::string,int> m_FilterToServer;
 
         MeleeGameDBAdapter* m_DBAdapter;
         MeleeGameRecorder* m_Recorder;
@@ -87,9 +110,13 @@ namespace MBSlippi
 
         std::vector<MeleeGame> p_RetrieveSpecGames(SlippiSpec const& SpecToEvalaute);
         std::vector<GameIntervall> p_EvaluateGameIntervalls(Filter_Component const& FilterToUse,GameIntervall CurrentIntervall,MeleeGame const& GameToFilter);
+
+        void p_InitializeServers();
     public:
         void SetDBAdapter(MeleeGameDBAdapter* NewAdapter);
         void SetRecorder(MeleeGameRecorder* NewRecorder);
+        void InitializeServers(std::vector<ServerInitilizationData> const& ServersToInitialize);
+
         bool VerifySpec(SlippiSpec& SpecToVerify,std::vector<MBLSP::Diagnostic>& OutDiagnostics);
         void EvaluateSpec(SlippiSpec& SpecToEvaluate,std::vector<MBLSP::Diagnostic>& OutDiagnostics);
     };

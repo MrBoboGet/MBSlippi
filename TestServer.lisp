@@ -10,9 +10,8 @@
 (ql:quickload "yason" :silent t)
 ;(prin1 "befbin")
 (defun parse-binary-integer (stream-input int-size)
-   (let ((result 0) (data (make-list int-size)))
-       (read-sequence data stream-input)
-       (setf data (mapcar #'char-int data))
+   (let ((result 0) (data (list)))
+       (dotimes (i int-size) (setf data (append data (list (read-byte *standard-input*)))))
        (dotimes (i int-size)
           (incf result (ash (nth i data) (* (- int-size i 1) 8)))
           )
@@ -25,7 +24,8 @@
         (setf data-to-write (append data-to-write (list (ldb (byte 8 (* i 8)) integer-to-write))))
       )
       (setf data-to-write (reverse data-to-write))
-      (write-sequence (mapcar #'code-char data-to-write) target-stream)
+      ;(write-sequence (mapcar #'code-char data-to-write) target-stream)
+      (write-sequence data-to-write target-stream)
     )
 )
 
@@ -36,8 +36,7 @@
         (setf data (make-string message-size))
         (read-sequence data *standard-input*)
         (setf message (yason:parse data))
-        ;(with-open-file (s "TestLispOutput.txt" :direction :output :if-exists :supersede)
-        ;  (yason:encode message s))
+        ;(setf message (yason:parse *standard-input*))
     )
 )
 
@@ -55,7 +54,7 @@
   (setf result `(let ((,hash-sym 0)) (setf ,hash-sym (make-hash-table :test 'equal)) ,@result-body (eval ,hash-sym)))
 )
 
-(defparameter *filter-names* (make-hash-table))
+(defparameter *filter-names* (make-hash-table :test 'equal))
 ;(setf (gethash "Test" *filter-names*) "test")
 ;(print (hash-table-count *filter-names*))
 ;(maphash (lambda (key func) (print key)) *filter-names*)
@@ -64,6 +63,7 @@
   (let* ((string-to-send (json-to-string json-to-send)) (message-length (length string-to-send)))
     (write-binary-integer *standard-output* message-length 4)
     (write-sequence string-to-send *standard-output*)
+    (finish-output *standard-output*)
   )
 )
 
@@ -96,12 +96,12 @@
       (progn
       (if (funcall predicate current-element)
         (progn
-          (if (not wastrue) (first-true i))
+          (if (not wastrue) (setf first-true i))
           (setf wastrue T)
         )
         ;else
         (progn
-          (if (wastrue)
+          (if wastrue
             (progn
              (setf result (append result (list first-true (- i 1))))
              (setf wastrue NIL)
@@ -118,13 +118,13 @@
 (def-filter "HasDair" (frames) 
   (exctract-sequences frames (lambda (frame) (equal (gethash "activeAttack" (nth 1 frame)) "Dair")))
 )
-
+(print (gethash "HasDair" *filter-names*))
 (defun handle-request (request) 
     (handler-case  (let ((request-method (gethash "method" request)))
         (if (equal request-method "ExecuteFilter") 
-          (let* ((params (gethash "params" request)) (filter-name (gethash "filterName" (params))))
+          (let* ((params (gethash "params" request)) (filter-name (gethash "filterName" params)))
             (let ((handler (gethash filter-name *filter-names*))) 
-                (if (handler) 
+                (if handler
                   (send-gqp-message (create-filter-response (funcall handler (gethash "frames" params))))
                   (send-gqp-message (create-error-response "No filer with name"))
             ))
@@ -133,7 +133,7 @@
           (send-gqp-message (create-error-response "Unsupported method"))))
         ;errors        
 
-        (error (e) (send-gqp-message (create-error-response "Error parsing message")))
+        (error (e) (send-gqp-message (create-error-response (format nil "Error parsing message: ~a~%" e))))
       ))
 
 (defun main ()

@@ -384,6 +384,12 @@ namespace MBSlippi
             Tokenizer.SetText(MBUtility::ReadWholeFile(SlippiScriptToExecute));
             SpecToEvaluate = ParseSlippiSpec(Tokenizer);
             std::vector<MBLSP::Diagnostic> Diagnostics;
+            //DEBUG
+            std::vector<ServerInitilizationData> Servers;
+            Servers.emplace_back();
+            Servers.back().ExecutableName = "sbcl";
+            Servers.back().ExecutableArguments = {"--noinform","--core","TestServerSBCL.mem"};
+            Evaluator.InitializeServers(Servers);
             Evaluator.EvaluateSpec(SpecToEvaluate,Diagnostics);
             if(Diagnostics.size() > 0)
             {

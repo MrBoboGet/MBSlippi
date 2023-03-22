@@ -5,6 +5,9 @@
 #include <MBUtility/Merge.h>
 #include <assert.h>
 #include <sstream>
+
+
+#include "SlippiGQPStructs.h"
 namespace MBSlippi
 {
 
@@ -110,6 +113,84 @@ namespace MBSlippi
     {
         return(true);    
     }
+
+    //BEGIN SpecServer
+    void SpecServer::p_SendInitialize()
+    {
+        std::string DataToSend;
+        GQP::Initialize_Request Request;
+        MBParsing::JSONObject Result = p_SendRequest(Request.GetJSON());
+        GQP::Initialize_Response Response;
+        Response.FillObject(Result);
+        for(auto const& Filter : Response.result.filters)
+        {
+            m_ExportedFilters.push_back(Filter.name);   
+        }
+    }
+    MBParsing::JSONObject SpecServer::p_SendRequest(MBParsing::JSONObject const& Request)
+    {
+        MBParsing::JSONObject ReturnValue;
+        std::string DataToSend = Request.ToString();
+        MBParsing::WriteBigEndianInteger(*m_SubProcess,DataToSend.size(),4);
+        *m_SubProcess<<DataToSend;
+        char SizeData[4];
+        MBUtility::ReadExact(*m_SubProcess,SizeData,4);
+        uint64_t ResponseSize = MBParsing::ParseBigEndianInteger(SizeData,4,0,0);
+        std::string Response = std::string(ResponseSize,0);
+        MBUtility::ReadExact(*m_SubProcess,Response.data(),ResponseSize);
+        MBError ParseResult = true;
+        ReturnValue = MBParsing::ParseJSONObject(Response,0,nullptr,&ParseResult);
+        if(!ParseResult)
+        {
+            throw std::runtime_error("Error parsing Request from server: "+ParseResult.ErrorMessage);   
+        }
+        return(ReturnValue);
+    }
+    SpecServer::SpecServer(std::string const& ExecutableName,std::vector<std::string> const& Args)
+    {
+        m_SubProcess = std::make_unique<MBSystem::BiDirectionalSubProcess>(ExecutableName,Args);
+        p_SendInitialize();
+    }
+    std::vector<std::string> SpecServer::GetExportedFilters()
+    {
+        return(m_ExportedFilters);
+    }
+    std::vector<GameIntervall> SpecServer::ExecuteFilter(std::string const& FilterName,MeleeGame const& GameToFilter,GameIntervall const& Intervall)
+    {
+        std::vector<GameIntervall> ReturnValue;
+        GQP::ExecuteFilter_Request Request;
+        Request.params.filterName  = FilterName;
+        MBParsing::JSONObject ObjectToSend = Request.GetJSON();
+        std::vector<MBParsing::JSONObject>& Frames = ObjectToSend["params"]["frames"].GetArrayData();
+        for(int i = Intervall.FirstFrame; i <= Intervall.LastFrame;i++)
+        {
+            Frames.push_back(std::vector<MBParsing::JSONObject>{GameToFilter.Frames[i].PlayerInfo[0].ToJSON(),GameToFilter.Frames[i].PlayerInfo[1].ToJSON()});
+        }
+        MBParsing::JSONObject Response = p_SendRequest(ObjectToSend);
+        GQP::ExecuteFilter_Response Result;
+        Result.FillObject(Response);
+        if(Result.result.intervalls.size() % 2 != 0)
+        {
+            throw std::runtime_error("Invalid result intervalls: returned integers have to be even in count");
+        }
+        for(int i = 0; i + 1 < Result.result.intervalls.size();i+=2)
+        {
+            ReturnValue.push_back(GameIntervall(Result.result.intervalls[i]+Intervall.FirstFrame,Result.result.intervalls[i+1]+Intervall.FirstFrame));
+        }
+        return(ReturnValue);
+    }
+    //END SpecServer
+
+
+
+
+
+
+
+
+
+
+    
     void SpecEvaluator::p_VerifyAttribute(std::vector<std::string> const& Attribute,bool IsPlayerAssignment,std::vector<MBLSP::Diagnostic>& OutDiagnostics)
     {
     }
@@ -200,11 +281,11 @@ namespace MBSlippi
     }
     void SpecEvaluator::p_VerifyFilterComponent(Filter_Component const& FilterToVerify,std::vector<MBLSP::Diagnostic>& OutDiagnostics)
     {
-        if(m_BuiltinFilters.find(FilterToVerify.FilterName) == m_BuiltinFilters.end())
+        if(m_BuiltinFilters.find(FilterToVerify.FilterName) == m_BuiltinFilters.end() &&
+                m_FilterToServer.find(FilterToVerify.FilterName) == m_FilterToServer.end())
         {
             MBLSP::Diagnostic NewDiagnostic;
-            NewDiagnostic.message = "Can't find builtin filter with name \""+FilterToVerify.FilterName+"\"";
-
+            NewDiagnostic.message = "Can't find filter with name \""+FilterToVerify.FilterName+"\"";
             OutDiagnostics.emplace_back(std::move(NewDiagnostic));
         }
         for(auto const& Filter : FilterToVerify.ExtraTerms)
@@ -232,6 +313,7 @@ namespace MBSlippi
             p_VerifyGameInfoPredicate(SpecToVerify.Assignment.PlayerCondition,true,Diagnostics);
         } 
         p_VerifyGameInfoPredicate(SpecToVerify.Games.GameCondition,false,Diagnostics);
+        p_VerifyFilter(SpecToVerify.SituationFilter,OutDiagnostics);
         if(Diagnostics.size() > 0)
         {
             ReturnValue = false;
@@ -376,6 +458,20 @@ namespace MBSlippi
     {
         m_DBAdapter = std::move(NewAdapter);    
     }
+    void SpecEvaluator::InitializeServers(std::vector<ServerInitilizationData> const& ServersToInitialize)
+    {
+        for(auto const& Server : ServersToInitialize)
+        {
+            SpecServer NewServer(Server.ExecutableName,Server.ExecutableArguments);
+            int Index = m_SpecServers.size();
+            std::vector<std::string> Filters = NewServer.GetExportedFilters();
+            for(auto const& Filter : Filters)
+            {
+                m_FilterToServer[Filter] = Index;   
+            }
+            m_SpecServers.push_back(std::move(NewServer));
+        }
+    }
     void SpecEvaluator::SetRecorder(MeleeGameRecorder* NewRecorder)
     {
         m_Recorder = std::move(NewRecorder);       
@@ -430,8 +526,18 @@ namespace MBSlippi
             ReturnValue.push_back(CurrentIntervall);
             return(ReturnValue);
         }         
-        BuiltinFilterType BuiltinFilter = m_BuiltinFilters[FilterToUse.FilterName];
-        ReturnValue = BuiltinFilter(GameToFilter,FilterToUse.ArgumentList,CurrentIntervall);
+        if(auto BuiltinFilter = m_BuiltinFilters.find(FilterToUse.FilterName); BuiltinFilter != m_BuiltinFilters.end())
+        {
+            ReturnValue = BuiltinFilter->second(GameToFilter,FilterToUse.ArgumentList,CurrentIntervall);
+        }
+        else if(auto ServerIndex = m_FilterToServer.find(FilterToUse.FilterName); ServerIndex != m_FilterToServer.end())
+        {
+            ReturnValue = m_SpecServers[ServerIndex->second].ExecuteFilter(FilterToUse.FilterName,GameToFilter,CurrentIntervall);
+        }
+        else
+        {
+            assert(false && "No server or builtin filter found, evaluating spec that shouldn't have been verified");
+        }
         for(auto const& ExtraFilter : FilterToUse.ExtraTerms)
         {
             if(ExtraFilter.Operator == "&")
