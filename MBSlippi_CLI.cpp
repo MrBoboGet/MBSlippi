@@ -58,8 +58,9 @@ namespace MBSlippi
 			{
 				MBParsing::JSONObject NewQueueElement(MBParsing::JSONObjectType::Aggregate);
 				NewQueueElement["path"] = Path;
-				NewQueueElement["startFrame"] =int64_t(Intervall.FirstFrame);
-				NewQueueElement["endFrame"] = int64_t(Intervall.LastFrame);
+                //replays start at -123, lmao, just hardcode it here.
+				NewQueueElement["startFrame"] =int64_t(Intervall.FirstFrame-123);
+				NewQueueElement["endFrame"] = int64_t(Intervall.LastFrame-123);
 				QueueElements.push_back(std::move(NewQueueElement));
 			}
 		}

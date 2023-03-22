@@ -612,7 +612,8 @@ namespace MBSlippi
 		float PunisherLastPercent = 0;
 		float TotalPunishPercent = 0;
 		
-		int PunishBeginFrame = -123;
+		int PunishBeginFrame = 0;
+        int FrameIndex = 0;
 		for (FrameInfo const& Frame : GameToInspect.Frames)
 		{
 			if (Frame.PlayerInfo[PunisheeIndex].Percent == 0 && PunisheeLastPercent > 0 || Frame.PlayerInfo[PunisherIndex].Percent == 0 && PunisherLastPercent > 0)
@@ -624,7 +625,7 @@ namespace MBSlippi
 					i_PunishInfo NewInfo;
 					NewInfo.TotalRecievedPercent = TotalPunishPercent;
 					NewInfo.PunishIntervall.FirstFrame = PunishBeginFrame;
-					NewInfo.PunishIntervall.LastFrame = Frame.FrameNumber;
+					NewInfo.PunishIntervall.LastFrame = FrameIndex;
 					ReturnValue.push_back(NewInfo);
 				}
 				TotalPunishPercent = 0;
@@ -637,7 +638,7 @@ namespace MBSlippi
 					i_PunishInfo NewInfo;
 					NewInfo.TotalRecievedPercent = TotalPunishPercent;
 					NewInfo.PunishIntervall.FirstFrame = PunishBeginFrame;
-					NewInfo.PunishIntervall.LastFrame = Frame.FrameNumber;
+					NewInfo.PunishIntervall.LastFrame = FrameIndex;
 					ReturnValue.push_back(NewInfo);
 				}
 				TotalPunishPercent = 0;
@@ -646,11 +647,12 @@ namespace MBSlippi
 			{
 				if (TotalPunishPercent == 0)
 				{
-					PunishBeginFrame = Frame.FrameNumber;
+					PunishBeginFrame = FrameIndex;
 				}
 				TotalPunishPercent += Frame.PlayerInfo[PunisheeIndex].Percent - PunisheeLastPercent;
 				PunisheeLastPercent = Frame.PlayerInfo[PunisheeIndex].Percent;
 			}
+            FrameIndex++;
 		}
 		return(ReturnValue);
 	}
