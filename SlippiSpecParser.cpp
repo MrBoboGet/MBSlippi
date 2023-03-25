@@ -516,42 +516,44 @@ Filter ParseFilter_0(MBCC::Tokenizer& Tokenizer)
     }
     return(ReturnValue);
 }
-AttributeLiteral ParseAttribute_Base(MBCC::Tokenizer& Tokenizer)
+AttributeComponent ParseAttribute_Base(MBCC::Tokenizer& Tokenizer)
 {
-    AttributeLiteral ReturnValue;
+    AttributeComponent ReturnValue;
     ReturnValue = ParseAttribute_Base_0(Tokenizer);
     return(ReturnValue);
 }
-AttributeLiteral ParseAttribute_Base_0(MBCC::Tokenizer& Tokenizer)
+AttributeComponent ParseAttribute_Base_0(MBCC::Tokenizer& Tokenizer)
 {
-    AttributeLiteral ReturnValue;
+    AttributeComponent ReturnValue;
+    ReturnValue.NamePosition = Tokenizer.Peek().Position;
     if(Tokenizer.Peek().Type != 14)
     {
         throw MBCC::ParsingException(Tokenizer.Peek().Position,"Attribute_Base","idf");
     }
-    ReturnValue.Attribute = Tokenizer.Peek().Value;
+    ReturnValue.Name = Tokenizer.Peek().Value;
     Tokenizer.ConsumeToken();
     return(ReturnValue);
 }
-AttributeLiteral ParseAttribute_Extension(MBCC::Tokenizer& Tokenizer)
+AttributeComponent ParseAttribute_Extension(MBCC::Tokenizer& Tokenizer)
 {
-    AttributeLiteral ReturnValue;
+    AttributeComponent ReturnValue;
     ReturnValue = ParseAttribute_Extension_0(Tokenizer);
     return(ReturnValue);
 }
-AttributeLiteral ParseAttribute_Extension_0(MBCC::Tokenizer& Tokenizer)
+AttributeComponent ParseAttribute_Extension_0(MBCC::Tokenizer& Tokenizer)
 {
-    AttributeLiteral ReturnValue;
+    AttributeComponent ReturnValue;
     if(Tokenizer.Peek().Type != 23)
     {
         throw MBCC::ParsingException(Tokenizer.Peek().Position,"Attribute_Extension","dot");
     }
     Tokenizer.ConsumeToken();
+    ReturnValue.NamePosition = Tokenizer.Peek().Position;
     if(Tokenizer.Peek().Type != 14)
     {
         throw MBCC::ParsingException(Tokenizer.Peek().Position,"Attribute_Extension","idf");
     }
-    ReturnValue.Attribute = Tokenizer.Peek().Value;
+    ReturnValue.Name = Tokenizer.Peek().Value;
     Tokenizer.ConsumeToken();
     return(ReturnValue);
 }
@@ -566,7 +568,7 @@ AttributeList ParseAttribute_List_0(MBCC::Tokenizer& Tokenizer)
     AttributeList ReturnValue;
     if(LOOKTable[38][0][Tokenizer.Peek().Type])
     {
-        ReturnValue.Attributes.push_back(ParseAttribute_Base(Tokenizer).Attribute);
+        ReturnValue.Attributes.push_back(ParseAttribute_Base(Tokenizer));
     }
     else
     {
@@ -574,7 +576,7 @@ AttributeList ParseAttribute_List_0(MBCC::Tokenizer& Tokenizer)
     }
     while(LOOKTable[40][0][Tokenizer.Peek().Type])
     {
-        ReturnValue.Attributes.push_back(ParseAttribute_Extension(Tokenizer).Attribute);
+        ReturnValue.Attributes.push_back(ParseAttribute_Extension(Tokenizer));
     }
     return(ReturnValue);
 }
@@ -728,6 +730,7 @@ GameInfoPredicate ParseGameInfoPredicate_Base_1(MBCC::Tokenizer& Tokenizer)
     {
          throw MBCC::ParsingException(Tokenizer.Peek().Position,"GameInfoPredicate_Base","Operator");
     }
+    ReturnValue.ValuePosition = Tokenizer.Peek().Position;
     if(Tokenizer.Peek().Type != 8)
     {
         throw MBCC::ParsingException(Tokenizer.Peek().Position,"GameInfoPredicate_Base","string");
@@ -801,6 +804,7 @@ PlayerAssignment ParsePlayerAssignment_0(MBCC::Tokenizer& Tokenizer)
         throw MBCC::ParsingException(Tokenizer.Peek().Position,"PlayerAssignment","WITH");
     }
     Tokenizer.ConsumeToken();
+    ReturnValue.PlayerPosition = Tokenizer.Peek().Position;
     if(Tokenizer.Peek().Type != 14)
     {
         throw MBCC::ParsingException(Tokenizer.Peek().Position,"PlayerAssignment","idf");

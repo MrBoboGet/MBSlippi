@@ -142,9 +142,9 @@ namespace MBSlippi
 
         std::vector<SpecServer> m_SpecServers;
         std::unordered_map<std::string,int> m_FilterToServer;
-
-        MeleeGameDBAdapter* m_DBAdapter;
-        MeleeGameRecorder* m_Recorder;
+ 
+        MeleeGameDBAdapter* m_DBAdapter = nullptr;
+        MeleeGameRecorder* m_Recorder = nullptr;
 
         void p_VerifyAttribute(std::vector<std::string> const& Attribute,bool IsPlayerAssignment,std::vector<MBLSP::Diagnostic>& OutDiagnostics);
         void p_VerifyFilterComponent(Filter_Component const& FilterToVerify,std::vector<MBLSP::Diagnostic>& OutDiagnostics);

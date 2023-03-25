@@ -48,9 +48,17 @@ struct GameInfoPredicate_Conjunction
     string Conjunction;
     GameInfoPredicate RHS;
 }
+
+struct AttributeComponent
+{
+    tokenPos NamePosition;
+    string Name;
+}
+
 struct GameInfoPredicate
 {
-    List<string> Attribute;
+    List<AttributeComponent> Attribute;
+    tokenPos ValuePosition;
     string Value;
     string Comparison;
     {uint64_t} DateValue;
@@ -65,6 +73,7 @@ struct GameInfoPredicate_OperatorList
 struct PlayerAssignment
 {
     tokenPos WithPosition;
+    tokenPos PlayerPosition;
     string AffectedPlayer;
     GameInfoPredicate PlayerCondition;
 }
@@ -78,25 +87,23 @@ struct Filter_Arg
 }
 struct Filter_Arg_Positional : Filter_Arg
 {
+    tokenPos ValuePosition;
     string Value; 
 }
 struct Filter_Arg_Named : Filter_Arg
 {
+    tokenPos NamePosition;
     string Name;
+    tokenPos ValuePosition;
     string Value;
 }
 struct ArgList
 {
     List<Filter_Arg> Args;
 }
-
-struct AttributeLiteral
-{
-    string Attribute;
-}
 struct AttributeList
 {
-    List<string> Attributes;
+    List<AttributeComponent> Attributes;
 }
 struct Filter_Component
 {
@@ -178,23 +185,23 @@ def GameInfoPredicate_Or=GameInfoPredicate;
 def GameInfoPredicate_And=GameInfoPredicate;
 def GameInfoPredicate_OperatorList=GameInfoPredicate_OperatorList;
 
-def Attribute_Extension = AttributeLiteral;
-def Attribute_Base = AttributeLiteral;
+def Attribute_Extension = AttributeComponent;
+def Attribute_Base = AttributeComponent;
 def Attribute_List = AttributeList;
-Attribute_Base = Attribute=idf;
-Attribute_Extension = dot Attribute=idf;
-Attribute_List = Attributes=Attribute_Base.Attribute Attributes=Attribute_Extension.Attribute*;
+Attribute_Base = NamePosition = TOKEN.Position Name=idf;
+Attribute_Extension = dot NamePosition = TOKEN.Position Name=idf;
+Attribute_List = Attributes=Attribute_Base Attributes=Attribute_Extension*;
 
 GameInfoPredicate_Or = Operator=OR this=GameInfoPredicate;
 GameInfoPredicate_And = Operator=AND this=GameInfoPredicate;
-GameInfoPredicate_OperatorList=Terms=GameInfoPredicate_Or+ | Terms=GameInfoPredicate_And+;
+GameInfoPredicate_OperatorList= Terms=GameInfoPredicate_Or+ | Terms=GameInfoPredicate_And+;
 GameInfoPredicate_Base = lpar this=GameInfoPredicate rpar | 
-    Attribute=Attribute_List.Attributes Comparison=Operator.Op Value=string;
+    Attribute=Attribute_List.Attributes Comparison=Operator.Op ValuePosition = TOKEN.Position Value=string;
 
 
 GameInfoPredicate = this=GameInfoPredicate_Base ExtraTerms=GameInfoPredicate_OperatorList.Terms?; 
 GameSelection = SelectPosition = TOKEN.Position SELECT GameCondition=GameInfoPredicate;
 
-PlayerAssignment = WithPosition = TOKEN.Position WITH AffectedPlayer=idf PlayerCondition=GameInfoPredicate;
+PlayerAssignment = WithPosition = TOKEN.Position WITH PlayerPosition = TOKEN.Position AffectedPlayer=idf PlayerCondition=GameInfoPredicate;
 Result = RecordPosition = TOKEN.Position RECORD OutFile=string;
 SlippiSpec= Assignment=PlayerAssignment? Games=GameSelection SituationFilter=Filter? Output=Result;

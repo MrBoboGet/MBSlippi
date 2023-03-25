@@ -11,15 +11,11 @@ class Operator
     std::string Op;
     
 };
-class GameInfoPredicate
+class AttributeComponent
 {
     public:
-    std::vector<std::string> Attribute;
-    std::string Value;
-    std::string Comparison;
-    uint64_t DateValue;
-    std::string Operator;
-    std::vector<GameInfoPredicate> ExtraTerms;
+    MBCC::TokenPosition NamePosition;
+    std::string Name;
     
 };
 class Result_Base
@@ -86,12 +82,6 @@ class Result
     }
     
 };
-class AttributeList
-{
-    public:
-    std::vector<std::string> Attributes;
-    
-};
 class Filter_Arg_Base
 {
     public:
@@ -156,22 +146,21 @@ class Filter_Arg
     }
     
 };
-class AttributeLiteral
-{
-    public:
-    std::string Attribute;
-    
-};
-class GameSelection
-{
-    public:
-    MBCC::TokenPosition SelectPosition;
-    GameInfoPredicate GameCondition;
-    
-};
 class Result_Tabulate : public Result_Base
 {
     public:
+    
+};
+class GameInfoPredicate
+{
+    public:
+    std::vector<AttributeComponent> Attribute;
+    MBCC::TokenPosition ValuePosition;
+    std::string Value;
+    std::string Comparison;
+    uint64_t DateValue;
+    std::string Operator;
+    std::vector<GameInfoPredicate> ExtraTerms;
     
 };
 class Result_Record : public Result_Base
@@ -181,35 +170,62 @@ class Result_Record : public Result_Base
     std::string OutFile;
     
 };
-class ArgList
-{
-    public:
-    std::vector<Filter_Arg> Args;
-    
-};
-class Filter_Arg_Named : public Filter_Arg_Base
-{
-    public:
-    std::string Name;
-    std::string Value;
-    
-};
-class Filter_Arg_Positional : public Filter_Arg_Base
-{
-    public:
-    std::string Value;
-    
-};
 class Filter_ArgList
 {
     public:
     std::vector<Filter_Arg> Arguments;
     
 };
+class Filter_Arg_Positional : public Filter_Arg_Base
+{
+    public:
+    MBCC::TokenPosition ValuePosition;
+    std::string Value;
+    
+};
+class Filter_Arg_Named : public Filter_Arg_Base
+{
+    public:
+    MBCC::TokenPosition NamePosition;
+    std::string Name;
+    MBCC::TokenPosition ValuePosition;
+    std::string Value;
+    
+};
+class ArgList
+{
+    public:
+    std::vector<Filter_Arg> Args;
+    
+};
+class AttributeList
+{
+    public:
+    std::vector<AttributeComponent> Attributes;
+    
+};
+class GameSelection
+{
+    public:
+    MBCC::TokenPosition SelectPosition;
+    GameInfoPredicate GameCondition;
+    
+};
+class Filter_Component
+{
+    public:
+    MBCC::TokenPosition NamePosition;
+    std::string FilterName;
+    Filter_ArgList ArgumentList;
+    std::string Operator;
+    std::vector<Filter_Component> ExtraTerms;
+    
+};
 class PlayerAssignment
 {
     public:
     MBCC::TokenPosition WithPosition;
+    MBCC::TokenPosition PlayerPosition;
     std::string AffectedPlayer;
     GameInfoPredicate PlayerCondition;
     
@@ -225,16 +241,6 @@ class GameInfoPredicate_Conjunction
     public:
     std::string Conjunction;
     GameInfoPredicate RHS;
-    
-};
-class Filter_Component
-{
-    public:
-    MBCC::TokenPosition NamePosition;
-    std::string FilterName;
-    Filter_ArgList ArgumentList;
-    std::string Operator;
-    std::vector<Filter_Component> ExtraTerms;
     
 };
 class Filter_OperatorList
@@ -361,10 +367,10 @@ Filter_Component ParseFilter_Component(MBCC::Tokenizer& Tokenizer);
 Filter_Component ParseFilter_Component_0(MBCC::Tokenizer& Tokenizer);
 Filter ParseFilter(MBCC::Tokenizer& Tokenizer);
 Filter ParseFilter_0(MBCC::Tokenizer& Tokenizer);
-AttributeLiteral ParseAttribute_Base(MBCC::Tokenizer& Tokenizer);
-AttributeLiteral ParseAttribute_Base_0(MBCC::Tokenizer& Tokenizer);
-AttributeLiteral ParseAttribute_Extension(MBCC::Tokenizer& Tokenizer);
-AttributeLiteral ParseAttribute_Extension_0(MBCC::Tokenizer& Tokenizer);
+AttributeComponent ParseAttribute_Base(MBCC::Tokenizer& Tokenizer);
+AttributeComponent ParseAttribute_Base_0(MBCC::Tokenizer& Tokenizer);
+AttributeComponent ParseAttribute_Extension(MBCC::Tokenizer& Tokenizer);
+AttributeComponent ParseAttribute_Extension_0(MBCC::Tokenizer& Tokenizer);
 AttributeList ParseAttribute_List(MBCC::Tokenizer& Tokenizer);
 AttributeList ParseAttribute_List_0(MBCC::Tokenizer& Tokenizer);
 GameInfoPredicate ParseGameInfoPredicate_Or(MBCC::Tokenizer& Tokenizer);

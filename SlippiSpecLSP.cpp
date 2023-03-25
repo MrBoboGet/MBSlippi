@@ -25,7 +25,7 @@ namespace MBSlippi
     {
         if(ComponentToExamine.FilterName != "")
         {
-            OutTokens.push_back(MBLSP::SemanticToken(MBLSP::TokenType::Class,
+            OutTokens.push_back(MBLSP::SemanticToken(MBLSP::TokenType::Function,
                         h_Convert(ComponentToExamine.NamePosition),ComponentToExamine.FilterName.size()));
             for(auto const& SubComponent : ComponentToExamine.ExtraTerms)
             {
@@ -33,15 +33,29 @@ namespace MBSlippi
             }
         }
     }
+    void SlippiLSP::p_ExtractTokens(std::vector<MBLSP::SemanticToken>& OutTokens,GameInfoPredicate const& PredicateToExamine)
+    {
+        for(auto const& Attribute : PredicateToExamine.Attribute)
+        {
+            OutTokens.push_back(MBLSP::SemanticToken(MBLSP::TokenType::Property,h_Convert(Attribute.NamePosition),Attribute.Name.size()));
+        }
+        OutTokens.push_back(MBLSP::SemanticToken(MBLSP::TokenType::String,h_Convert(PredicateToExamine.ValuePosition),PredicateToExamine.Value.size() + 2));
+        for(auto const& SubComponent : PredicateToExamine.ExtraTerms)
+        {
+            p_ExtractTokens(OutTokens,SubComponent);   
+        }
+    }
     void SlippiLSP::p_ExtractTokens(std::vector<MBLSP::SemanticToken>& OutTokens,GameSelection const& SelectionToExamine)
     {
         OutTokens.push_back(MBLSP::SemanticToken(MBLSP::TokenType::Keyword,h_Convert(SelectionToExamine.SelectPosition),6));
+        p_ExtractTokens(OutTokens,SelectionToExamine.GameCondition);
     }
     void SlippiLSP::p_ExtractTokens(std::vector<MBLSP::SemanticToken>& OutTokens,PlayerAssignment const& AssignmentToExamine)
     {
         if(AssignmentToExamine.AffectedPlayer != "")
         {
             OutTokens.push_back(MBLSP::SemanticToken(MBLSP::TokenType::Keyword,h_Convert(AssignmentToExamine.WithPosition),4));
+            p_ExtractTokens(OutTokens,AssignmentToExamine.PlayerCondition);
         }
     }
     void SlippiLSP::p_ExtractTokens(std::vector<MBLSP::SemanticToken>& OutTokens,Result const& ResultToExamine)
@@ -75,7 +89,7 @@ namespace MBSlippi
             ReturnValue.ParsedSpec = ParseSlippiSpec(m_Tokenizer);
             ReturnValue.SemanticTokens = p_ExtractTokens(ReturnValue.ParsedSpec);
             SpecEvaluator Evaluator;
-            //Evaluator.EvaluateSpec(ReturnValue.ParsedSpec,ReturnValue.Diagnostics);
+            Evaluator.VerifySpec(ReturnValue.ParsedSpec,ReturnValue.Diagnostics);
             if(!m_Tokenizer.IsEOF(m_Tokenizer.Peek()))
             {
 
