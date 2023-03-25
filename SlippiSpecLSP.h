@@ -1,0 +1,50 @@
+#include <MBLSP/MBLSP.h>
+#include "SlippiSpec.h"
+#include <MBLSP/SemanticTokens.h>
+namespace MBSlippi
+{
+    class SlippiLSP : public MBLSP::LSP_Server
+    {
+    private:
+        struct DocumentInfo
+        {
+            SlippiSpec ParsedSpec;
+            std::vector<MBLSP::Diagnostic> Diagnostics;
+            std::vector<MBLSP::SemanticToken> SemanticTokens;
+        };
+        MBLSP::LSP_ServerHandler* m_AssociatedHandler = nullptr;
+        MBCC::Tokenizer m_Tokenizer = GetTokenizer();
+
+
+        //PlayerAssignment Assignment;
+        //GameSelection Games;
+        //Filter SituationFilter;
+        //Result Output;
+
+        void p_ExtractTokens(std::vector<MBLSP::SemanticToken>& OutTokens,Filter const& FilterToExamine);
+        void p_ExtractTokens(std::vector<MBLSP::SemanticToken>& OutTokens,Filter_Component const& ComponentToExamine);
+
+        void p_ExtractTokens(std::vector<MBLSP::SemanticToken>& OutTokens,GameSelection const& SelectionToExamine);
+        void p_ExtractTokens(std::vector<MBLSP::SemanticToken>& OutTokens,PlayerAssignment const& AssignmentToExamine);
+        void p_ExtractTokens(std::vector<MBLSP::SemanticToken>& OutTokens,Result const& ResultToExamine);
+
+        void p_PushDiagnostics(DocumentInfo& DocumentData,std::string const& URI);
+        std::vector<MBLSP::SemanticToken> p_ExtractTokens(SlippiSpec const& Spec);
+        DocumentInfo p_CreateDocumentInfo(std::string const& Content);
+        std::unordered_map<std::string,DocumentInfo> m_OpenedDocuments;
+    public:
+        //Mandatory to support
+        virtual MBLSP::Initialize_Response HandleRequest(MBLSP::InitializeRequest const& Request) override;
+        virtual void OpenedDocument(std::string const& URI,std::string const& Content) override;
+        virtual void ClosedDocument(std::string const& URI) override;
+        virtual void DocumentChanged(std::string const& URI,std::string const& NewContent) override;
+
+        virtual void SetHandler(MBLSP::LSP_ServerHandler* AssociatedHandler) override;
+        //Skip the mandatory initialized notification, probably only necessary
+        //with dynamic registration
+
+        virtual MBLSP::GotoDefinition_Response HandleRequest(MBLSP::GotoDefinition_Request const& Request) override;
+        virtual MBLSP::SemanticToken_Response HandleRequest(MBLSP::SemanticToken_Request const& Request) override;
+
+    };
+}

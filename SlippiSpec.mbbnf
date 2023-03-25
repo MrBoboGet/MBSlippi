@@ -40,6 +40,7 @@ struct Operator
 }
 struct GameSelection
 {
+    tokenPos SelectPosition;
     GameInfoPredicate GameCondition;
 }
 struct GameInfoPredicate_Conjunction
@@ -63,6 +64,7 @@ struct GameInfoPredicate_OperatorList
 
 struct PlayerAssignment
 {
+    tokenPos WithPosition;
     string AffectedPlayer;
     GameInfoPredicate PlayerCondition;
 }
@@ -98,6 +100,7 @@ struct AttributeList
 }
 struct Filter_Component
 {
+    tokenPos NamePosition;
     string FilterName; 
     Filter_ArgList ArgumentList;
     string Operator;
@@ -109,11 +112,13 @@ struct Filter_OperatorList
 }
 struct Filter
 {
+    tokenPos FilterPosition;
     Filter_Component Component;
 }
 struct Result {}
 struct Result_Record : Result
 {
+    tokenPos RecordPosition;
     string OutFile;
 }
 struct Result_Tabulate : Result
@@ -164,9 +169,9 @@ Filter_Component_Or = Operator=pipe this=Filter_Component;
 Filter_OperatorList = Components=Filter_Component_And+ | Components=Filter_Component_Or+;
 Filter_Component_Base = 
     lpar this=Filter_Component rpar 
-    | FilterName=idf ArgumentList.Arguments=Filter_ArgList.Args?;
+    | NamePosition = TOKEN.Position FilterName=idf ArgumentList.Arguments=Filter_ArgList.Args?;
 Filter_Component = this=Filter_Component_Base ExtraTerms=Filter_OperatorList.Components?;
-Filter= FILTER Component=Filter_Component;
+Filter= FilterPosition = TOKEN.Position FILTER Component=Filter_Component;
 
 
 def GameInfoPredicate_Or=GameInfoPredicate;
@@ -188,8 +193,8 @@ GameInfoPredicate_Base = lpar this=GameInfoPredicate rpar |
 
 
 GameInfoPredicate = this=GameInfoPredicate_Base ExtraTerms=GameInfoPredicate_OperatorList.Terms?; 
-GameSelection = SELECT GameCondition=GameInfoPredicate;
+GameSelection = SelectPosition = TOKEN.Position SELECT GameCondition=GameInfoPredicate;
 
-PlayerAssignment = WITH AffectedPlayer=idf PlayerCondition=GameInfoPredicate;
-Result = RECORD OutFile=string;
+PlayerAssignment = WithPosition = TOKEN.Position WITH AffectedPlayer=idf PlayerCondition=GameInfoPredicate;
+Result = RecordPosition = TOKEN.Position RECORD OutFile=string;
 SlippiSpec= Assignment=PlayerAssignment? Games=GameSelection SituationFilter=Filter? Output=Result;

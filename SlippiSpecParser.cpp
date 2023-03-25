@@ -453,6 +453,7 @@ Filter_Component ParseFilter_Component_Base_0(MBCC::Tokenizer& Tokenizer)
 Filter_Component ParseFilter_Component_Base_1(MBCC::Tokenizer& Tokenizer)
 {
     Filter_Component ReturnValue;
+    ReturnValue.NamePosition = Tokenizer.Peek().Position;
     if(Tokenizer.Peek().Type != 14)
     {
         throw MBCC::ParsingException(Tokenizer.Peek().Position,"Filter_Component_Base","idf");
@@ -499,6 +500,7 @@ Filter ParseFilter(MBCC::Tokenizer& Tokenizer)
 Filter ParseFilter_0(MBCC::Tokenizer& Tokenizer)
 {
     Filter ReturnValue;
+    ReturnValue.FilterPosition = Tokenizer.Peek().Position;
     if(Tokenizer.Peek().Type != 13)
     {
         throw MBCC::ParsingException(Tokenizer.Peek().Position,"Filter","FILTER");
@@ -768,6 +770,7 @@ GameSelection ParseGameSelection(MBCC::Tokenizer& Tokenizer)
 GameSelection ParseGameSelection_0(MBCC::Tokenizer& Tokenizer)
 {
     GameSelection ReturnValue;
+    ReturnValue.SelectPosition = Tokenizer.Peek().Position;
     if(Tokenizer.Peek().Type != 11)
     {
         throw MBCC::ParsingException(Tokenizer.Peek().Position,"GameSelection","SELECT");
@@ -792,6 +795,7 @@ PlayerAssignment ParsePlayerAssignment(MBCC::Tokenizer& Tokenizer)
 PlayerAssignment ParsePlayerAssignment_0(MBCC::Tokenizer& Tokenizer)
 {
     PlayerAssignment ReturnValue;
+    ReturnValue.WithPosition = Tokenizer.Peek().Position;
     if(Tokenizer.Peek().Type != 10)
     {
         throw MBCC::ParsingException(Tokenizer.Peek().Position,"PlayerAssignment","WITH");
@@ -822,6 +826,7 @@ Result_Record ParseResult(MBCC::Tokenizer& Tokenizer)
 Result_Record ParseResult_0(MBCC::Tokenizer& Tokenizer)
 {
     Result_Record ReturnValue;
+    ReturnValue.RecordPosition = Tokenizer.Peek().Position;
     if(Tokenizer.Peek().Type != 12)
     {
         throw MBCC::ParsingException(Tokenizer.Peek().Position,"Result","RECORD");

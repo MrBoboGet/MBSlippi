@@ -1,0 +1,70 @@
+struct Error
+{
+    string message;    
+}
+struct Response
+{
+    ?Error error;  
+}
+
+struct Request
+{
+
+}
+
+struct Initialize_Params
+{
+    string version = "0.1.0";
+}
+struct Initialize_Request : Request
+{
+    string method = "Initialize";    
+    Initialize_Params params;
+}
+struct ExecuteFilter_Params
+{
+    string filterName;
+    List<FrameInfo> frames;
+}
+struct ExecuteFilter_Request : Request
+{
+    string method = "ExecuteFilter";
+    ExecuteFilter_Params params;
+}
+
+struct FilterDefinition
+{
+    string name; 
+}
+
+struct Initialize_Result
+{
+    string version = "0.1.0";
+    List<FilterDefinition> filters;
+}
+struct Initialize_Response : Response
+{
+    Initialize_Result result; 
+}
+struct ExecuteFilter_Result
+{
+    List<int> intervalls;
+}
+struct ExecuteFilter_Response : Response
+{
+    ExecuteFilter_Result result; 
+}
+struct PlayerFrameInfo
+{
+    string actionState;
+    string activeAttack;
+    bool inHitlag = false;
+    bool fastFalling = false;
+    bool airborne = false;
+    int actionableFrames;
+    float percent;
+}
+struct FrameInfo
+{
+    List<PlayerFrameInfo> PlayerInfo;
+}

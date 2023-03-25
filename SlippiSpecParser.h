@@ -165,6 +165,7 @@ class AttributeLiteral
 class GameSelection
 {
     public:
+    MBCC::TokenPosition SelectPosition;
     GameInfoPredicate GameCondition;
     
 };
@@ -176,6 +177,7 @@ class Result_Tabulate : public Result_Base
 class Result_Record : public Result_Base
 {
     public:
+    MBCC::TokenPosition RecordPosition;
     std::string OutFile;
     
 };
@@ -207,6 +209,7 @@ class Filter_ArgList
 class PlayerAssignment
 {
     public:
+    MBCC::TokenPosition WithPosition;
     std::string AffectedPlayer;
     GameInfoPredicate PlayerCondition;
     
@@ -227,6 +230,7 @@ class GameInfoPredicate_Conjunction
 class Filter_Component
 {
     public:
+    MBCC::TokenPosition NamePosition;
     std::string FilterName;
     Filter_ArgList ArgumentList;
     std::string Operator;
@@ -242,6 +246,7 @@ class Filter_OperatorList
 class Filter
 {
     public:
+    MBCC::TokenPosition FilterPosition;
     Filter_Component Component;
     
 };
