@@ -199,103 +199,99 @@ namespace MBSlippi
     void SpecEvaluator::p_VerifyGameInfoPredicate(GameInfoPredicate& PredicateToVerify,bool IsPlayerAssignment,std::vector<MBLSP::Diagnostic>& OutDiagnostics)
     {
         std::vector<AttributeComponent> const& Attribute = PredicateToVerify.Attribute;
-        if(Attribute.size() == 0)
+        if(Attribute.size() != 0)
         {
-            MBLSP::Diagnostic NewDiagnostic;
-            NewDiagnostic.message = "Empy attribute is invalid";
+            int AttributeOffset = 0;
+            if(!IsPlayerAssignment)
+            {
+                if(Attribute[0].Name == "Date" || Attribute[0].Name == "Stage")
+                {
+                    if(Attribute.size() > 1)
+                    {
+                        MBLSP::Diagnostic NewDiagnostic;
+                        NewDiagnostic.message = Attribute[0].Name +" doesn't have any members";
+                        NewDiagnostic.range.start.line = Attribute[0].NamePosition.Line;
+                        NewDiagnostic.range.start.character = Attribute[0].NamePosition.ByteOffset;
+                        NewDiagnostic.range.end = NewDiagnostic.range.start + Attribute[0].Name.size();
+                        OutDiagnostics.emplace_back(std::move(NewDiagnostic));
+                        return;
+                    }
+                    if(IsPlayerAssignment)
+                    {
+                        MBLSP::Diagnostic NewDiagnostic;
+                        NewDiagnostic.message = "Only player attributes can be a part of a player specification";
+                        NewDiagnostic.range.start.line = Attribute[0].NamePosition.Line;
+                        NewDiagnostic.range.start.character = Attribute[0].NamePosition.ByteOffset;
+                        NewDiagnostic.range.end = NewDiagnostic.range.start + Attribute[0].Name.size();
+                        OutDiagnostics.emplace_back(std::move(NewDiagnostic));
+                        return;
+                    }
+                }
+                if(Attribute[0].Name == "Date")
+                {
+                    if(!(h_IsValidDate(PredicateToVerify.Value)))
+                    {
+                        MBLSP::Diagnostic NewDiagnostic;
+                        NewDiagnostic.message = "Invalid date for predicate string";
+                        NewDiagnostic.range.start.line = PredicateToVerify.ValuePosition.Line;
+                        NewDiagnostic.range.start.character = PredicateToVerify.ValuePosition.ByteOffset;
+                        NewDiagnostic.range.end = NewDiagnostic.range.start + PredicateToVerify.Value.size();
+                        OutDiagnostics.emplace_back(std::move(NewDiagnostic));
+                    }
+                    else
+                    {
+                        PredicateToVerify.DateValue = h_GetPosixTime(PredicateToVerify.Value);
+                    }
+                    return;
+                }
+                else if(Attribute[0].Name == "Stage")
+                {
+                    if(!(h_IsValidStage(PredicateToVerify.Value)))
+                    {
+                        MBLSP::Diagnostic NewDiagnostic;
+                        NewDiagnostic.message = "Invalid stage for predicate string";
+                        NewDiagnostic.range.start.line = PredicateToVerify.ValuePosition.Line;
+                        NewDiagnostic.range.start.character = PredicateToVerify.ValuePosition.ByteOffset;
+                        NewDiagnostic.range.end = NewDiagnostic.range.start + PredicateToVerify.Value.size();
+                        OutDiagnostics.emplace_back(std::move(NewDiagnostic));
+                    }
+                    return;
+                }
+                else if(!(Attribute[0].Name == "Player1" || Attribute[0].Name == "Player2"))
+                {
+                    MBLSP::Diagnostic NewDiagnostic;
+                    NewDiagnostic.message = "Invalid attribute: \""+Attribute[0].Name+"\"";
+                    NewDiagnostic.range.start.line = Attribute[0].NamePosition.Line;
+                    NewDiagnostic.range.start.character = Attribute[0].NamePosition.ByteOffset;
+                    NewDiagnostic.range.end = NewDiagnostic.range.start + Attribute[0].Name.size();
 
-            OutDiagnostics.emplace_back(std::move(NewDiagnostic));
-            return;
-        }
-        int AttributeOffset = 0;
-        if(!IsPlayerAssignment)
-        {
-            if(Attribute[0].Name == "Date" || Attribute[0].Name == "Stage")
-            {
-                if(Attribute.size() > 1)
-                {
-                    MBLSP::Diagnostic NewDiagnostic;
-                    NewDiagnostic.message = Attribute[0].Name +" doesn't have any members";
-                    NewDiagnostic.range.start.line = Attribute[0].NamePosition.Line;
-                    NewDiagnostic.range.start.character = Attribute[0].NamePosition.ByteOffset;
-                    NewDiagnostic.range.end = NewDiagnostic.range.start + Attribute[0].Name.size();
                     OutDiagnostics.emplace_back(std::move(NewDiagnostic));
                     return;
                 }
-                if(IsPlayerAssignment)
-                {
-                    MBLSP::Diagnostic NewDiagnostic;
-                    NewDiagnostic.message = "Only player attributes can be a part of a player specification";
-                    NewDiagnostic.range.start.line = Attribute[0].NamePosition.Line;
-                    NewDiagnostic.range.start.character = Attribute[0].NamePosition.ByteOffset;
-                    NewDiagnostic.range.end = NewDiagnostic.range.start + Attribute[0].Name.size();
-                    OutDiagnostics.emplace_back(std::move(NewDiagnostic));
-                    return;
-                }
+                AttributeOffset += 1;
             }
-            if(Attribute[0].Name == "Date")
-            {
-                if(!(h_IsValidDate(PredicateToVerify.Value)))
-                {
-                    MBLSP::Diagnostic NewDiagnostic;
-                    NewDiagnostic.message = "Invalid date for predicate string";
-                    NewDiagnostic.range.start.line = PredicateToVerify.ValuePosition.Line;
-                    NewDiagnostic.range.start.character = PredicateToVerify.ValuePosition.ByteOffset;
-                    NewDiagnostic.range.end = NewDiagnostic.range.start + PredicateToVerify.Value.size();
-                    OutDiagnostics.emplace_back(std::move(NewDiagnostic));
-                }
-                else
-                {
-                    PredicateToVerify.DateValue = h_GetPosixTime(PredicateToVerify.Value);
-                }
-                return;
-            }
-            else if(Attribute[0].Name == "Stage")
-            {
-                if(!(h_IsValidStage(PredicateToVerify.Value)))
-                {
-                    MBLSP::Diagnostic NewDiagnostic;
-                    NewDiagnostic.message = "Invalid stage for predicate string";
-                    NewDiagnostic.range.start.line = PredicateToVerify.ValuePosition.Line;
-                    NewDiagnostic.range.start.character = PredicateToVerify.ValuePosition.ByteOffset;
-                    NewDiagnostic.range.end = NewDiagnostic.range.start + PredicateToVerify.Value.size();
-                    OutDiagnostics.emplace_back(std::move(NewDiagnostic));
-                }
-                return;
-            }
-            else if(!(Attribute[0].Name == "Player1" || Attribute[0].Name == "Player2"))
+            if(AttributeOffset >= Attribute.size())
             {
                 MBLSP::Diagnostic NewDiagnostic;
-                NewDiagnostic.message = "Invalid attribute: \""+Attribute[0].Name+"\"";
+                NewDiagnostic.message = "Empy attribute is invalid";
                 NewDiagnostic.range.start.line = Attribute[0].NamePosition.Line;
                 NewDiagnostic.range.start.character = Attribute[0].NamePosition.ByteOffset;
                 NewDiagnostic.range.end = NewDiagnostic.range.start + Attribute[0].Name.size();
 
                 OutDiagnostics.emplace_back(std::move(NewDiagnostic));
-                return;
             }
-            AttributeOffset += 1;
-        }
-        if(AttributeOffset >= Attribute.size())
-        {
-            MBLSP::Diagnostic NewDiagnostic;
-            NewDiagnostic.message = "Empy attribute is invalid";
-            NewDiagnostic.range.start.line = Attribute[0].NamePosition.Line;
-            NewDiagnostic.range.start.character = Attribute[0].NamePosition.ByteOffset;
-            NewDiagnostic.range.end = NewDiagnostic.range.start + Attribute[0].Name.size();
+            //Guaranteed to be player attributes at this point
+            if(!(Attribute[AttributeOffset].Name == "Character" || Attribute[AttributeOffset].Name == "Tag" || Attribute[AttributeOffset].Name == "Code"))
+            {
+                MBLSP::Diagnostic NewDiagnostic;
+                NewDiagnostic.message = "Invalid player member: \""+Attribute[AttributeOffset].Name+"\"";
+                NewDiagnostic.range.start.line = Attribute[AttributeOffset].NamePosition.Line;
+                NewDiagnostic.range.start.character = Attribute[AttributeOffset].NamePosition.ByteOffset;
+                NewDiagnostic.range.end = NewDiagnostic.range.start + Attribute[AttributeOffset].Name.size();
 
-            OutDiagnostics.emplace_back(std::move(NewDiagnostic));
-        }
-        //Guaranteed to be player attributes at this point
-        if(!(Attribute[AttributeOffset].Name == "Character" || Attribute[AttributeOffset].Name == "Tag" || Attribute[AttributeOffset].Name == "Code"))
-        {
-            MBLSP::Diagnostic NewDiagnostic;
-            NewDiagnostic.message = "Invalid player member: \""+Attribute[AttributeOffset].Name+"\"";
-            NewDiagnostic.range.start.line = Attribute[0].NamePosition.Line;
-            NewDiagnostic.range.start.character = Attribute[0].NamePosition.ByteOffset;
-            NewDiagnostic.range.end = NewDiagnostic.range.start + Attribute[0].Name.size();
+                OutDiagnostics.emplace_back(std::move(NewDiagnostic));
+            }
 
-            OutDiagnostics.emplace_back(std::move(NewDiagnostic));
         }
         for(auto& SubPredicate : PredicateToVerify.ExtraTerms)
         {
@@ -304,15 +300,18 @@ namespace MBSlippi
     }
     void SpecEvaluator::p_VerifyFilterComponent(Filter_Component const& FilterToVerify,std::vector<MBLSP::Diagnostic>& OutDiagnostics)
     {
-        if(m_BuiltinFilters.find(FilterToVerify.FilterName) == m_BuiltinFilters.end() &&
-                m_FilterToServer.find(FilterToVerify.FilterName) == m_FilterToServer.end())
+        if(FilterToVerify.FilterName != "")
         {
-            MBLSP::Diagnostic NewDiagnostic;
-            NewDiagnostic.message = "Can't find filter with name \""+FilterToVerify.FilterName+"\"";
-            NewDiagnostic.range.start.line = FilterToVerify.NamePosition.Line;
-            NewDiagnostic.range.start.character = FilterToVerify.NamePosition.ByteOffset;
-            NewDiagnostic.range.end = NewDiagnostic.range.start + FilterToVerify.FilterName.size();
-            OutDiagnostics.emplace_back(std::move(NewDiagnostic));
+            if(m_BuiltinFilters.find(FilterToVerify.FilterName) == m_BuiltinFilters.end() &&
+                    m_FilterToServer.find(FilterToVerify.FilterName) == m_FilterToServer.end())
+            {
+                MBLSP::Diagnostic NewDiagnostic;
+                NewDiagnostic.message = "Can't find filter with name \""+FilterToVerify.FilterName+"\"";
+                NewDiagnostic.range.start.line = FilterToVerify.NamePosition.Line;
+                NewDiagnostic.range.start.character = FilterToVerify.NamePosition.ByteOffset;
+                NewDiagnostic.range.end = NewDiagnostic.range.start + FilterToVerify.FilterName.size();
+                OutDiagnostics.emplace_back(std::move(NewDiagnostic));
+            }
         }
         for(auto const& Filter : FilterToVerify.ExtraTerms)
         {
@@ -346,56 +345,60 @@ namespace MBSlippi
         if(Diagnostics.size() > 0)
         {
             ReturnValue = false;
+            OutDiagnostics = std::move(Diagnostics);
         }
         return(ReturnValue);
     }
     bool SpecEvaluator::p_EvaluateGameSelection(SlippiGameInfo const& GameInfo,bool IsSwapped,GameInfoPredicate const& PredicateToEvaluate)
     {
         bool ReturnValue = true;
-        SlippiGamePlayerInfo const* Player1Pointer = &GameInfo.PlayerInfo[0];
-        SlippiGamePlayerInfo const* Player2Pointer = &GameInfo.PlayerInfo[1];
-        if(IsSwapped)
+        if(PredicateToEvaluate.Attribute.size() != 0)
         {
-            std::swap(Player1Pointer,Player1Pointer);   
-        }
-        SlippiGamePlayerInfo  const*  PlayerToEvaluatePointer = Player1Pointer;
-        if(PredicateToEvaluate.Attribute[0].Name == "Player2")
-        {
-            PlayerToEvaluatePointer = Player2Pointer;
-        }
-        SlippiGamePlayerInfo const& CurrentPlayer = *PlayerToEvaluatePointer;
-        if(PredicateToEvaluate.Attribute[0].Name == "Player1" || PredicateToEvaluate.Attribute[0].Name == "Player2")
-        {
-            if(PredicateToEvaluate.Attribute[1].Name == "Character")
+            SlippiGamePlayerInfo const* Player1Pointer = &GameInfo.PlayerInfo[0];
+            SlippiGamePlayerInfo const* Player2Pointer = &GameInfo.PlayerInfo[1];
+            if(IsSwapped)
             {
-                //ReturnValue = CurrentPlayer.Character == PredicateToEvaluate.Value;   
-                ReturnValue = h_Comp(CurrentPlayer.Character,PredicateToEvaluate.Comparison,PredicateToEvaluate.Value);
-            } 
-            else if(PredicateToEvaluate.Attribute[1].Name == "Code")
-            {
-                //ReturnValue = CurrentPlayer.Code == PredicateToEvaluate.Value;   
-                ReturnValue = h_Comp(CurrentPlayer.Code,PredicateToEvaluate.Comparison,PredicateToEvaluate.Value);
+                std::swap(Player1Pointer,Player1Pointer);   
             }
-            else if(PredicateToEvaluate.Attribute[1].Name == "Tag")
+            SlippiGamePlayerInfo  const*  PlayerToEvaluatePointer = Player1Pointer;
+            if(PredicateToEvaluate.Attribute[0].Name == "Player2")
             {
-                //ReturnValue = CurrentPlayer.Tag == PredicateToEvaluate.Value;   
-                ReturnValue = h_Comp(CurrentPlayer.Tag,PredicateToEvaluate.Comparison,PredicateToEvaluate.Value);
+                PlayerToEvaluatePointer = Player2Pointer;
+            }
+            SlippiGamePlayerInfo const& CurrentPlayer = *PlayerToEvaluatePointer;
+            if(PredicateToEvaluate.Attribute[0].Name == "Player1" || PredicateToEvaluate.Attribute[0].Name == "Player2")
+            {
+                if(PredicateToEvaluate.Attribute[1].Name == "Character")
+                {
+                    //ReturnValue = CurrentPlayer.Character == PredicateToEvaluate.Value;   
+                    ReturnValue = h_Comp(CurrentPlayer.Character,PredicateToEvaluate.Comparison,PredicateToEvaluate.Value);
+                } 
+                else if(PredicateToEvaluate.Attribute[1].Name == "Code")
+                {
+                    //ReturnValue = CurrentPlayer.Code == PredicateToEvaluate.Value;   
+                    ReturnValue = h_Comp(CurrentPlayer.Code,PredicateToEvaluate.Comparison,PredicateToEvaluate.Value);
+                }
+                else if(PredicateToEvaluate.Attribute[1].Name == "Tag")
+                {
+                    //ReturnValue = CurrentPlayer.Tag == PredicateToEvaluate.Value;   
+                    ReturnValue = h_Comp(CurrentPlayer.Tag,PredicateToEvaluate.Comparison,PredicateToEvaluate.Value);
+                }
+                else
+                {
+                    assert(false && "Only Tag,Character,Code is recognized as player attribute");   
+                }
             }
             else
             {
-                assert(false && "Only Tag,Character,Code is recognized as player attribute");   
-            }
-        }
-        else
-        {
-            if(PredicateToEvaluate.Attribute[0].Name == "Stage")
-            {
-                ReturnValue = GameInfo.Stage == PredicateToEvaluate.Value;
-            }
-            else if(PredicateToEvaluate.Attribute[0].Name == "Date")
-            {
-                ReturnValue = h_Comp(GameInfo.Date,PredicateToEvaluate.Comparison,PredicateToEvaluate.DateValue);
-                //ReturnValue = h_Comp(GameInfo.Date,PredicateToEvaluate.Operator,
+                if(PredicateToEvaluate.Attribute[0].Name == "Stage")
+                {
+                    ReturnValue = GameInfo.Stage == PredicateToEvaluate.Value;
+                }
+                else if(PredicateToEvaluate.Attribute[0].Name == "Date")
+                {
+                    ReturnValue = h_Comp(GameInfo.Date,PredicateToEvaluate.Comparison,PredicateToEvaluate.DateValue);
+                    //ReturnValue = h_Comp(GameInfo.Date,PredicateToEvaluate.Operator,
+                }
             }
         }
         for(auto const& ExtraTerm : PredicateToEvaluate.ExtraTerms)
@@ -415,6 +418,10 @@ namespace MBSlippi
                     break;
                 }
             }
+            else if(ExtraTerm.Operator == "")
+            {
+                ReturnValue = p_EvaluateGameSelection(GameInfo,IsSwapped,ExtraTerm);
+            }
             else
             {
                 assert(false && "Only valid operators are && and ||");   
@@ -425,21 +432,25 @@ namespace MBSlippi
     bool h_SatisfiesPlayerAssignment(SlippiGamePlayerInfo const& PlayerInfo,GameInfoPredicate const& PredicateToEvaluate)
     {
         bool ReturnValue = true;
-        if(PredicateToEvaluate.Attribute[0].Name == "Character")
+
+        if(PredicateToEvaluate.Attribute.size() != 0)
         {
-            ReturnValue = PlayerInfo.Character == PredicateToEvaluate.Value;
-        }
-        else if(PredicateToEvaluate.Attribute[0].Name == "Tag")
-        {
-            ReturnValue = PlayerInfo.Tag == PredicateToEvaluate.Value;
-        }
-        else if(PredicateToEvaluate.Attribute[0].Name == "Code")
-        {
-            ReturnValue = PlayerInfo.Code == PredicateToEvaluate.Value;
-        }
-        else
-        {
-            assert(false && "Only Tag,Character,Code is recognized as player attribute");   
+            if(PredicateToEvaluate.Attribute[0].Name == "Character")
+            {
+                ReturnValue = PlayerInfo.Character == PredicateToEvaluate.Value;
+            }
+            else if(PredicateToEvaluate.Attribute[0].Name == "Tag")
+            {
+                ReturnValue = PlayerInfo.Tag == PredicateToEvaluate.Value;
+            }
+            else if(PredicateToEvaluate.Attribute[0].Name == "Code")
+            {
+                ReturnValue = PlayerInfo.Code == PredicateToEvaluate.Value;
+            }
+            else
+            {
+                assert(false && "Only Tag,Character,Code is recognized as player attribute");   
+            }
         }
         for(auto const& ExtraTerm : PredicateToEvaluate.ExtraTerms)
         {
@@ -458,6 +469,10 @@ namespace MBSlippi
                     ReturnValue = false;   
                     break;
                 }
+            }
+            else if(ExtraTerm.Operator == "")
+            {
+                ReturnValue = h_SatisfiesPlayerAssignment(PlayerInfo,ExtraTerm);
             }
             else
             {
@@ -550,22 +565,26 @@ namespace MBSlippi
             GameIntervall CurrentIntervall,MeleeGame const& GameToFilter)
     {
         std::vector<GameIntervall> ReturnValue;
-        if(FilterToUse.FilterName == "")
+        if(FilterToUse.FilterName == "" && FilterToUse.ExtraTerms.size() == 0)
         {
             ReturnValue.push_back(CurrentIntervall);
             return(ReturnValue);
         }         
-        if(auto BuiltinFilter = m_BuiltinFilters.find(FilterToUse.FilterName); BuiltinFilter != m_BuiltinFilters.end())
+
+        if(FilterToUse.FilterName != "")
         {
-            ReturnValue = BuiltinFilter->second(GameToFilter,FilterToUse.ArgumentList,CurrentIntervall);
-        }
-        else if(auto ServerIndex = m_FilterToServer.find(FilterToUse.FilterName); ServerIndex != m_FilterToServer.end())
-        {
-            ReturnValue = m_SpecServers[ServerIndex->second].ExecuteFilter(FilterToUse.FilterName,GameToFilter,CurrentIntervall);
-        }
-        else
-        {
-            assert(false && "No server or builtin filter found, evaluating spec that shouldn't have been verified");
+            if(auto BuiltinFilter = m_BuiltinFilters.find(FilterToUse.FilterName); BuiltinFilter != m_BuiltinFilters.end())
+            {
+                ReturnValue = BuiltinFilter->second(GameToFilter,FilterToUse.ArgumentList,CurrentIntervall);
+            }
+            else if(auto ServerIndex = m_FilterToServer.find(FilterToUse.FilterName); ServerIndex != m_FilterToServer.end())
+            {
+                ReturnValue = m_SpecServers[ServerIndex->second].ExecuteFilter(FilterToUse.FilterName,GameToFilter,CurrentIntervall);
+            }
+            else
+            {
+                assert(false && "No server or builtin filter found, evaluating spec that shouldn't have been verified");
+            }
         }
         for(auto const& ExtraFilter : FilterToUse.ExtraTerms)
         {
@@ -585,6 +604,10 @@ namespace MBSlippi
                     NewIntervalls.push_back(p_EvaluateGameIntervalls(ExtraFilter,Intervall,GameToFilter));
                 } 
                 ReturnValue = MBUtility::Merge<GameIntervall>(NewIntervalls.begin(),NewIntervalls.end());
+            }
+            else if(ExtraFilter.Operator == "")
+            {
+                ReturnValue = p_EvaluateGameIntervalls(ExtraFilter,CurrentIntervall,GameToFilter);
             }
             else
             {
@@ -750,7 +773,7 @@ namespace MBSlippi
     std::vector<GameIntervall> SpecEvaluator::Move(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,GameIntervall IntervallToInspect)
     {
         std::vector<GameIntervall> ReturnValue;
-        if(ExtraArguments.PositionalArguments.size() != 0)
+        if(ExtraArguments.PositionalArguments.size() != 1)
         {
             throw std::runtime_error("Move requries exactly 1 positional option, the name of the move to inspect");
         }

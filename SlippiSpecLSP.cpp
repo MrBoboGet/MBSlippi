@@ -2,6 +2,7 @@
 #include "MBLSP/LSP_Structs.h"
 #include "SlippiSpecParser.h"
 #include "SlippiSpec.h"
+#include <assert.h>
 namespace MBSlippi
 {
     MBLSP::Position h_Convert(MBCC::TokenPosition PositionToConvert)
@@ -30,6 +31,27 @@ namespace MBSlippi
             for(auto const& SubComponent : ComponentToExamine.ExtraTerms)
             {
                 p_ExtractTokens(OutTokens,SubComponent);
+            }
+        }
+    }
+    void SlippiLSP::p_ExtractTokens(std::vector<MBLSP::SemanticToken>& OutTokens,Filter_ArgList const& ComponentToExamine)
+    {
+        for(auto const& Arg : ComponentToExamine.Arguments)
+        {
+            if(Arg.IsType<Filter_Arg_Named>())
+            {
+                auto const& NamedArg = Arg.GetType<Filter_Arg_Named>();
+                OutTokens.push_back(MBLSP::SemanticToken(MBLSP::TokenType::Property,h_Convert(NamedArg.NamePosition),NamedArg.Name.size()));
+                OutTokens.push_back(MBLSP::SemanticToken(MBLSP::TokenType::String,h_Convert(NamedArg.ValuePosition),NamedArg.Value.size()+2));
+            }   
+            else if(Arg.IsType<Filter_Arg_Positional>())
+            {
+                auto const& PositionalArg  = Arg.GetType<Filter_Arg_Positional>();
+                OutTokens.push_back(MBLSP::SemanticToken(MBLSP::TokenType::Property,h_Convert(PositionalArg.ValuePosition),PositionalArg.Value.size()+2));
+            }
+            else
+            {
+                assert(false && "p_ExtractTokens in LSP doesn't cover all cases for Filter_ArgList");   
             }
         }
     }
@@ -87,7 +109,8 @@ namespace MBSlippi
         try
         {
             ReturnValue.ParsedSpec = ParseSlippiSpec(m_Tokenizer);
-            ReturnValue.SemanticTokens = p_ExtractTokens(ReturnValue.ParsedSpec);
+            ReturnValue.Tokens = p_ExtractTokens(ReturnValue.ParsedSpec);
+            ReturnValue.SemanticTokens = MBLSP::CalculateSemanticTokens(ReturnValue.Tokens);
             SpecEvaluator Evaluator;
             Evaluator.VerifySpec(ReturnValue.ParsedSpec,ReturnValue.Diagnostics);
             if(!m_Tokenizer.IsEOF(m_Tokenizer.Peek()))
@@ -102,6 +125,7 @@ namespace MBSlippi
         }
         catch(MBCC::ParsingException const& ParseException)
         {
+            ReturnValue.CorrectParsing = false;
             MBLSP::Diagnostic NewDiagnostic;
             NewDiagnostic.range.start = h_Convert(ParseException.Position);
             NewDiagnostic.range.end = NewDiagnostic.range.start +m_Tokenizer.Peek().Value.size();
@@ -111,6 +135,7 @@ namespace MBSlippi
         catch(std::exception const& e)
         {
             //Range, xd, arbitrary
+            ReturnValue.CorrectParsing = false;
             ReturnValue.Diagnostics.push_back(MBLSP::Diagnostic());
             ReturnValue.Diagnostics.back().range.end.line = 0;
             ReturnValue.Diagnostics.back().range.end.character = 0;
@@ -118,7 +143,6 @@ namespace MBSlippi
             ReturnValue.Diagnostics.back().range.start.character = 0;
             ReturnValue.Diagnostics.back().message = e.what();
         }
-        return(ReturnValue);
         return(ReturnValue);
     }
     MBLSP::Initialize_Response SlippiLSP::HandleRequest(MBLSP::InitializeRequest const& Request)
@@ -146,8 +170,20 @@ namespace MBSlippi
     }
     void SlippiLSP::DocumentChanged(std::string const& URI,std::string const& NewContent)
     {
-        m_OpenedDocuments[URI] = p_CreateDocumentInfo(NewContent);
+        DocumentInfo NewDocumentInfo = p_CreateDocumentInfo(NewContent);
+        m_OpenedDocuments[URI] = std::move(NewDocumentInfo);
         p_PushDiagnostics(m_OpenedDocuments[URI],URI);
+    }
+    void SlippiLSP::DocumentChanged(std::string const& URI,std::string const& NewContent,std::vector<MBLSP::TextChange> const& Changes)
+    {
+        DocumentInfo NewDocumentInfo = p_CreateDocumentInfo(NewContent);
+        if(!NewDocumentInfo.CorrectParsing && m_OpenedDocuments[URI].SemanticTokens.size() != 0)
+        {
+            NewDocumentInfo.SemanticTokens = MBLSP::UpdateSemanticTokens(m_OpenedDocuments[URI].SemanticTokens,Changes);
+        }
+        m_OpenedDocuments[URI] = std::move(NewDocumentInfo);
+        p_PushDiagnostics(m_OpenedDocuments[URI],URI);
+           
     }
     void SlippiLSP::p_PushDiagnostics(DocumentInfo& DocumentData,std::string const& URI)
     {
@@ -171,7 +207,19 @@ namespace MBSlippi
     {
         MBLSP::SemanticToken_Response ReturnValue;
         ReturnValue.result = MBLSP::SemanticTokens();
-        ReturnValue.result->data = MBLSP::CalculateSemanticTokens(m_OpenedDocuments[Request.params.textDocument.uri].SemanticTokens);
+        ReturnValue.result->data = m_OpenedDocuments[Request.params.textDocument.uri].SemanticTokens;
+        return(ReturnValue);
+    }
+    MBLSP::SemanticTokensRange_Response SlippiLSP::HandleRequest(MBLSP::SemanticTokensRange_Request const& Request) 
+    {
+        MBLSP::SemanticTokensRange_Response ReturnValue;
+        auto DocIt = m_OpenedDocuments.find(Request.params.textDocument.uri);
+        if(DocIt == m_OpenedDocuments.end())
+        {
+            throw std::runtime_error("Attempting semanticTokens/range on unopened document");   
+        }
+        ReturnValue.result = MBLSP::SemanticTokens();
+        ReturnValue.result->data = MBLSP::GetTokenRange(DocIt->second.SemanticTokens,Request.params.range);
         return(ReturnValue);
     }
 

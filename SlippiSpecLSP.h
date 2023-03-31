@@ -1,4 +1,6 @@
 #include <MBLSP/MBLSP.h>
+#include "MBLSP/LSP_Structs.h"
+#include "MBLSP/TextChanges.h"
 #include "SlippiSpec.h"
 #include <MBLSP/SemanticTokens.h>
 namespace MBSlippi
@@ -8,9 +10,11 @@ namespace MBSlippi
     private:
         struct DocumentInfo
         {
+            bool CorrectParsing = true;
             SlippiSpec ParsedSpec;
             std::vector<MBLSP::Diagnostic> Diagnostics;
-            std::vector<MBLSP::SemanticToken> SemanticTokens;
+            std::vector<MBLSP::SemanticToken> Tokens;
+            std::vector<int> SemanticTokens;
         };
         MBLSP::LSP_ServerHandler* m_AssociatedHandler = nullptr;
         MBCC::Tokenizer m_Tokenizer = GetTokenizer();
@@ -23,6 +27,7 @@ namespace MBSlippi
 
         void p_ExtractTokens(std::vector<MBLSP::SemanticToken>& OutTokens,Filter const& FilterToExamine);
         void p_ExtractTokens(std::vector<MBLSP::SemanticToken>& OutTokens,Filter_Component const& ComponentToExamine);
+        void p_ExtractTokens(std::vector<MBLSP::SemanticToken>& OutTokens,Filter_ArgList const& ComponentToExamine);
 
         void p_ExtractTokens(std::vector<MBLSP::SemanticToken>& OutTokens,GameInfoPredicate const& PredicateToExamine);
         void p_ExtractTokens(std::vector<MBLSP::SemanticToken>& OutTokens,GameSelection const& SelectionToExamine);
@@ -39,6 +44,7 @@ namespace MBSlippi
         virtual void OpenedDocument(std::string const& URI,std::string const& Content) override;
         virtual void ClosedDocument(std::string const& URI) override;
         virtual void DocumentChanged(std::string const& URI,std::string const& NewContent) override;
+        virtual void DocumentChanged(std::string const& URI,std::string const& NewContent,std::vector<MBLSP::TextChange> const& Changes) override;
 
         virtual void SetHandler(MBLSP::LSP_ServerHandler* AssociatedHandler) override;
         //Skip the mandatory initialized notification, probably only necessary
@@ -46,6 +52,7 @@ namespace MBSlippi
 
         virtual MBLSP::GotoDefinition_Response HandleRequest(MBLSP::GotoDefinition_Request const& Request) override;
         virtual MBLSP::SemanticToken_Response HandleRequest(MBLSP::SemanticToken_Request const& Request) override;
+        virtual MBLSP::SemanticTokensRange_Response HandleRequest(MBLSP::SemanticTokensRange_Request const& Request) override;
 
     };
 }
