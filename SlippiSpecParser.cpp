@@ -235,6 +235,7 @@ Filter_Arg_Named ParseFilter_Arg_Named(MBCC::Tokenizer& Tokenizer)
 Filter_Arg_Named ParseFilter_Arg_Named_0(MBCC::Tokenizer& Tokenizer)
 {
     Filter_Arg_Named ReturnValue;
+    ReturnValue.NamePosition = Tokenizer.Peek().Position;
     if(Tokenizer.Peek().Type != 14)
     {
         throw MBCC::ParsingException(Tokenizer.Peek().Position,"Filter_Arg_Named","idf");
@@ -246,6 +247,7 @@ Filter_Arg_Named ParseFilter_Arg_Named_0(MBCC::Tokenizer& Tokenizer)
         throw MBCC::ParsingException(Tokenizer.Peek().Position,"Filter_Arg_Named","eq");
     }
     Tokenizer.ConsumeToken();
+    ReturnValue.ValuePosition = Tokenizer.Peek().Position;
     if(Tokenizer.Peek().Type != 8)
     {
         throw MBCC::ParsingException(Tokenizer.Peek().Position,"Filter_Arg_Named","string");
@@ -263,6 +265,7 @@ Filter_Arg_Positional ParseFilter_Arg_Positional(MBCC::Tokenizer& Tokenizer)
 Filter_Arg_Positional ParseFilter_Arg_Positional_0(MBCC::Tokenizer& Tokenizer)
 {
     Filter_Arg_Positional ReturnValue;
+    ReturnValue.ValuePosition = Tokenizer.Peek().Position;
     if(Tokenizer.Peek().Type != 8)
     {
         throw MBCC::ParsingException(Tokenizer.Peek().Position,"Filter_Arg_Positional","string");
@@ -844,6 +847,7 @@ Result_Record ParseResult_0(MBCC::Tokenizer& Tokenizer)
         throw MBCC::ParsingException(Tokenizer.Peek().Position,"Result","RECORD");
     }
     Tokenizer.ConsumeToken();
+    ReturnValue.FilePosition = Tokenizer.Peek().Position;
     if(Tokenizer.Peek().Type != 8)
     {
         throw MBCC::ParsingException(Tokenizer.Peek().Position,"Result","string");

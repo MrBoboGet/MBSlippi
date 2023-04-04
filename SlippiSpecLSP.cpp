@@ -28,6 +28,11 @@ namespace MBSlippi
         {
             OutTokens.push_back(MBLSP::SemanticToken(MBLSP::TokenType::Function,
                         h_Convert(ComponentToExamine.NamePosition),ComponentToExamine.FilterName.size()));
+
+            if(ComponentToExamine.ArgumentList.Arguments.size() != 0)
+            {
+                p_ExtractTokens(OutTokens,ComponentToExamine.ArgumentList);
+            }
             for(auto const& SubComponent : ComponentToExamine.ExtraTerms)
             {
                 p_ExtractTokens(OutTokens,SubComponent);
@@ -47,7 +52,7 @@ namespace MBSlippi
             else if(Arg.IsType<Filter_Arg_Positional>())
             {
                 auto const& PositionalArg  = Arg.GetType<Filter_Arg_Positional>();
-                OutTokens.push_back(MBLSP::SemanticToken(MBLSP::TokenType::Property,h_Convert(PositionalArg.ValuePosition),PositionalArg.Value.size()+2));
+                OutTokens.push_back(MBLSP::SemanticToken(MBLSP::TokenType::String,h_Convert(PositionalArg.ValuePosition),PositionalArg.Value.size()+2));
             }
             else
             {
@@ -88,6 +93,9 @@ namespace MBSlippi
             OutTokens.push_back(MBLSP::SemanticToken(MBLSP::TokenType::Keyword,
                         MBLSP::Position{RecordResult.RecordPosition.Line,RecordResult.RecordPosition.ByteOffset},
                         6));
+            OutTokens.push_back(MBLSP::SemanticToken(MBLSP::TokenType::String,
+                        MBLSP::Position{RecordResult.FilePosition.Line,RecordResult.FilePosition.ByteOffset},
+                        RecordResult.OutFile.size()+2));
         }
     }
     std::vector<MBLSP::SemanticToken> SlippiLSP::p_ExtractTokens(SlippiSpec const& Spec)
@@ -154,6 +162,7 @@ namespace MBSlippi
         ReturnValue.result->capabilities.semanticTokensProvider = MBLSP::SemanticTokensOptions();
         MBLSP::SemanticTokensLegend Legend;
         Legend.tokenTypes = MBLSP::GetTokenLegend();
+        Legend.tokenTypes.push_back("TestTest");
         ReturnValue.result->capabilities.semanticTokensProvider->legend = Legend;
         ReturnValue.result->capabilities.semanticTokensProvider->full = true;
         ReturnValue.result->capabilities.semanticTokensProvider->range = false;

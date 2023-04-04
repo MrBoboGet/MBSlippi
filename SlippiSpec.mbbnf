@@ -126,6 +126,7 @@ struct Result {}
 struct Result_Record : Result
 {
     tokenPos RecordPosition;
+    tokenPos FilePosition;
     string OutFile;
 }
 struct Result_Tabulate : Result
@@ -160,8 +161,8 @@ Operator = Op=less|Op=pipe|Op=AND|Op=OR|Op=add|Op=great | Op=eq | Op=leq | Op=ge
 def Filter_Arg_Extra = Filter_Arg;
 Filter_Arg_Extra = comma this=Filter_Arg;
 Filter_Arg = this=Filter_Arg_Named | this=Filter_Arg_Positional;
-Filter_Arg_Named = Name=idf eq Value=string;
-Filter_Arg_Positional = Value=string;
+Filter_Arg_Named = NamePosition = TOKEN.Position Name=idf eq ValuePosition = TOKEN.Position Value=string;
+Filter_Arg_Positional = ValuePosition = TOKEN.Position Value=string;
 def Filter_ArgList_Arguments = ArgList;
 Filter_ArgList_Arguments = Args=Filter_Arg Args=Filter_Arg_Extra*;
 Filter_ArgList = lpar this=Filter_ArgList_Arguments? rpar;
@@ -203,5 +204,5 @@ GameInfoPredicate = lpar ExtraTerms=GameInfoPredicate rpar ExtraTerms=GameInfoPr
 GameSelection = SelectPosition = TOKEN.Position SELECT GameCondition=GameInfoPredicate;
 
 PlayerAssignment = WithPosition = TOKEN.Position WITH PlayerPosition = TOKEN.Position AffectedPlayer=idf PlayerCondition=GameInfoPredicate;
-Result = RecordPosition = TOKEN.Position RECORD OutFile=string;
+Result = RecordPosition = TOKEN.Position RECORD  FilePosition = TOKEN.Position OutFile=string;
 SlippiSpec= Assignment=PlayerAssignment? Games=GameSelection SituationFilter=Filter? Output=Result;

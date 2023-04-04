@@ -167,6 +167,7 @@ class Result_Record : public Result_Base
 {
     public:
     MBCC::TokenPosition RecordPosition;
+    MBCC::TokenPosition FilePosition;
     std::string OutFile;
     
 };
