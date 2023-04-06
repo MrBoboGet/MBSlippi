@@ -1,0 +1,25 @@
+# MBSlippi
+
+MBSlippi is a CLI tool and query language that can be used to analyze slippi
+replay files. It has a focus on supporting analyzing games from a competitive
+standpoint, and supports saving a collection of replays as a video file, and
+extracting stats from games that can be furthered analyzed by conventional
+tools.
+
+The history and motivation for the project can be read about
+@[here](History.mbd). While not strictly neccessary in order to use the program,
+it can provide some insights to design decisions, and what the program aims to
+achieve.
+
+The documentation is then split into mainly 3 parts, 
+@[Installation](Installation.mbd), which describes how the program is installed
+on the computer, and what kind of environment it expects and uses. Then we have
+the parts describing the @[query language](SlippiSpec/index.mbd), and finally 
+a description of the CLI and how to invoke the program can be found in the 
+@[CLI](CLI.mbd) part.
+
+Apart from the main program so is there also a 
+@[language server](https://microsoft.github.io/language-server-protocol)
+that is a part of the project. It includes highlighting and linting of query
+text files. How this program is used and combined with editors can be read about
+@[here](mbslippid/index.mbd).

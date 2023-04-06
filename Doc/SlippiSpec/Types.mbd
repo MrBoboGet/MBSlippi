@@ -1,0 +1,41 @@
+# Types
+
+This part describes all of the different types which are used in MBSlippi. It
+contain both a description of the trivial types, and the more complicated types
+such as @[PlayerFrameInfo](#PlayerFrameInfo).
+
+
+#_ Simple types
+
+    SlippiSpec like any other programming language has some basic types which
+    and has most likely the exact semantic one would expect.
+
+    # String
+
+        Any string is assumed to be encoded as a series of UTF-8 bytes, which
+        include both the text the query is written on. Every string and text
+        exposed by the API or written by the program is also encoded in UTF-8,
+        or more accurately, handled as it were encoded in UTF-8, no internal
+        validation is made in order to ensure that it is properly encoded, and
+        relies on the proper encoding from the strings as read from files.
+
+    # Integers
+
+        The integers used are regular integers as represented in typical C++,
+        they are therefore not arbitrary precision, but are guaranteed to be at
+        least 32 bits wide. However, this restriction is only relevant for the
+        integers that are a part of the 
+        @[filter arguments](Filters.mbd#Filter arguments), as no integers that
+        are a part of the replay files require more than 32 bits.
+
+    #  Floats
+
+        Floats have a unspecified internal reprsentation, but is at least 32
+        bits wide.
+
+/_
+
+# Dates
+
+    All of the dates 
+

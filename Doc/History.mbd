@@ -1,0 +1,80 @@
+# History and motivation
+
+The project started when I wanted a way to more efficiently analyze replays
+files, and at it's inception I just wanted a way to convert a replay file into a
+video.
+
+Normally, when watching slippi replays, you use the replay feature from the
+slippi GUI, but this has some limitations. It doesn't really support skipping in
+the replay, and doesn't provide convenient controls for more advanced viewing
+use cases, that other program liks VLC can provide. The original goal was
+therefore just to be able to say the replays I was interested in as a regular
+video file, so I could re-view them easily, analyze situations frame by frame
+and so on.
+
+When implementing this however, I realized that there were also some other tasks
+that could be improved, the most obvious being, which replays am I actually
+interested in saving? The tool quickly got a goal of being able to automate
+common replay analyzing operations and to integrate easily with bash. This was
+however something that required a bit more knowledge about the actual format of
+the replays, and this is when the C++ slippi replay parser was created.
+
+With the parser it was possible to extract important meta data for the played
+matches, such as the stage the game was played on, against which player and
+with which characters etc. Having this parser implemented also meant that the
+possibility to do even more automated analysis was possible. And this is where
+the scripting language was first introduced.
+
+The first incarnation of the scripting language used a custom, janky, imperative
+language, MBScript. It had syntax and semantics similar to python. The api
+provided made it possible to extract some interesting situations, such as
+every time you where in shield pressure. It did however have multiple problems.
+
+The biggest problem, was that the imperative model was inherently prone to
+repetition and boilerplate. Because every part of the analysis was made with
+this scripting language, specifying and filtering the games had to be repeated
+frequently. Because of the nature of replay files, which player you are often
+times have to be determined by a game by game basis. After that, actually
+extracting the situations you were interested in in a format that could be saved
+also had to be repeated. And when writing the early proof of concepts, I
+realised that practically every new file had the exact same structure. 
+
+After having a working version of @[MBCC](/{MBCC}) and @[MBLSP](/{MBLSP}), I decided to rework the
+language. Instead of using the imperative language forcing people to write the
+programs in a ghetto scripting language with lots boilerplate, the whole process
+was completely standardised. Now the different parts were made mandatory and
+explicit. This in turns allows for a much more expressive query language, and
+much more powerful linting. The pipeline structure inspired by bash makes it so
+at that every new builtin filter can be easily reasued and combined with other.
+The common structure also allows for the filters written in "pure c++". The
+previous builtin command needed to directly interface with MBScript, which
+involves a lot of type checking and validity checking. This made it so that
+implementing a new builtin was extremely tedious, but with the standardised
+model it is much easier, with a higher pay off.
+
+This statically typed query language also allows for more powerful tooling. The
+language server now can support semantic tokens directly from the AST, without
+the need to implement much more complicated reasoning on the execution of a
+dynamic language. More helpful error messages can also be provided.
+
+At this point, it was clear that MBSlippi was much more than just a way to save
+replays files. Now the goal is for MBSlippi to provide all the tools neccessary
+to analyze replays files in a programmatic way. This also means that
+interoperability and composability has high priority. Features that also are to
+be implemented are the ability to calculate statistics for games, for example
+how many frames on average are you idle after landing, how many times were you
+hit be raw fox upsmash etc. 
+
+Another goal, is the ability to define custom filters. While the builtin
+customization ability to combine filters might be enough for most use cases,
+especially my own, the ability to create custom filters in a language that
+doesn't require a recompilation of the whole program can be very covenient, and
+allows for the program to in a sense be fully customizable. The current idea for
+this is to use the same model as LSP and DAP, that is extensions are separate
+servers that provide their functionality through IPC.
+
+A REPL is also something that is planned to be added, supporting a more
+interactive and exploratory form of workflow, but that kind of workflow also
+requires more feature from the query language to be usable, such as the ability
+to assign partial results to variables in order to be reused with different
+queries etc.

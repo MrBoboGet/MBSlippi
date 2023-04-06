@@ -1,0 +1,89 @@
+# SlippiSpec
+
+    SlippiSpec is the query language that lies at the heart of MBSlippi, and
+    takes inspiration in both syntax and semantics from SQL and bash. It is
+    intended to provide a uniform way to extract interesting situations from
+    melee games, and values composability over total imperative control over
+    queries, relying heavily on builtin operations over user defined.
+
+# Documentation layout
+
+    This document contains a brief description of the most top level behaviour
+    of the query language, and more thorough descriptions are split into
+    separate documents. In @[Types](Types.mbd), descriptions for the various
+    types and objects used and referenced throughout MBSlippi are described.
+    In @[Syntax](Syntax.mbd), a complete description of the grammar and encoding
+    is specified, and the different parts of the execution as described here can
+    be found in their respective parts, 
+    @[Player specification](PlayerSpecification.mbd),
+    @[Game specification](GameSpecification.mbd),
+    @[Filters](Filters.mbd) and 
+    @[Results](Results.mbd).
+
+#_ Overview
+
+    Similar to SQL so can SlippiSpec be split into multiple distinct parts, some
+    of which are optional, and some of which are mandatory. The parts then form a
+    pipeline, where the result from one part influences the next part of
+    the pipeline, which results affect the behavior of further parts and so on.
+
+    The execution can be split into the following parts, ordered in their
+    conceptual order of the executing pipeline.
+
+    # Player specification
+        
+        The player specification allows for the index of the players to be
+        reordered, and is optional. The main purpose of this options is to be
+        able to standardize which player Player1 is supposed to represent. Often
+        times one is interested in extracting common situation against for
+        example specific matchups, and being forced to by a game by game basis
+        determine which player you are and modify the query to match that is
+        difficult, error prone, and requires a lot of boilerplate.
+
+        For every game to be examined in the @[game specification](#Game Specification), the
+        player matching the predicate gets reassigned to that index, and more
+        importantly, the @[game specification](#Game specification) predicate is
+        evaluated with the players having the switched positions. This makes it
+        for example possible to create a Player specification that puts you in
+        the Player1 position, and then in the 
+        @[game specification](#Game specification) 
+        filter only the matches you played falcon.
+
+        This predicate only have access to the 
+        @[player game info fields](#Player Game Info), which means that only
+        information that doesn't require analysis of what actually happens in
+        the game is available, such as players tags, player codes, characters,
+        and game metadata.
+
+    # Game specification
+
+        This part of the execution determines what games, slippi replays, should
+        be analyzed. This query much like the 
+        @[player specification](Player Specification) only looks at the
+        information of a replay that doesn't require further examination of the
+        contents. In order to minimize file IO so is metadata for every slippi
+        game stored in a separate database, that is queried separately in order
+        to retrieve which games to load, and therefore doesn't require that every
+        single replay available is read in order to determine if it should be
+        included. More about this caching can be read in 
+        @[the installation part](../Installation.mbd).
+
+    # Situation filter
+
+        This part of the execution takes it's inspiration from bash, and is the
+        component allowing SlippiSpec to perform more advanced analysis. The
+        fundamental unit of saving and analysis is a game interval, which
+        contains the game it belongs to, and which start and end frame it
+        contains. Every filter takes as input a game interval, and then outputs
+        new game intervals. This can then be chained like a typical unix
+        pipeline. Every game is first considered as one big interval, and is fed
+        into the first filter, which splits it up into new intervals, which can
+        be further split and filtered by other filters.
+
+    # Result
+
+        This mandatory parts is the final step of execution, and determines what
+        the output should be. The only currently supported result is that all of
+        the extracted game intervals are saved as a video.
+/_
+
