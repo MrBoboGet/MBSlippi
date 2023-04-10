@@ -108,7 +108,10 @@ namespace MBSlippi
         return(ReturnValue);
     }
 
-
+    class MQL_Context
+    {
+        
+    };
     class SpecEvaluator
     {
     private:
@@ -142,6 +145,8 @@ namespace MBSlippi
 
         std::vector<SpecServer> m_SpecServers;
         std::unordered_map<std::string,int> m_FilterToServer;
+
+        MQL_Context m_TopContext;
  
         MeleeGameDBAdapter* m_DBAdapter = nullptr;
         MeleeGameRecorder* m_Recorder = nullptr;

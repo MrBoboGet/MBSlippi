@@ -14,10 +14,15 @@ term bool = "true|false";
 term WITH = "WITH";
 term SELECT = "SELECT";
 term RECORD = "RECORD";
+term GAMES = "GAMES";
 term FILTER = "FILTER";
+term PRINT = "PRINT";
 
+
+term variable = "$[[:alnum:]_]+";
 term idf = "[[:alpha:]_]+[[:alnum:]_]*";
 
+term semi = ";";
 term leq = "<=";
 term less = "<";
 term geq = ">=";
@@ -34,13 +39,53 @@ term add = "&";
 term que = "\?";
 skip "( |\t|\n|\r)*";
 
+struct Statement
+{
+    
+}
+
+struct VariableDeclaration : Statement
+{
+    tokenPos NamePosition;
+    string Name;
+}
+
+struct VariableDeclaration_Filter : VariableDeclaration
+{
+    tokenPos FilterPosition;
+    Filter_Component Component;
+}
+
+struct VariableDeclaration_GameList : VariableDeclaration
+{
+    tokenPos GamePosition;
+    GameSelection Selection;
+}
+
+struct VariableDeclaration_PlayerSelection : VariableDeclaration
+{
+    tokenPos GamePosition;
+    GameInfoPredicate Predicate;
+}
+
+struct VariableDeclaration_GameInfoPredicate : VariableDeclaration
+{
+    tokenPos GamePosition;
+    GameInfoPredicate Predicate;
+}
+
+struct Module
+{
+    List<Statement> Statements;
+}
+
 struct Operator
 {
     string Op;
 }
 struct GameSelection
 {
-    tokenPos SelectPosition;
+    PlayerAssignment Assignment;
     GameInfoPredicate GameCondition;
 }
 struct GameInfoPredicate_Conjunction
@@ -55,13 +100,28 @@ struct AttributeComponent
     string Name;
 }
 
-struct GameInfoPredicate
+struct GameInfoPredicate_Data
+{
+    
+}
+
+struct GameInfoPredicate_Variable : GameInfoPredicate_Data
+{
+    tokenPos VariablePosition;
+    string VariableName;
+}
+struct GameInfoPredicate_Direct : GameInfoPredicate_Data
 {
     List<AttributeComponent> Attribute;
     tokenPos ValuePosition;
     string Value;
     string Comparison;
     {uint64_t} DateValue;
+}
+
+struct GameInfoPredicate
+{
+    GameInfoPredicate_Data Data;
     string Operator;
     List<GameInfoPredicate> ExtraTerms;
 }
@@ -105,10 +165,26 @@ struct AttributeList
 {
     List<AttributeComponent> Attributes;
 }
-struct Filter_Component
+
+struct Filter_Component_Data
+{
+    
+}
+
+struct Filter_Component_Variable : Filter_Component_Data
+{
+    tokenPos VariablePosition;
+    string VariableName;
+}
+struct Filter_Component_Function : Filter_Component_Data
 {
     tokenPos NamePosition;
     string FilterName; 
+}
+
+struct Filter_Component
+{
+    Filter_Component_Data Data;
     Filter_ArgList ArgumentList;
     string Operator;
     List<Filter_Component> ExtraTerms;
@@ -129,19 +205,27 @@ struct Result_Record : Result
     tokenPos FilePosition;
     string OutFile;
 }
+
+struct Result_Print : Result
+{
+    tokenPos PrintPosition;
+}
+
 struct Result_Tabulate : Result
 {
         
 }
-struct SlippiSpec
+struct Selection : Statement
 {
-    PlayerAssignment Assignment;
+    tokenPos SelectPosition;
     GameSelection Games;
     Filter SituationFilter;
     Result Output;
 }
-def SlippiSpec=SlippiSpec;
-def Result=Result_Record;
+def Selection=Selection;
+def Result=Result;
+def Result_Record=Result_Record;
+def Result_Print = Result_Print;
 def PlayerAssignment=PlayerAssignment;
 
 def GameSelection=GameSelection;
@@ -171,11 +255,20 @@ Filter_ArgList = lpar this=Filter_ArgList_Arguments? rpar;
 def Filter_Component_Or=Filter_Component;
 def Filter_Component_And=Filter_Component;
 def Filter_OperatorList=Filter_OperatorList;
+def Filter_Component_Function=Filter_Component_Function;
+def Filter_Component_Variable=Filter_Component_Variable;
+def Filter_Component_Data=Filter_Component_Data;
+
 
 Filter_Component_And = Operator=add this=Filter_Component;
 Filter_Component_Or = Operator=pipe this=Filter_Component;
 Filter_OperatorList = Components=Filter_Component_And+ | Components=Filter_Component_Or+;
-Filter_Component_Base = NamePosition = TOKEN.Position FilterName=idf ArgumentList.Arguments=Filter_ArgList.Args?;
+
+Filter_Component_Function = NamePosition = TOKEN.Position FilterName=idf;
+Filter_Component_Variable = VariablePosition = TOKEN.Position VariableName=variable;
+Filter_Component_Data = this=Filter_Component_Function | this=Filter_Component_Variable;
+
+Filter_Component_Base = Data=Filter_Component_Data ArgumentList.Arguments=Filter_ArgList.Args?;
 
 Filter_Component = lpar ExtraTerms=Filter_Component rpar ExtraTerms=Filter_OperatorList.Components?| this=Filter_Component_Base ExtraTerms=Filter_OperatorList.Components?;
 
@@ -185,6 +278,9 @@ Filter= FilterPosition = TOKEN.Position FILTER Component=Filter_Component;
 def GameInfoPredicate_Or=GameInfoPredicate;
 def GameInfoPredicate_And=GameInfoPredicate;
 def GameInfoPredicate_OperatorList=GameInfoPredicate_OperatorList;
+def GameInfoPredicate_Direct=GameInfoPredicate_Direct;
+def GameInfoPredicate_Variable=GameInfoPredicate_Variable;
+def GameInfoPredicate_Data=GameInfoPredicate_Data;
 
 def Attribute_Extension = AttributeComponent;
 def Attribute_Base = AttributeComponent;
@@ -196,13 +292,37 @@ Attribute_List = Attributes=Attribute_Base Attributes=Attribute_Extension*;
 GameInfoPredicate_Or = Operator=OR this=GameInfoPredicate;
 GameInfoPredicate_And = Operator=AND this=GameInfoPredicate;
 GameInfoPredicate_OperatorList= Terms=GameInfoPredicate_Or+ | Terms=GameInfoPredicate_And+;
-GameInfoPredicate_Base = Attribute=Attribute_List.Attributes Comparison=Operator.Op ValuePosition = TOKEN.Position Value=string;
+
+GameInfoPredicate_Data = this=GameInfoPredicate_Direct | this=GameInfoPredicate_Variable;
+
+GameInfoPredicate_Variable = VariablePosition = TOKEN.Position VariableName=variable;
+GameInfoPredicate_Direct = Attribute=Attribute_List.Attributes Comparison=Operator.Op ValuePosition = TOKEN.Position Value=string;
+GameInfoPredicate_Data = this=GameInfoPredicate_Variable | this=GameInfoPredicate_Direct;
+
+GameInfoPredicate_Base = Data=GameInfoPredicate_Data;
 
 
 GameInfoPredicate = lpar ExtraTerms=GameInfoPredicate rpar ExtraTerms=GameInfoPredicate_OperatorList.Terms? |
     this=GameInfoPredicate_Base ExtraTerms=GameInfoPredicate_OperatorList.Terms?; 
-GameSelection = SelectPosition = TOKEN.Position SELECT GameCondition=GameInfoPredicate;
+GameSelection = Assignment=PlayerAssignment? GameCondition=GameInfoPredicate;
 
 PlayerAssignment = WithPosition = TOKEN.Position WITH PlayerPosition = TOKEN.Position AffectedPlayer=idf PlayerCondition=GameInfoPredicate;
-Result = RecordPosition = TOKEN.Position RECORD  FilePosition = TOKEN.Position OutFile=string;
-SlippiSpec= Assignment=PlayerAssignment? Games=GameSelection SituationFilter=Filter? Output=Result;
+Result_Record = RecordPosition = TOKEN.Position RECORD  FilePosition = TOKEN.Position OutFile=string;
+Result_Print = PrintPosition = TOKEN.Position PRINT;
+Result = this=Result_Record | this=Result_Print;
+
+Selection =  SelectPosition = TOKEN.Position SELECT Games=GameSelection SituationFilter=Filter? Output=Result semi;
+
+def Statement=Statement;
+def Module=Module;
+def VariableDeclaration=VariableDeclaration;
+def VariableDeclaration_Filter=VariableDeclaration_Filter;
+def VariableDeclaration_GameList=VariableDeclaration_GameList;
+
+VariableDeclaration_Filter = FilterPosition=TOKEN.Position FILTER Component=Filter_Component semi;
+VariableDeclaration_GameList = GamePosition=TOKEN.Position GAMES Selection=GameSelection semi;
+VariableDeclaration = this=VariableDeclaration_Filter | this=VariableDeclaration_GameList;
+
+Module = Statements=Statement*;
+
+Statement = this=VariableDeclaration | this=Selection;
