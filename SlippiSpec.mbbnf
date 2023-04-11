@@ -293,7 +293,6 @@ GameInfoPredicate_Or = Operator=OR this=GameInfoPredicate;
 GameInfoPredicate_And = Operator=AND this=GameInfoPredicate;
 GameInfoPredicate_OperatorList= Terms=GameInfoPredicate_Or+ | Terms=GameInfoPredicate_And+;
 
-GameInfoPredicate_Data = this=GameInfoPredicate_Direct | this=GameInfoPredicate_Variable;
 
 GameInfoPredicate_Variable = VariablePosition = TOKEN.Position VariableName=variable;
 GameInfoPredicate_Direct = Attribute=Attribute_List.Attributes Comparison=Operator.Op ValuePosition = TOKEN.Position Value=string;

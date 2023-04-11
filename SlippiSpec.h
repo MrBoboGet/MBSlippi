@@ -108,9 +108,42 @@ namespace MBSlippi
         return(ReturnValue);
     }
 
-    class MQL_Context
+    struct LazyGameList
     {
-        
+        bool Evaluated = false;
+        std::vector<MeleeGame> Games;
+    };
+    struct MQL_Variable_GameInfoPredicate
+    {
+        bool IsPlayerAssignment = false;
+        GameInfoPredicate Predicate;
+    };
+    class MQL_Variable
+    {
+    public:
+        std::variant<LazyGameList,MQL_Variable_GameInfoPredicate,Filter_Component>  Data;
+    };
+    class MQL_Scope
+    {
+        std::unordered_map<std::string,MQL_Variable> m_Variables;
+    public:
+        MQL_Variable& GetVariable(std::string const& VariableName)
+        {
+            auto It = m_Variables.find(VariableName);
+            if(It == m_Variables.end())
+            {
+                throw std::runtime_error(VariableName + " doesn't exist in current scope");
+            }
+            return(It->second);
+        }
+        bool HasVariable(std::string const& VariableName)
+        {
+            return(m_Variables.find(VariableName) != m_Variables.end());   
+        }
+    };
+    struct MQL_Context
+    {
+        MQL_Scope GlobalScope;
     };
     class SpecEvaluator
     {
@@ -154,13 +187,18 @@ namespace MBSlippi
         void p_VerifyAttribute(std::vector<std::string> const& Attribute,bool IsPlayerAssignment,std::vector<MBLSP::Diagnostic>& OutDiagnostics);
         void p_VerifyFilterComponent(Filter_Component const& FilterToVerify,std::vector<MBLSP::Diagnostic>& OutDiagnostics);
         void p_VerifyFilter(Filter const& FilterToVerify,std::vector<MBLSP::Diagnostic>& OutDiagnostics);
-        void p_VerifyGameInfoPredicate(GameInfoPredicate& PredicateToVerify,bool IsPlayerAssignment,std::vector<MBLSP::Diagnostic>& OutDiagnostics);
 
+        void p_VerifyGameInfoPredicate_Direct(GameInfoPredicate_Direct& PredicateToVerify,
+                bool IsPlayerAssignment,std::vector<MBLSP::Diagnostic>& OutDiagnostics);
+        void p_VerifyGameInfoPredicate(GameInfoPredicate& PredicateToVerify,bool IsPlayerAssignment,std::vector<MBLSP::Diagnostic>& OutDiagnostics);
+        void p_VerifyPlayerAssignment(PlayerAssignment& AssignmentToVerify,std::vector<MBLSP::Diagnostic>& OutDiagnostics);
+
+        bool p_SatisfiesPlayerAssignment(SlippiGamePlayerInfo const& PlayerInfo,GameInfoPredicate const& PredicateToEvaluate);
         bool p_EvaluateGameSelection(SlippiGameInfo const& GameInfo,bool IsSwapped,GameInfoPredicate const& PredicateToEvaluate);
         //Retunrs wheter or not any player satisfies the condition
         bool p_IsPlayersSwapped(SlippiGameInfo const& GameInfo, GameInfoPredicate const& PredicateToEvaluate,bool& IsSwapped);
 
-        std::vector<MeleeGame> p_RetrieveSpecGames(SlippiSpec const& SpecToEvalaute);
+        std::vector<MeleeGame> p_RetrieveSpecGames(GameSelection const& GameSelection);
         std::vector<GameIntervall> p_EvaluateGameIntervalls(Filter_Component const& FilterToUse,GameIntervall CurrentIntervall,MeleeGame const& GameToFilter);
 
         void p_InitializeServers();
@@ -169,7 +207,15 @@ namespace MBSlippi
         void SetRecorder(MeleeGameRecorder* NewRecorder);
         void InitializeServers(std::vector<ServerInitilizationData> const& ServersToInitialize);
 
-        bool VerifySpec(SlippiSpec& SpecToVerify,std::vector<MBLSP::Diagnostic>& OutDiagnostics);
-        void EvaluateSpec(SlippiSpec& SpecToEvaluate,std::vector<MBLSP::Diagnostic>& OutDiagnostics);
+        bool VerifyVariableDeclaration(VariableDeclaration& DeclarationToVerify,std::vector<MBLSP::Diagnostic>& OutDiagnostics);
+        bool VerifyStatement(Statement& SpecToVerify,std::vector<MBLSP::Diagnostic>& OutDiagnostics);
+        bool VerifySelection(Selection& SpecToVerify,std::vector<MBLSP::Diagnostic>& OutDiagnostics);
+        bool VerifyModule(Module& SpecToVerify,std::vector<MBLSP::Diagnostic>& OutDiagnostics);
+
+
+        void EvaluateStatement(Statement& SpecToEvaluate,std::vector<MBLSP::Diagnostic>& OutDiagnostics);
+        void EvaluateSelection(Selection& SpecToEvaluate,std::vector<MBLSP::Diagnostic>& OutDiagnostics);
+        void EvaluateVariableDeclaration(VariableDeclaration& SpecToEvaluate,std::vector<MBLSP::Diagnostic>& OutDiagnostics);
+        void EvaluateModule(Module& SpecToEvaluate,std::vector<MBLSP::Diagnostic>& OutDiagnostics);
     };
 }

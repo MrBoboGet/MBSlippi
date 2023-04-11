@@ -196,7 +196,8 @@ namespace MBSlippi
     void SpecEvaluator::p_VerifyAttribute(std::vector<std::string> const& Attribute,bool IsPlayerAssignment,std::vector<MBLSP::Diagnostic>& OutDiagnostics)
     {
     }
-    void SpecEvaluator::p_VerifyGameInfoPredicate(GameInfoPredicate& PredicateToVerify,bool IsPlayerAssignment,std::vector<MBLSP::Diagnostic>& OutDiagnostics)
+    void SpecEvaluator::p_VerifyGameInfoPredicate_Direct(GameInfoPredicate_Direct& PredicateToVerify,
+            bool IsPlayerAssignment,std::vector<MBLSP::Diagnostic>& OutDiagnostics)
     {
         std::vector<AttributeComponent> const& Attribute = PredicateToVerify.Attribute;
         if(Attribute.size() != 0)
@@ -291,7 +292,26 @@ namespace MBSlippi
 
                 OutDiagnostics.emplace_back(std::move(NewDiagnostic));
             }
-
+        }
+    }
+    void SpecEvaluator::p_VerifyGameInfoPredicate(GameInfoPredicate& PredicateToVerify,bool IsPlayerAssignment,std::vector<MBLSP::Diagnostic>& OutDiagnostics)
+    {
+        if(PredicateToVerify.Data.IsType<GameInfoPredicate_Direct>())
+        {
+            p_VerifyGameInfoPredicate_Direct(PredicateToVerify.Data.GetType<GameInfoPredicate_Direct>(),IsPlayerAssignment,OutDiagnostics);
+        }
+        else
+        {
+            auto const& VariablePredicate = PredicateToVerify.Data.GetType<GameInfoPredicate_Variable>();
+            if(!m_TopContext.GlobalScope.HasVariable(VariablePredicate.VariableName))
+            {
+                MBLSP::Diagnostic NewDiagnostic;
+                NewDiagnostic.message = "No variable named \"" + VariablePredicate.VariableName + "\" in global scope";
+                NewDiagnostic.range.start.line = VariablePredicate.VariablePosition.Line;
+                NewDiagnostic.range.start.character = VariablePredicate.VariablePosition.ByteOffset;
+                NewDiagnostic.range.end = NewDiagnostic.range.start + VariablePredicate.VariableName.size()+1;
+                OutDiagnostics.emplace_back(std::move(NewDiagnostic));
+            }
         }
         for(auto& SubPredicate : PredicateToVerify.ExtraTerms)
         {
@@ -300,18 +320,40 @@ namespace MBSlippi
     }
     void SpecEvaluator::p_VerifyFilterComponent(Filter_Component const& FilterToVerify,std::vector<MBLSP::Diagnostic>& OutDiagnostics)
     {
-        if(FilterToVerify.FilterName != "")
+        if(FilterToVerify.Data.IsType<Filter_Component_Variable>())
         {
-            if(m_BuiltinFilters.find(FilterToVerify.FilterName) == m_BuiltinFilters.end() &&
-                    m_FilterToServer.find(FilterToVerify.FilterName) == m_FilterToServer.end())
+            auto const& VariablePredicate = FilterToVerify.Data.GetType<Filter_Component_Variable>();
+            if(!m_TopContext.GlobalScope.HasVariable(VariablePredicate.VariableName))
             {
                 MBLSP::Diagnostic NewDiagnostic;
-                NewDiagnostic.message = "Can't find filter with name \""+FilterToVerify.FilterName+"\"";
-                NewDiagnostic.range.start.line = FilterToVerify.NamePosition.Line;
-                NewDiagnostic.range.start.character = FilterToVerify.NamePosition.ByteOffset;
-                NewDiagnostic.range.end = NewDiagnostic.range.start + FilterToVerify.FilterName.size();
+                NewDiagnostic.message = "No variable named \"" + VariablePredicate.VariableName + "\" in global scope";
+                NewDiagnostic.range.start.line = VariablePredicate.VariablePosition.Line;
+                NewDiagnostic.range.start.character = VariablePredicate.VariablePosition.ByteOffset;
+                NewDiagnostic.range.end = NewDiagnostic.range.start + VariablePredicate.VariableName.size()+1;
                 OutDiagnostics.emplace_back(std::move(NewDiagnostic));
             }
+        }
+        else if(FilterToVerify.Data.IsType<Filter_Component_Function>())
+        {
+            auto const& FilterValue = FilterToVerify.Data.GetType<Filter_Component_Function>();
+            if(m_BuiltinFilters.find(FilterValue.FilterName) == m_BuiltinFilters.end() &&
+                    m_FilterToServer.find(FilterValue.FilterName) == m_FilterToServer.end())
+            {
+                MBLSP::Diagnostic NewDiagnostic;
+                NewDiagnostic.message = "Can't find filter with name \""+FilterValue.FilterName+"\"";
+                NewDiagnostic.range.start.line = FilterValue.NamePosition.Line;
+                NewDiagnostic.range.start.character = FilterValue.NamePosition.ByteOffset;
+                NewDiagnostic.range.end = NewDiagnostic.range.start + FilterValue.FilterName.size();
+                OutDiagnostics.emplace_back(std::move(NewDiagnostic));
+            }
+        }
+        else if(FilterToVerify.Data.IsEmpty())
+        {
+            //Do nothing
+        }
+        else
+        {
+            assert(false && "VerifyFilterComponent doesn't cover all cases");
         }
         for(auto const& Filter : FilterToVerify.ExtraTerms)
         {
@@ -322,24 +364,34 @@ namespace MBSlippi
     {
         p_VerifyFilterComponent(FilterToVerify.Component,OutDiagnostics);
     }
-    bool SpecEvaluator::VerifySpec(SlippiSpec& SpecToVerify,std::vector<MBLSP::Diagnostic>& OutDiagnostics)
+    bool SpecEvaluator::VerifyVariableDeclaration(VariableDeclaration& DeclarationToVerify,std::vector<MBLSP::Diagnostic>& OutDiagnostics)
     {
         bool ReturnValue = true;
         std::vector<MBLSP::Diagnostic> Diagnostics;
-        if(SpecToVerify.Assignment.AffectedPlayer != "")
+        return(ReturnValue);
+    }
+    void SpecEvaluator::p_VerifyPlayerAssignment(PlayerAssignment& AssignmentToVerify,std::vector<MBLSP::Diagnostic>& OutDiagnostics)
+    {
+        if(AssignmentToVerify.AffectedPlayer != "")
         {
-            if(!(SpecToVerify.Assignment.AffectedPlayer == "Player1" || SpecToVerify.Assignment.AffectedPlayer == "Player2"))
+            if(!(AssignmentToVerify.AffectedPlayer == "Player1" || AssignmentToVerify.AffectedPlayer == "Player2"))
             {
                 MBLSP::Diagnostic NewDiagnostic;
                 NewDiagnostic.message = "Only Player1/Player2 is allowed in player assignment";
-                NewDiagnostic.range.start.line = SpecToVerify.Assignment.PlayerPosition.Line;
-                NewDiagnostic.range.start.character = SpecToVerify.Assignment.PlayerPosition.ByteOffset;
-                NewDiagnostic.range.end  = NewDiagnostic.range.start + SpecToVerify.Assignment.AffectedPlayer.size();
+                NewDiagnostic.range.start.line = AssignmentToVerify.PlayerPosition.Line;
+                NewDiagnostic.range.start.character = AssignmentToVerify.PlayerPosition.ByteOffset;
+                NewDiagnostic.range.end  = NewDiagnostic.range.start + AssignmentToVerify.AffectedPlayer.size();
 
-                Diagnostics.emplace_back(std::move(NewDiagnostic));
+                OutDiagnostics.emplace_back(std::move(NewDiagnostic));
             }  
-            p_VerifyGameInfoPredicate(SpecToVerify.Assignment.PlayerCondition,true,Diagnostics);
+            p_VerifyGameInfoPredicate(AssignmentToVerify.PlayerCondition,true,OutDiagnostics);
         } 
+    }
+    bool SpecEvaluator::VerifySelection(Selection& SpecToVerify,std::vector<MBLSP::Diagnostic>& OutDiagnostics)
+    {
+        bool ReturnValue = true;
+        std::vector<MBLSP::Diagnostic> Diagnostics;
+        p_VerifyPlayerAssignment(SpecToVerify.Games.Assignment,OutDiagnostics);
         p_VerifyGameInfoPredicate(SpecToVerify.Games.GameCondition,false,Diagnostics);
         p_VerifyFilter(SpecToVerify.SituationFilter,OutDiagnostics);
         if(Diagnostics.size() > 0)
@@ -349,11 +401,34 @@ namespace MBSlippi
         }
         return(ReturnValue);
     }
+    bool SpecEvaluator::VerifyStatement(Statement& SpecToVerify,std::vector<MBLSP::Diagnostic>& OutDiagnostics)
+    {
+        bool ReturnValue = true;
+        if(SpecToVerify.IsType<Selection>())
+        {
+            ReturnValue = VerifySelection(SpecToVerify.GetType<Selection>(),OutDiagnostics);
+        }
+        else if(SpecToVerify.IsType<VariableDeclaration>())
+        {
+            ReturnValue = VerifyVariableDeclaration(SpecToVerify.GetType<VariableDeclaration>(),OutDiagnostics);
+        }
+        return(ReturnValue);
+    }
+    bool SpecEvaluator::VerifyModule(Module& SpecToVerify,std::vector<MBLSP::Diagnostic>& OutDiagnostics)
+    {
+        bool ReturnValue = true;
+        for(auto& Statement : SpecToVerify.Statements)
+        {
+            ReturnValue = ReturnValue && VerifyStatement(Statement,OutDiagnostics);
+        }
+        return(ReturnValue);
+    }
     bool SpecEvaluator::p_EvaluateGameSelection(SlippiGameInfo const& GameInfo,bool IsSwapped,GameInfoPredicate const& PredicateToEvaluate)
     {
         bool ReturnValue = true;
-        if(PredicateToEvaluate.Attribute.size() != 0)
+        if(PredicateToEvaluate.Data.IsType<GameInfoPredicate_Direct>())
         {
+            auto const& DirectData = PredicateToEvaluate.Data.GetType<GameInfoPredicate_Direct>();
             SlippiGamePlayerInfo const* Player1Pointer = &GameInfo.PlayerInfo[0];
             SlippiGamePlayerInfo const* Player2Pointer = &GameInfo.PlayerInfo[1];
             if(IsSwapped)
@@ -361,27 +436,27 @@ namespace MBSlippi
                 std::swap(Player1Pointer,Player1Pointer);   
             }
             SlippiGamePlayerInfo  const*  PlayerToEvaluatePointer = Player1Pointer;
-            if(PredicateToEvaluate.Attribute[0].Name == "Player2")
+            if(DirectData.Attribute[0].Name == "Player2")
             {
                 PlayerToEvaluatePointer = Player2Pointer;
             }
             SlippiGamePlayerInfo const& CurrentPlayer = *PlayerToEvaluatePointer;
-            if(PredicateToEvaluate.Attribute[0].Name == "Player1" || PredicateToEvaluate.Attribute[0].Name == "Player2")
+            if(DirectData.Attribute[0].Name == "Player1" || DirectData.Attribute[0].Name == "Player2")
             {
-                if(PredicateToEvaluate.Attribute[1].Name == "Character")
+                if(DirectData.Attribute[1].Name == "Character")
                 {
                     //ReturnValue = CurrentPlayer.Character == PredicateToEvaluate.Value;   
-                    ReturnValue = h_Comp(CurrentPlayer.Character,PredicateToEvaluate.Comparison,PredicateToEvaluate.Value);
+                    ReturnValue = h_Comp(CurrentPlayer.Character,DirectData.Comparison,DirectData.Value);
                 } 
-                else if(PredicateToEvaluate.Attribute[1].Name == "Code")
+                else if(DirectData.Attribute[1].Name == "Code")
                 {
                     //ReturnValue = CurrentPlayer.Code == PredicateToEvaluate.Value;   
-                    ReturnValue = h_Comp(CurrentPlayer.Code,PredicateToEvaluate.Comparison,PredicateToEvaluate.Value);
+                    ReturnValue = h_Comp(CurrentPlayer.Code,DirectData.Comparison,DirectData.Value);
                 }
-                else if(PredicateToEvaluate.Attribute[1].Name == "Tag")
+                else if(DirectData.Attribute[1].Name == "Tag")
                 {
                     //ReturnValue = CurrentPlayer.Tag == PredicateToEvaluate.Value;   
-                    ReturnValue = h_Comp(CurrentPlayer.Tag,PredicateToEvaluate.Comparison,PredicateToEvaluate.Value);
+                    ReturnValue = h_Comp(CurrentPlayer.Tag,DirectData.Comparison,DirectData.Value);
                 }
                 else
                 {
@@ -390,16 +465,31 @@ namespace MBSlippi
             }
             else
             {
-                if(PredicateToEvaluate.Attribute[0].Name == "Stage")
+                if(DirectData.Attribute[0].Name == "Stage")
                 {
-                    ReturnValue = GameInfo.Stage == PredicateToEvaluate.Value;
+                    ReturnValue = GameInfo.Stage == DirectData.Value;
                 }
-                else if(PredicateToEvaluate.Attribute[0].Name == "Date")
+                else if(DirectData.Attribute[0].Name == "Date")
                 {
-                    ReturnValue = h_Comp(GameInfo.Date,PredicateToEvaluate.Comparison,PredicateToEvaluate.DateValue);
+                    ReturnValue = h_Comp(GameInfo.Date,DirectData.Comparison,DirectData.DateValue);
                     //ReturnValue = h_Comp(GameInfo.Date,PredicateToEvaluate.Operator,
                 }
             }
+        }
+        else if(PredicateToEvaluate.Data.IsType<GameInfoPredicate_Variable>())
+        {
+            auto const& VariableData = PredicateToEvaluate.Data.GetType<GameInfoPredicate_Variable>();
+            MQL_Variable& Variable = m_TopContext.GlobalScope.GetVariable(VariableData.VariableName);
+            MQL_Variable_GameInfoPredicate const& DereferencedPredicate = std::get<MQL_Variable_GameInfoPredicate>(Variable.Data);
+            ReturnValue = p_EvaluateGameSelection(GameInfo,IsSwapped,DereferencedPredicate.Predicate);
+        }
+        else if(PredicateToEvaluate.Data.IsEmpty())
+        {
+            //do nothing   
+        }
+        else
+        {
+            assert(false && "p_EvaluateGameSelection doesn't cover all cases for GameInfoPredicate.Data");
         }
         for(auto const& ExtraTerm : PredicateToEvaluate.ExtraTerms)
         {
@@ -429,28 +519,40 @@ namespace MBSlippi
         }
         return(ReturnValue);
     }
-    bool h_SatisfiesPlayerAssignment(SlippiGamePlayerInfo const& PlayerInfo,GameInfoPredicate const& PredicateToEvaluate)
+    bool SpecEvaluator::p_SatisfiesPlayerAssignment(SlippiGamePlayerInfo const& PlayerInfo,GameInfoPredicate const& PredicateToEvaluate)
     {
         bool ReturnValue = true;
 
-        if(PredicateToEvaluate.Attribute.size() != 0)
+        if(PredicateToEvaluate.Data.IsType<GameInfoPredicate_Direct>())
         {
-            if(PredicateToEvaluate.Attribute[0].Name == "Character")
+            auto const& DirectData = PredicateToEvaluate.Data.GetType<GameInfoPredicate_Direct>();
+            if(DirectData.Attribute[0].Name == "Character")
             {
-                ReturnValue = PlayerInfo.Character == PredicateToEvaluate.Value;
+                ReturnValue = PlayerInfo.Character == DirectData.Value;
             }
-            else if(PredicateToEvaluate.Attribute[0].Name == "Tag")
+            else if(DirectData.Attribute[0].Name == "Tag")
             {
-                ReturnValue = PlayerInfo.Tag == PredicateToEvaluate.Value;
+                ReturnValue = PlayerInfo.Tag == DirectData.Value;
             }
-            else if(PredicateToEvaluate.Attribute[0].Name == "Code")
+            else if(DirectData.Attribute[0].Name == "Code")
             {
-                ReturnValue = PlayerInfo.Code == PredicateToEvaluate.Value;
+                ReturnValue = PlayerInfo.Code == DirectData.Value;
             }
             else
             {
                 assert(false && "Only Tag,Character,Code is recognized as player attribute");   
             }
+        }
+        else if(PredicateToEvaluate.Data.IsType<GameInfoPredicate_Variable>())
+        {
+            auto const& VariableData  = PredicateToEvaluate.Data.GetType<Filter_Component_Variable>();
+            GameInfoPredicate const& DereferencedPredicate =std::get<MQL_Variable_GameInfoPredicate>(
+                    m_TopContext.GlobalScope.GetVariable(VariableData.VariableName).Data).Predicate;
+            ReturnValue = p_SatisfiesPlayerAssignment(PlayerInfo,DereferencedPredicate);
+        }
+        else
+        {
+            assert(false && "p_SatisfiesPlayerAssignment doesn't cover all cases for PredicateToEvaluate.Data");
         }
         for(auto const& ExtraTerm : PredicateToEvaluate.ExtraTerms)
         {
@@ -459,12 +561,12 @@ namespace MBSlippi
             {
                 if(!ReturnValue)
                 {
-                    ReturnValue = h_SatisfiesPlayerAssignment(PlayerInfo,ExtraTerm);
+                    ReturnValue = p_SatisfiesPlayerAssignment(PlayerInfo,ExtraTerm);
                 }
             }
             else if(ExtraTerm.Operator == "&&")
             {
-                if(!h_SatisfiesPlayerAssignment(PlayerInfo,ExtraTerm))
+                if(!p_SatisfiesPlayerAssignment(PlayerInfo,ExtraTerm))
                 {
                     ReturnValue = false;   
                     break;
@@ -472,7 +574,7 @@ namespace MBSlippi
             }
             else if(ExtraTerm.Operator == "")
             {
-                ReturnValue = h_SatisfiesPlayerAssignment(PlayerInfo,ExtraTerm);
+                ReturnValue = p_SatisfiesPlayerAssignment(PlayerInfo,ExtraTerm);
             }
             else
             {
@@ -484,13 +586,13 @@ namespace MBSlippi
     bool SpecEvaluator::p_IsPlayersSwapped(SlippiGameInfo const& GameInfo, GameInfoPredicate const& PredicateToEvaluate,bool& IsSwapped)
     {
         bool ReturnValue = false;        
-        if(h_SatisfiesPlayerAssignment(GameInfo.PlayerInfo[1],PredicateToEvaluate))
+        if(p_SatisfiesPlayerAssignment(GameInfo.PlayerInfo[1],PredicateToEvaluate))
         {
            IsSwapped = true;   
         } 
         else
         {
-            ReturnValue = h_SatisfiesPlayerAssignment(GameInfo.PlayerInfo[0],PredicateToEvaluate);   
+            ReturnValue = p_SatisfiesPlayerAssignment(GameInfo.PlayerInfo[0],PredicateToEvaluate);   
             if(ReturnValue)
             {
                IsSwapped = false;    
@@ -528,7 +630,7 @@ namespace MBSlippi
             std::swap(Frame.PlayerInfo[0],Frame.PlayerInfo[1]);
         }
     }
-    std::vector<MeleeGame> SpecEvaluator::p_RetrieveSpecGames(SlippiSpec const& SpecToEvalaute)
+    std::vector<MeleeGame> SpecEvaluator::p_RetrieveSpecGames(GameSelection const& SpecToEvalaute)
     {
         std::vector<MeleeGame> ReturnValue;
         //TODO improve this could with SQL querry so unneccesary game info doesn't need to be parsed
@@ -565,26 +667,39 @@ namespace MBSlippi
             GameIntervall CurrentIntervall,MeleeGame const& GameToFilter)
     {
         std::vector<GameIntervall> ReturnValue;
-        if(FilterToUse.FilterName == "" && FilterToUse.ExtraTerms.size() == 0)
-        {
-            ReturnValue.push_back(CurrentIntervall);
-            return(ReturnValue);
-        }         
 
-        if(FilterToUse.FilterName != "")
+
+        if(FilterToUse.Data.IsType<Filter_Component_Function>())
         {
-            if(auto BuiltinFilter = m_BuiltinFilters.find(FilterToUse.FilterName); BuiltinFilter != m_BuiltinFilters.end())
+            auto const& FunctionData = FilterToUse.Data.GetType<Filter_Component_Function>();
+            if(auto BuiltinFilter = m_BuiltinFilters.find(FunctionData.FilterName); BuiltinFilter != m_BuiltinFilters.end())
             {
                 ReturnValue = BuiltinFilter->second(GameToFilter,FilterToUse.ArgumentList,CurrentIntervall);
             }
-            else if(auto ServerIndex = m_FilterToServer.find(FilterToUse.FilterName); ServerIndex != m_FilterToServer.end())
+            else if(auto ServerIndex = m_FilterToServer.find(FunctionData.FilterName); ServerIndex != m_FilterToServer.end())
             {
-                ReturnValue = m_SpecServers[ServerIndex->second].ExecuteFilter(FilterToUse.FilterName,GameToFilter,CurrentIntervall);
+                ReturnValue = m_SpecServers[ServerIndex->second].ExecuteFilter(FunctionData.FilterName,GameToFilter,CurrentIntervall);
             }
             else
             {
                 assert(false && "No server or builtin filter found, evaluating spec that shouldn't have been verified");
             }
+        }
+        else if(FilterToUse.Data.IsType<Filter_Component_Variable>())
+        {
+            auto const& VariableData = FilterToUse.Data.GetType<Filter_Component_Variable>();
+            Filter_Component const& DerferencedFilter = std::get<Filter_Component>(
+                m_TopContext.GlobalScope.GetVariable(VariableData.VariableName).Data);
+            ReturnValue = p_EvaluateGameIntervalls(DerferencedFilter,CurrentIntervall,GameToFilter);
+        }
+        else if(FilterToUse.Data.IsEmpty() && FilterToUse.ExtraTerms.size() == 0)
+        {
+            ReturnValue.push_back(CurrentIntervall);
+            return(ReturnValue);
+        }
+        else
+        {
+            assert(false && "p_EvaluateGameIntervalls doesn't cover all cases for FilterToUse.Data");   
         }
         for(auto const& ExtraFilter : FilterToUse.ExtraTerms)
         {
@@ -617,7 +732,7 @@ namespace MBSlippi
         }
         return(ReturnValue);
     }
-    void SpecEvaluator::EvaluateSpec(SlippiSpec& SpecToEvaluate,std::vector<MBLSP::Diagnostic>& OutDiagnostics)
+    void SpecEvaluator::EvaluateSelection(Selection& SpecToEvaluate,std::vector<MBLSP::Diagnostic>& OutDiagnostics)
     {       
         if(m_DBAdapter == nullptr)
         {
@@ -627,11 +742,11 @@ namespace MBSlippi
         {
             throw std::runtime_error("Recorder need to be set in order to evaluate SlippiSpec");   
         }
-        if(!VerifySpec(SpecToEvaluate,OutDiagnostics))
+        if(!VerifySelection(SpecToEvaluate,OutDiagnostics))
         {
             return;   
         }
-        std::vector<MeleeGame> GamesToInspect = p_RetrieveSpecGames(SpecToEvaluate);
+        std::vector<MeleeGame> GamesToInspect = p_RetrieveSpecGames(SpecToEvaluate.Games);
         std::vector<std::vector<GameIntervall>> GameIntervalls;
         GameIntervalls.reserve(GamesToInspect.size());
 
@@ -650,7 +765,48 @@ namespace MBSlippi
         }
         m_Recorder->RecordGames(GamesToRecord,SpecToEvaluate.Output.GetType<Result_Record>().OutFile);
     }
-	struct i_PunishInfo
+    void SpecEvaluator::EvaluateStatement(Statement& StatementToEvaluate,std::vector<MBLSP::Diagnostic>& OutDiagnostics)
+    {       
+        if(StatementToEvaluate.IsType<Selection>())
+        {
+            EvaluateSelection(StatementToEvaluate.GetType<Selection>(),OutDiagnostics);
+        }
+        else if(StatementToEvaluate.IsType<VariableDeclaration>())
+        {
+            EvaluateVariableDeclaration(StatementToEvaluate.GetType<VariableDeclaration>(),OutDiagnostics);
+        }
+        else if(StatementToEvaluate.IsEmpty())
+        {
+            throw std::runtime_error("Cannot evaluate empty statement");
+        }
+        else 
+        {
+            assert(false && "EvaluateStatement doesn't cover all cases");
+        }
+    }
+    void SpecEvaluator::EvaluateVariableDeclaration(VariableDeclaration& SpecToEvaluate,std::vector<MBLSP::Diagnostic>& OutDiagnostics)
+    {
+        if(!VerifyVariableDeclaration(SpecToEvaluate,OutDiagnostics))
+        {
+            return;
+        }
+    }
+    void SpecEvaluator::EvaluateModule(Module& ModuleToEvaluate,std::vector<MBLSP::Diagnostic>& OutDiagnostics)
+    {
+        if(m_DBAdapter == nullptr)
+        {
+            throw std::runtime_error("DBAdapter need to be set in order to evaluate SlippiSpec");  
+        } 
+        if(m_Recorder == nullptr)
+        {
+            throw std::runtime_error("Recorder need to be set in order to evaluate SlippiSpec");   
+        }
+        for(auto& Statement : ModuleToEvaluate.Statements)
+        {
+            EvaluateStatement(Statement,OutDiagnostics);
+        }
+    }
+    struct i_PunishInfo
 	{
 		float TotalRecievedPercent = 0;
 		GameIntervall PunishIntervall;
