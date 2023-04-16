@@ -300,7 +300,7 @@ namespace MBSlippi
         {
             p_VerifyGameInfoPredicate_Direct(PredicateToVerify.Data.GetType<GameInfoPredicate_Direct>(),IsPlayerAssignment,OutDiagnostics);
         }
-        else
+        else if(PredicateToVerify.Data.IsType<GameInfoPredicate_Variable>())
         {
             auto const& VariablePredicate = PredicateToVerify.Data.GetType<GameInfoPredicate_Variable>();
             if(!m_TopContext.GlobalScope.HasVariable(VariablePredicate.VariableName))
@@ -312,6 +312,53 @@ namespace MBSlippi
                 NewDiagnostic.range.end = NewDiagnostic.range.start + VariablePredicate.VariableName.size()+1;
                 OutDiagnostics.emplace_back(std::move(NewDiagnostic));
             }
+            else
+            {
+                auto const& Variable = m_TopContext.GlobalScope.GetVariable(VariablePredicate.VariableName);
+                if(std::holds_alternative<MQL_LazyGameList>(Variable.Data))
+                {
+                       
+                }
+                else if(!std::holds_alternative<MQL_Variable_GameInfoPredicate>(Variable.Data))
+                {
+                    MBLSP::Diagnostic NewDiagnostic;
+                    NewDiagnostic.message = "Variable isn't of type GameInfoPredicate";
+                    NewDiagnostic.range.start.line = VariablePredicate.VariablePosition.Line;
+                    NewDiagnostic.range.start.character = VariablePredicate.VariablePosition.ByteOffset;
+                    NewDiagnostic.range.end = NewDiagnostic.range.start + VariablePredicate.VariableName.size()+1;
+                    OutDiagnostics.emplace_back(std::move(NewDiagnostic));
+                }
+                else
+                {
+                    auto const& PredicateData = std::get<MQL_Variable_GameInfoPredicate>(Variable.Data);
+                    if(IsPlayerAssignment && !PredicateData.IsPlayerAssignment)
+                    {
+                        MBLSP::Diagnostic NewDiagnostic;
+                        NewDiagnostic.message = "Variable isn't of type GameInfoPredicate";
+                        NewDiagnostic.range.start.line = VariablePredicate.VariablePosition.Line;
+                        NewDiagnostic.range.start.character = VariablePredicate.VariablePosition.ByteOffset;
+                        NewDiagnostic.range.end = NewDiagnostic.range.start + VariablePredicate.VariableName.size()+1;
+                        OutDiagnostics.emplace_back(std::move(NewDiagnostic));
+                    }
+                    else  if(!IsPlayerAssignment && PredicateData.IsPlayerAssignment)
+                    {
+                        MBLSP::Diagnostic NewDiagnostic;
+                        NewDiagnostic.message = "Variable isn't of type PlayerAssignment";
+                        NewDiagnostic.range.start.line = VariablePredicate.VariablePosition.Line;
+                        NewDiagnostic.range.start.character = VariablePredicate.VariablePosition.ByteOffset;
+                        NewDiagnostic.range.end = NewDiagnostic.range.start + VariablePredicate.VariableName.size()+1;
+                        OutDiagnostics.emplace_back(std::move(NewDiagnostic));
+                    }
+                }
+            }
+        }
+        else if(PredicateToVerify.Data.IsEmpty())
+        {
+           //Do nothing    
+        }
+        else
+        {
+            assert(false && "p_VerifyGameInfoPredicate doesn't cover all cases");   
         }
         for(auto& SubPredicate : PredicateToVerify.ExtraTerms)
         {
@@ -331,6 +378,19 @@ namespace MBSlippi
                 NewDiagnostic.range.start.character = VariablePredicate.VariablePosition.ByteOffset;
                 NewDiagnostic.range.end = NewDiagnostic.range.start + VariablePredicate.VariableName.size()+1;
                 OutDiagnostics.emplace_back(std::move(NewDiagnostic));
+            }
+            else
+            {
+                auto const& FilterVariable = m_TopContext.GlobalScope.GetVariable(VariablePredicate.VariableName);   
+                if(!std::holds_alternative<Filter_Component>(FilterVariable.Data))
+                {
+                    MBLSP::Diagnostic NewDiagnostic;
+                    NewDiagnostic.message = "Variable isn't of type Filter";
+                    NewDiagnostic.range.start.line = VariablePredicate.VariablePosition.Line;
+                    NewDiagnostic.range.start.character = VariablePredicate.VariablePosition.ByteOffset;
+                    NewDiagnostic.range.end = NewDiagnostic.range.start + VariablePredicate.VariableName.size()+1;
+                    OutDiagnostics.emplace_back(std::move(NewDiagnostic));
+                }
             }
         }
         else if(FilterToVerify.Data.IsType<Filter_Component_Function>())
@@ -364,29 +424,71 @@ namespace MBSlippi
     {
         p_VerifyFilterComponent(FilterToVerify.Component,OutDiagnostics);
     }
-    bool SpecEvaluator::VerifyVariableDeclaration(VariableDeclaration& DeclarationToVerify,std::vector<MBLSP::Diagnostic>& OutDiagnostics)
+    bool SpecEvaluator::VerifyVariableDeclaration(Statement& DeclarationToVerify,std::vector<MBLSP::Diagnostic>& OutDiagnostics,bool UpdateState)
     {
         bool ReturnValue = true;
         std::vector<MBLSP::Diagnostic> Diagnostics;
+        //no redeclaration allowed, should allow redeclaration if of the same type
+        auto const& VariableBase = DeclarationToVerify.GetType<VariableDeclaration_Base>();
+        bool VariableExists = false;
+        if(m_TopContext.GlobalScope.HasVariable(VariableBase.Name))
+        {
+            MBLSP::Diagnostic NewDiagnostic;
+            NewDiagnostic.range.start.line = VariableBase.NamePosition.Line;
+            NewDiagnostic.range.start.character = VariableBase.NamePosition.ByteOffset;
+            NewDiagnostic.range.end = NewDiagnostic.range.start+VariableBase.Name.size();
+            NewDiagnostic.message = "Variable with name \""+VariableBase.Name+"\" already exists";
+            Diagnostics.push_back(std::move(NewDiagnostic));
+            VariableExists = true;
+        }
         if(DeclarationToVerify.IsType<VariableDeclaration_Filter>())
         {
             auto const& FilterVariable = DeclarationToVerify.GetType<VariableDeclaration_Filter>();
             p_VerifyFilterComponent(FilterVariable.Component,Diagnostics);
+            if(UpdateState && !VariableExists)
+            {
+                MQL_Variable TemporaryVariable;
+                TemporaryVariable.Data = Filter_Component();
+                m_TopContext.GlobalScope.AddVariable(VariableBase.Name,std::move(TemporaryVariable));
+            }
         }
         else if(DeclarationToVerify.IsType<VariableDeclaration_GameInfoPredicate>())
         {
             auto& PredicateVariable = DeclarationToVerify.GetType<VariableDeclaration_GameInfoPredicate>();
             p_VerifyGameInfoPredicate(PredicateVariable.Predicate,false,Diagnostics);
+            if(UpdateState && !VariableExists)
+            {
+                MQL_Variable TemporaryVariable;
+                MQL_Variable_GameInfoPredicate Value = MQL_Variable_GameInfoPredicate();
+                Value.IsPlayerAssignment = false;
+                TemporaryVariable.Data = std::move(Value);
+                m_TopContext.GlobalScope.AddVariable(VariableBase.Name,std::move(TemporaryVariable));
+            }
         }
         else if(DeclarationToVerify.IsType<VariableDeclaration_PlayerSelection>())
         {
             auto& PlayerSelectionVariable = DeclarationToVerify.GetType<VariableDeclaration_PlayerSelection>();
             p_VerifyGameInfoPredicate(PlayerSelectionVariable.Predicate,true,Diagnostics);
+            if(UpdateState && !VariableExists)
+            {
+                MQL_Variable TemporaryVariable;
+                MQL_Variable_GameInfoPredicate Value = MQL_Variable_GameInfoPredicate();
+                Value.IsPlayerAssignment = true;
+                TemporaryVariable.Data = std::move(Value);
+                m_TopContext.GlobalScope.AddVariable(VariableBase.Name,std::move(TemporaryVariable));
+            }
         }
         else if(DeclarationToVerify.IsType<VariableDeclaration_GameList>())
         {
             auto& GameListVariable = DeclarationToVerify.GetType<VariableDeclaration_GameList>();
             p_VerifyGameSelection(GameListVariable.Selection,Diagnostics);
+            if(UpdateState && !VariableExists)
+            {
+                MQL_Variable TemporaryVariable;
+                MQL_LazyGameList Value = MQL_LazyGameList();
+                TemporaryVariable.Data = std::move(Value);
+                m_TopContext.GlobalScope.AddVariable(VariableBase.Name,std::move(TemporaryVariable));
+            }
         }
         else if(DeclarationToVerify.IsEmpty())
         {
@@ -449,17 +551,38 @@ namespace MBSlippi
         }
         else if(SpecToVerify.IsType<VariableDeclaration_Base>())
         {
-            //ReturnValue = VerifyVariableDeclaration(SpecToVerify.GetType<VariableDeclaration>(),OutDiagnostics);
+            ReturnValue = VerifyVariableDeclaration(SpecToVerify,OutDiagnostics);
+        }
+        else if(SpecToVerify.IsEmpty())
+        {
+            assert(false && "Trying to verify empty Statement");
+        }
+        else
+        {
+            assert(false && "VerifyStatement doesn't cover all cases");
         }
         return(ReturnValue);
     }
     bool SpecEvaluator::VerifyModule(Module& SpecToVerify,std::vector<MBLSP::Diagnostic>& OutDiagnostics)
     {
         bool ReturnValue = true;
+        //ensures that the top scope isn't modified after the verification,
+        //but still makes variables visible to other parts of the verification
+        MQL_Scope TopScope = MQL_Scope();
+        std::swap(TopScope,m_TopContext.GlobalScope);
+        m_TopContext.GlobalScope.SetParentScope(&TopScope);
         for(auto& Statement : SpecToVerify.Statements)
         {
-            ReturnValue = ReturnValue && VerifyStatement(Statement,OutDiagnostics);
+            if(Statement.IsType<VariableDeclaration_Base>())
+            {
+                ReturnValue = ReturnValue && VerifyVariableDeclaration(Statement,OutDiagnostics,true);
+            }
+            else
+            {
+                ReturnValue = ReturnValue && VerifyStatement(Statement,OutDiagnostics);
+            }
         }
+        std::swap(TopScope,m_TopContext.GlobalScope);
         return(ReturnValue);
     }
     bool SpecEvaluator::p_EvaluateGameSelection(SlippiGameInfo const& GameInfo,bool IsSwapped,GameInfoPredicate const& PredicateToEvaluate)
@@ -519,8 +642,30 @@ namespace MBSlippi
         {
             auto const& VariableData = PredicateToEvaluate.Data.GetType<GameInfoPredicate_Variable>();
             MQL_Variable& Variable = m_TopContext.GlobalScope.GetVariable(VariableData.VariableName);
-            MQL_Variable_GameInfoPredicate const& DereferencedPredicate = std::get<MQL_Variable_GameInfoPredicate>(Variable.Data);
-            ReturnValue = p_EvaluateGameSelection(GameInfo,IsSwapped,DereferencedPredicate.Predicate);
+            if(std::holds_alternative<MQL_LazyGameList>(Variable.Data))
+            {
+                MQL_LazyGameList& GameList = std::get<MQL_LazyGameList>(Variable.Data);
+                if(!GameList.Evaluated)
+                {
+                    GameList.Games = p_RetrieveSpecGames(GameList.GamesToRetrieve);
+                    std::sort(GameList.Games.begin(),GameList.Games.end(),[](MeleeGame const& lhs,MeleeGame const& rhs)
+                            {
+                                return(lhs.Metadata.GamePath < rhs.Metadata.GamePath);
+                            });
+                    GameList.Evaluated = true;
+                }
+                auto LowestIt = std::lower_bound(GameList.Games.begin(),GameList.Games.end(),GameInfo,
+                        [](MeleeGame const& lhs,SlippiGameInfo const& rhs)
+                        {
+                            return(lhs.Metadata.GamePath < rhs.RelativePath);
+                        });
+                ReturnValue = LowestIt != GameList.Games.end() && LowestIt->Metadata.GamePath == GameInfo.RelativePath;
+            }
+            else if(std::holds_alternative<MQL_Variable_GameInfoPredicate>(Variable.Data))
+            {
+                MQL_Variable_GameInfoPredicate const& DereferencedPredicate = std::get<MQL_Variable_GameInfoPredicate>(Variable.Data);
+                ReturnValue = p_EvaluateGameSelection(GameInfo,IsSwapped,DereferencedPredicate.Predicate);
+            }
         }
         else if(PredicateToEvaluate.Data.IsEmpty())
         {
@@ -589,13 +734,16 @@ namespace MBSlippi
                     m_TopContext.GlobalScope.GetVariable(VariableData.VariableName).Data).Predicate;
             ReturnValue = p_SatisfiesPlayerAssignment(PlayerInfo,DereferencedPredicate);
         }
+        else if(PredicateToEvaluate.Data.IsEmpty())
+        {
+            //do nothjing   
+        }
         else
         {
             assert(false && "p_SatisfiesPlayerAssignment doesn't cover all cases for PredicateToEvaluate.Data");
         }
         for(auto const& ExtraTerm : PredicateToEvaluate.ExtraTerms)
         {
-            //errenous until parsing is fixed
             if(ExtraTerm.Operator == "||")
             {
                 if(!ReturnValue)
@@ -625,9 +773,14 @@ namespace MBSlippi
     bool SpecEvaluator::p_IsPlayersSwapped(SlippiGameInfo const& GameInfo, GameInfoPredicate const& PredicateToEvaluate,bool& IsSwapped)
     {
         bool ReturnValue = false;        
+        if(PredicateToEvaluate.Data.IsEmpty())
+        {
+            return(true);   
+        }
         if(p_SatisfiesPlayerAssignment(GameInfo.PlayerInfo[1],PredicateToEvaluate))
         {
            IsSwapped = true;   
+           ReturnValue = true;
         } 
         else
         {
@@ -812,7 +965,7 @@ namespace MBSlippi
         }
         else if(StatementToEvaluate.IsType<VariableDeclaration_Base>())
         {
-            //EvaluateVariableDeclaration(StatementToEvaluate.GetType<VariableDeclaration>(),OutDiagnostics);
+            EvaluateVariableDeclaration(StatementToEvaluate,OutDiagnostics);
         }
         else if(StatementToEvaluate.IsEmpty())
         {
@@ -823,7 +976,7 @@ namespace MBSlippi
             assert(false && "EvaluateStatement doesn't cover all cases");
         }
     }
-    void SpecEvaluator::EvaluateVariableDeclaration(VariableDeclaration& SpecToEvaluate,std::vector<MBLSP::Diagnostic>& OutDiagnostics)
+    void SpecEvaluator::EvaluateVariableDeclaration(Statement& SpecToEvaluate,std::vector<MBLSP::Diagnostic>& OutDiagnostics)
     {
         if(!VerifyVariableDeclaration(SpecToEvaluate,OutDiagnostics))
         {
@@ -833,19 +986,33 @@ namespace MBSlippi
         {
             MQL_Variable NewVariable;
             NewVariable.Data = SpecToEvaluate.GetType<VariableDeclaration_Filter>().Component;
-                 
+            m_TopContext.GlobalScope.AddVariable(SpecToEvaluate.GetType<VariableDeclaration_Base>().Name, std::move(NewVariable));
         }
         else if(SpecToEvaluate.IsType<VariableDeclaration_GameList>())
         {
-
+            MQL_Variable NewVariable;
+            MQL_LazyGameList Value;
+            Value.GamesToRetrieve = SpecToEvaluate.GetType<VariableDeclaration_GameList>().Selection;
+            NewVariable.Data = std::move(Value);
+            m_TopContext.GlobalScope.AddVariable(SpecToEvaluate.GetType<VariableDeclaration_Base>().Name, std::move(NewVariable));
         }
         else if(SpecToEvaluate.IsType<VariableDeclaration_GameInfoPredicate>())
         {
-            
+            MQL_Variable NewVariable;
+            MQL_Variable_GameInfoPredicate Value;
+            Value.IsPlayerAssignment = false;
+            Value.Predicate = SpecToEvaluate.GetType<VariableDeclaration_GameInfoPredicate>().Predicate;
+            NewVariable.Data = std::move(Value);
+            m_TopContext.GlobalScope.AddVariable(SpecToEvaluate.GetType<VariableDeclaration_Base>().Name, std::move(NewVariable));
         }
         else if(SpecToEvaluate.IsType<VariableDeclaration_PlayerSelection>())
         {
-               
+            MQL_Variable NewVariable;
+            MQL_Variable_GameInfoPredicate Value;
+            Value.IsPlayerAssignment = true;
+            Value.Predicate = SpecToEvaluate.GetType<VariableDeclaration_PlayerSelection>().Predicate;
+            NewVariable.Data = std::move(Value);
+            m_TopContext.GlobalScope.AddVariable(SpecToEvaluate.GetType<VariableDeclaration_Base>().Name, std::move(NewVariable));
         }
         else if(SpecToEvaluate.IsEmpty())
         {
@@ -865,6 +1032,10 @@ namespace MBSlippi
         if(m_Recorder == nullptr)
         {
             throw std::runtime_error("Recorder need to be set in order to evaluate SlippiSpec");   
+        }
+        if(!VerifyModule(ModuleToEvaluate,OutDiagnostics))
+        {
+            return;
         }
         for(auto& Statement : ModuleToEvaluate.Statements)
         {

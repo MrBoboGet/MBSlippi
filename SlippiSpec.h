@@ -108,9 +108,10 @@ namespace MBSlippi
         return(ReturnValue);
     }
 
-    struct LazyGameList
+    struct MQL_LazyGameList
     {
         bool Evaluated = false;
+        GameSelection GamesToRetrieve;
         std::vector<MeleeGame> Games;
     };
     struct MQL_Variable_GameInfoPredicate
@@ -121,24 +122,46 @@ namespace MBSlippi
     class MQL_Variable
     {
     public:
-        std::variant<LazyGameList,MQL_Variable_GameInfoPredicate,Filter_Component>  Data;
+        std::variant<MQL_LazyGameList,MQL_Variable_GameInfoPredicate,Filter_Component>  Data;
     };
     class MQL_Scope
     {
+        MQL_Scope* m_ParentScope = nullptr;
         std::unordered_map<std::string,MQL_Variable> m_Variables;
     public:
+        void SetParentScope(MQL_Scope* Parent)
+        {
+            m_ParentScope = Parent;
+        }
+        //doesn't verify that the variable doesn't already exist
+        void AddVariable(std::string const& Name,MQL_Variable Value)
+        {
+            m_Variables[Name] = std::move(Value);
+        }
         MQL_Variable& GetVariable(std::string const& VariableName)
         {
             auto It = m_Variables.find(VariableName);
             if(It == m_Variables.end())
             {
-                throw std::runtime_error(VariableName + " doesn't exist in current scope");
+                if(m_ParentScope != nullptr)
+                {
+                    return(m_ParentScope->GetVariable(VariableName));
+                }
+                else
+                {
+                    throw std::runtime_error(VariableName + " doesn't exist in current scope");
+                }
             }
             return(It->second);
         }
         bool HasVariable(std::string const& VariableName)
         {
-            return(m_Variables.find(VariableName) != m_Variables.end());   
+            bool ReturnValue = m_Variables.find(VariableName) != m_Variables.end();
+            if(!ReturnValue && m_ParentScope != nullptr)
+            {
+                ReturnValue = m_ParentScope->HasVariable(VariableName);
+            }
+            return(ReturnValue);
         }
     };
     struct MQL_Context
@@ -208,7 +231,7 @@ namespace MBSlippi
         void SetRecorder(MeleeGameRecorder* NewRecorder);
         void InitializeServers(std::vector<ServerInitilizationData> const& ServersToInitialize);
 
-        bool VerifyVariableDeclaration(VariableDeclaration& DeclarationToVerify,std::vector<MBLSP::Diagnostic>& OutDiagnostics);
+        bool VerifyVariableDeclaration(Statement& DeclarationToVerify,std::vector<MBLSP::Diagnostic>& OutDiagnostics,bool UpdateState=false);
         bool VerifyStatement(Statement& SpecToVerify,std::vector<MBLSP::Diagnostic>& OutDiagnostics);
         bool VerifySelection(Selection& SpecToVerify,std::vector<MBLSP::Diagnostic>& OutDiagnostics);
         //special semantics, in that it modifies the scope, so that modules can be verified correct
@@ -218,7 +241,7 @@ namespace MBSlippi
 
         void EvaluateStatement(Statement& SpecToEvaluate,std::vector<MBLSP::Diagnostic>& OutDiagnostics);
         void EvaluateSelection(Selection& SpecToEvaluate,std::vector<MBLSP::Diagnostic>& OutDiagnostics);
-        void EvaluateVariableDeclaration(VariableDeclaration& SpecToEvaluate,std::vector<MBLSP::Diagnostic>& OutDiagnostics);
+        void EvaluateVariableDeclaration(Statement& SpecToEvaluate,std::vector<MBLSP::Diagnostic>& OutDiagnostics);
         void EvaluateModule(Module& SpecToEvaluate,std::vector<MBLSP::Diagnostic>& OutDiagnostics);
     };
 }

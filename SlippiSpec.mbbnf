@@ -13,12 +13,14 @@ term bool = "true|false";
 term WITH = "WITH";
 term SELECT = "SELECT";
 term RECORD = "RECORD";
-term GAMES = "GAMES";
-term FILTER = "FILTER";
+term GAMES = "Games";
+term GamePredicate = "GamePredicate";
+term PlayerSelection = "PlayerSelection";
+term FILTER = "Filter";
 term PRINT = "PRINT";
 
 
-term variable = "\$[[:alnum:]_]+";
+term variable = "$\$([[:alnum:]_]+)";
 term idf = "[[:alpha:]_]+[[:alnum:]_]*";
 
 term semi = ";";
@@ -316,10 +318,16 @@ def Module=Module;
 def VariableDeclaration=VariableDeclaration;
 def VariableDeclaration_Filter=VariableDeclaration_Filter;
 def VariableDeclaration_GameList=VariableDeclaration_GameList;
+def VariableDeclaration_PlayerSelection=VariableDeclaration_PlayerSelection;
+def VariableDeclaration_GameInfoPredicate=VariableDeclaration_GameInfoPredicate;
 
-VariableDeclaration_Filter = FilterPosition=TOKEN.Position FILTER Component=Filter_Component semi;
-VariableDeclaration_GameList = GamePosition=TOKEN.Position GAMES Selection=GameSelection semi;
-VariableDeclaration = this=VariableDeclaration_Filter | this=VariableDeclaration_GameList;
+VariableDeclaration_Filter = FilterPosition=TOKEN.Position FILTER NamePosition = TOKEN.Position Name = idf eq Component=Filter_Component semi;
+VariableDeclaration_GameList = GamePosition=TOKEN.Position GAMES NamePosition = TOKEN.Position Name = idf eq Selection=GameSelection semi;
+VariableDeclaration_PlayerSelection = GamePosition=TOKEN.Position PlayerSelection NamePosition = TOKEN.Position Name = idf eq 
+    Predicate=GameInfoPredicate semi;
+VariableDeclaration_GameInfoPredicate = GamePosition=TOKEN.Position GamePredicate NamePosition = TOKEN.Position Name = idf eq Predicate=GameInfoPredicate semi;
+VariableDeclaration = this=VariableDeclaration_Filter | this=VariableDeclaration_GameList | this=VariableDeclaration_GameInfoPredicate 
+    | this=VariableDeclaration_PlayerSelection;
 
 Module = Statements=Statement*;
 

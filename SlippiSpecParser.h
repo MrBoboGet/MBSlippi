@@ -471,9 +471,15 @@ VariableDeclaration_Filter ParseVariableDeclaration_Filter(MBCC::Tokenizer& Toke
 VariableDeclaration_Filter ParseVariableDeclaration_Filter_0(MBCC::Tokenizer& Tokenizer);
 VariableDeclaration_GameList ParseVariableDeclaration_GameList(MBCC::Tokenizer& Tokenizer);
 VariableDeclaration_GameList ParseVariableDeclaration_GameList_0(MBCC::Tokenizer& Tokenizer);
+VariableDeclaration_PlayerSelection ParseVariableDeclaration_PlayerSelection(MBCC::Tokenizer& Tokenizer);
+VariableDeclaration_PlayerSelection ParseVariableDeclaration_PlayerSelection_0(MBCC::Tokenizer& Tokenizer);
+VariableDeclaration_GameInfoPredicate ParseVariableDeclaration_GameInfoPredicate(MBCC::Tokenizer& Tokenizer);
+VariableDeclaration_GameInfoPredicate ParseVariableDeclaration_GameInfoPredicate_0(MBCC::Tokenizer& Tokenizer);
 VariableDeclaration ParseVariableDeclaration(MBCC::Tokenizer& Tokenizer);
 VariableDeclaration ParseVariableDeclaration_0(MBCC::Tokenizer& Tokenizer);
 VariableDeclaration ParseVariableDeclaration_1(MBCC::Tokenizer& Tokenizer);
+VariableDeclaration ParseVariableDeclaration_2(MBCC::Tokenizer& Tokenizer);
+VariableDeclaration ParseVariableDeclaration_3(MBCC::Tokenizer& Tokenizer);
 Module ParseModule(MBCC::Tokenizer& Tokenizer);
 Module ParseModule_0(MBCC::Tokenizer& Tokenizer);
 Statement ParseStatement(MBCC::Tokenizer& Tokenizer);
@@ -481,6 +487,6 @@ Statement ParseStatement_0(MBCC::Tokenizer& Tokenizer);
 Statement ParseStatement_1(MBCC::Tokenizer& Tokenizer);
 inline MBCC::Tokenizer GetTokenizer()
 {
-    MBCC::Tokenizer ReturnValue("( |\\t|\\n|\\r)*",{"\\(","\\)","\\{","\\}","\\[","\\]","[[:digit:]]+","$\"((\\\\.|[^\"\\\\])*)\"","true|false","WITH","SELECT","RECORD","GAMES","FILTER","PRINT","\\$[[:alnum:]_]+","[[:alpha:]_]+[[:alnum:]_]*",";","<=","<",">=",">","!=",":",",","=","\\.","\\|\\|","\\|","&&","&","\\?",});
+    MBCC::Tokenizer ReturnValue("( |\\t|\\n|\\r)*",{"\\(","\\)","\\{","\\}","\\[","\\]","[[:digit:]]+","$\"((\\\\.|[^\"\\\\])*)\"","true|false","WITH","SELECT","RECORD","Games","GamePredicate","PlayerSelection","Filter","PRINT","$\\$([[:alnum:]_]+)","[[:alpha:]_]+[[:alnum:]_]*",";","<=","<",">=",">","!=",":",",","=","\\.","\\|\\|","\\|","&&","&","\\?",});
     return(ReturnValue);
 }
