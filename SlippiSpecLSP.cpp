@@ -130,24 +130,25 @@ namespace MBSlippi
             if(StatementToExamine.IsType<VariableDeclaration_Filter>())
             {
                 auto const& FilterType = StatementToExamine.GetType<VariableDeclaration_Filter>();
+                OutTokens.push_back(MBLSP::SemanticToken(MBLSP::TokenType::Class,h_Convert(FilterType.FilterPosition),6));
                 p_ExtractTokens(OutTokens,FilterType.Component);
             }
             else if(StatementToExamine.IsType<VariableDeclaration_GameInfoPredicate>())
             {
                 auto const& PredicateVariable = StatementToExamine.GetType<VariableDeclaration_GameInfoPredicate>();
-                OutTokens.push_back(MBLSP::SemanticToken(MBLSP::TokenType::Class,h_Convert(PredicateVariable.GamePosition),4));
+                OutTokens.push_back(MBLSP::SemanticToken(MBLSP::TokenType::Class,h_Convert(PredicateVariable.GamePosition),13));
                 p_ExtractTokens(OutTokens,PredicateVariable.Predicate);
             }
             else if(StatementToExamine.IsType<VariableDeclaration_PlayerSelection>())
             {
                 auto const& PredicateVariable = StatementToExamine.GetType<VariableDeclaration_PlayerSelection>();
-                OutTokens.push_back(MBLSP::SemanticToken(MBLSP::TokenType::Class,h_Convert(PredicateVariable.GamePosition),6));
+                OutTokens.push_back(MBLSP::SemanticToken(MBLSP::TokenType::Class,h_Convert(PredicateVariable.GamePosition),15));
                 p_ExtractTokens(OutTokens,PredicateVariable.Predicate);
             }
             else if(StatementToExamine.IsType<VariableDeclaration_GameList>())
             {
                 auto const& GameListVariable = StatementToExamine.GetType<VariableDeclaration_GameList>();
-                OutTokens.push_back(MBLSP::SemanticToken(MBLSP::TokenType::Class,h_Convert(GameListVariable.GamePosition),8));
+                OutTokens.push_back(MBLSP::SemanticToken(MBLSP::TokenType::Class,h_Convert(GameListVariable.GamePosition),5));
                 p_ExtractTokens(OutTokens,GameListVariable.Selection);
             }
         }

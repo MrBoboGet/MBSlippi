@@ -334,7 +334,7 @@ namespace MBSlippi
                     if(IsPlayerAssignment && !PredicateData.IsPlayerAssignment)
                     {
                         MBLSP::Diagnostic NewDiagnostic;
-                        NewDiagnostic.message = "Variable isn't of type GameInfoPredicate";
+                        NewDiagnostic.message = "Variable isn't of type PlayerAssignment";
                         NewDiagnostic.range.start.line = VariablePredicate.VariablePosition.Line;
                         NewDiagnostic.range.start.character = VariablePredicate.VariablePosition.ByteOffset;
                         NewDiagnostic.range.end = NewDiagnostic.range.start + VariablePredicate.VariableName.size()+1;
@@ -343,7 +343,7 @@ namespace MBSlippi
                     else  if(!IsPlayerAssignment && PredicateData.IsPlayerAssignment)
                     {
                         MBLSP::Diagnostic NewDiagnostic;
-                        NewDiagnostic.message = "Variable isn't of type PlayerAssignment";
+                        NewDiagnostic.message = "Variable isn't of type GameInfoPredicate";
                         NewDiagnostic.range.start.line = VariablePredicate.VariablePosition.Line;
                         NewDiagnostic.range.start.character = VariablePredicate.VariablePosition.ByteOffset;
                         NewDiagnostic.range.end = NewDiagnostic.range.start + VariablePredicate.VariableName.size()+1;
@@ -744,6 +744,7 @@ namespace MBSlippi
         }
         for(auto const& ExtraTerm : PredicateToEvaluate.ExtraTerms)
         {
+            //errenous until parsing is fixed
             if(ExtraTerm.Operator == "||")
             {
                 if(!ReturnValue)
