@@ -375,7 +375,7 @@ namespace MBSlippi
 			std::exit(1);
 		}
 		std::string SlippiScriptToExecute = Input.TopCommandArguments[0];
-        SlippiSpec SpecToEvaluate;
+        Module ModuleToEvaluate;
         SpecEvaluator Evaluator;
         auto Tokenizer = GetTokenizer();
         try
@@ -383,15 +383,15 @@ namespace MBSlippi
             Evaluator.SetDBAdapter(this);
             Evaluator.SetRecorder(this);
             Tokenizer.SetText(MBUtility::ReadWholeFile(SlippiScriptToExecute));
-            SpecToEvaluate = ParseSlippiSpec(Tokenizer);
+            ModuleToEvaluate = ParseModule(Tokenizer);
             std::vector<MBLSP::Diagnostic> Diagnostics;
             //DEBUG
             std::vector<ServerInitilizationData> Servers;
-            Servers.emplace_back();
-            Servers.back().ExecutableName = "sbcl";
-            Servers.back().ExecutableArguments = {"--noinform","--core","TestServerSBCL.mem"};
-            Evaluator.InitializeServers(Servers);
-            Evaluator.EvaluateSpec(SpecToEvaluate,Diagnostics);
+            //Servers.emplace_back();
+            //Servers.back().ExecutableName = "sbcl";
+            //Servers.back().ExecutableArguments = {"--noinform","--core","TestServerSBCL.mem"};
+            //Evaluator.InitializeServers(Servers);
+            Evaluator.EvaluateModule(ModuleToEvaluate,Diagnostics);
             if(Diagnostics.size() > 0)
             {
                 m_Terminal.PrintLine("Semantic error evaluating SlippiSpec:");

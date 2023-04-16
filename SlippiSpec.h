@@ -192,6 +192,7 @@ namespace MBSlippi
                 bool IsPlayerAssignment,std::vector<MBLSP::Diagnostic>& OutDiagnostics);
         void p_VerifyGameInfoPredicate(GameInfoPredicate& PredicateToVerify,bool IsPlayerAssignment,std::vector<MBLSP::Diagnostic>& OutDiagnostics);
         void p_VerifyPlayerAssignment(PlayerAssignment& AssignmentToVerify,std::vector<MBLSP::Diagnostic>& OutDiagnostics);
+        void p_VerifyGameSelection(GameSelection& SelectionToVerify,std::vector<MBLSP::Diagnostic>& OutDiagnostics);
 
         bool p_SatisfiesPlayerAssignment(SlippiGamePlayerInfo const& PlayerInfo,GameInfoPredicate const& PredicateToEvaluate);
         bool p_EvaluateGameSelection(SlippiGameInfo const& GameInfo,bool IsSwapped,GameInfoPredicate const& PredicateToEvaluate);
@@ -210,6 +211,8 @@ namespace MBSlippi
         bool VerifyVariableDeclaration(VariableDeclaration& DeclarationToVerify,std::vector<MBLSP::Diagnostic>& OutDiagnostics);
         bool VerifyStatement(Statement& SpecToVerify,std::vector<MBLSP::Diagnostic>& OutDiagnostics);
         bool VerifySelection(Selection& SpecToVerify,std::vector<MBLSP::Diagnostic>& OutDiagnostics);
+        //special semantics, in that it modifies the scope, so that modules can be verified correct
+        //without needing to actually execute the actions
         bool VerifyModule(Module& SpecToVerify,std::vector<MBLSP::Diagnostic>& OutDiagnostics);
 
 

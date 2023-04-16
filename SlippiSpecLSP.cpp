@@ -15,7 +15,7 @@ namespace MBSlippi
 
     void SlippiLSP::p_ExtractTokens(std::vector<MBLSP::SemanticToken>& OutTokens, Filter const& FilterToExamine)
     {
-        if(FilterToExamine.Component.FilterName != "")
+        if(!FilterToExamine.Component.Data.IsEmpty())
         {
             OutTokens.push_back(MBLSP::SemanticToken(MBLSP::TokenType::Keyword,
                         h_Convert(FilterToExamine.FilterPosition),6));
@@ -24,19 +24,26 @@ namespace MBSlippi
     }
     void SlippiLSP::p_ExtractTokens(std::vector<MBLSP::SemanticToken>& OutTokens,Filter_Component const& ComponentToExamine)
     {
-        if(ComponentToExamine.FilterName != "")
+        if(ComponentToExamine.Data.IsType<Filter_Component_Function>())
         {
+            auto const& FunctionData = ComponentToExamine.Data.GetType<Filter_Component_Function>();
             OutTokens.push_back(MBLSP::SemanticToken(MBLSP::TokenType::Function,
-                        h_Convert(ComponentToExamine.NamePosition),ComponentToExamine.FilterName.size()));
+                        h_Convert(FunctionData.NamePosition),FunctionData.FilterName.size()));
 
             if(ComponentToExamine.ArgumentList.Arguments.size() != 0)
             {
                 p_ExtractTokens(OutTokens,ComponentToExamine.ArgumentList);
             }
-            for(auto const& SubComponent : ComponentToExamine.ExtraTerms)
-            {
-                p_ExtractTokens(OutTokens,SubComponent);
-            }
+        }
+        else if(ComponentToExamine.Data.IsType<Filter_Component_Variable>())
+        {
+            auto const& VariableData = ComponentToExamine.Data.GetType<Filter_Component_Variable>();
+            OutTokens.push_back(MBLSP::SemanticToken(
+                        MBLSP::TokenType::Keyword,h_Convert(VariableData.VariablePosition),VariableData.VariableName.size()+1));
+        }
+        for(auto const& SubComponent : ComponentToExamine.ExtraTerms)
+        {
+            p_ExtractTokens(OutTokens,SubComponent);
         }
     }
     void SlippiLSP::p_ExtractTokens(std::vector<MBLSP::SemanticToken>& OutTokens,Filter_ArgList const& ComponentToExamine)
@@ -62,11 +69,22 @@ namespace MBSlippi
     }
     void SlippiLSP::p_ExtractTokens(std::vector<MBLSP::SemanticToken>& OutTokens,GameInfoPredicate const& PredicateToExamine)
     {
-        for(auto const& Attribute : PredicateToExamine.Attribute)
+        if(PredicateToExamine.Data.IsType<GameInfoPredicate_Direct>())
         {
-            OutTokens.push_back(MBLSP::SemanticToken(MBLSP::TokenType::Property,h_Convert(Attribute.NamePosition),Attribute.Name.size()));
+            auto const& DirectData = PredicateToExamine.Data.GetType<GameInfoPredicate_Direct>();
+            for(auto const& Attribute : DirectData.Attribute)
+            {
+                OutTokens.push_back(MBLSP::SemanticToken(MBLSP::TokenType::Property,h_Convert(Attribute.NamePosition),Attribute.Name.size()));
+            }
+            OutTokens.push_back(MBLSP::SemanticToken(MBLSP::TokenType::String,h_Convert(DirectData.ValuePosition),DirectData.Value.size() + 2));
         }
-        OutTokens.push_back(MBLSP::SemanticToken(MBLSP::TokenType::String,h_Convert(PredicateToExamine.ValuePosition),PredicateToExamine.Value.size() + 2));
+        else if(PredicateToExamine.Data.IsType<GameInfoPredicate_Variable>())
+        {
+            auto const& VariableData = PredicateToExamine.Data.GetType<GameInfoPredicate_Variable>();
+            OutTokens.push_back(MBLSP::SemanticToken(
+                        MBLSP::TokenType::Keyword,h_Convert(VariableData.VariablePosition),VariableData.VariableName.size()+1));
+               
+        }
         for(auto const& SubComponent : PredicateToExamine.ExtraTerms)
         {
             p_ExtractTokens(OutTokens,SubComponent);   
@@ -76,6 +94,7 @@ namespace MBSlippi
     {
         OutTokens.push_back(MBLSP::SemanticToken(MBLSP::TokenType::Keyword,h_Convert(SelectionToExamine.SelectPosition),6));
         p_ExtractTokens(OutTokens,SelectionToExamine.GameCondition);
+        p_ExtractTokens(OutTokens,SelectionToExamine.Assignment);
     }
     void SlippiLSP::p_ExtractTokens(std::vector<MBLSP::SemanticToken>& OutTokens,PlayerAssignment const& AssignmentToExamine)
     {
@@ -98,15 +117,55 @@ namespace MBSlippi
                         RecordResult.OutFile.size()+2));
         }
     }
-    std::vector<MBLSP::SemanticToken> SlippiLSP::p_ExtractTokens(SlippiSpec const& Spec)
+    void SlippiLSP::p_ExtractTokens(std::vector<MBLSP::SemanticToken>& OutTokens,Statement const& StatementToExamine)
+    {
+        if(StatementToExamine.IsType<Selection>())
+        {
+            p_ExtractTokens(OutTokens,StatementToExamine.GetType<Selection>());
+        }
+        else if(StatementToExamine.IsType<VariableDeclaration_Base>())
+        {
+            auto const& VariableType = StatementToExamine.GetType<VariableDeclaration_Base>();
+            OutTokens.push_back(MBLSP::SemanticToken(MBLSP::TokenType::Property,h_Convert(VariableType.NamePosition),VariableType.Name.size()));
+            if(StatementToExamine.IsType<VariableDeclaration_Filter>())
+            {
+                auto const& FilterType = StatementToExamine.GetType<VariableDeclaration_Filter>();
+                p_ExtractTokens(OutTokens,FilterType.Component);
+            }
+            else if(StatementToExamine.IsType<VariableDeclaration_GameInfoPredicate>())
+            {
+                auto const& PredicateVariable = StatementToExamine.GetType<VariableDeclaration_GameInfoPredicate>();
+                OutTokens.push_back(MBLSP::SemanticToken(MBLSP::TokenType::Class,h_Convert(PredicateVariable.GamePosition),4));
+                p_ExtractTokens(OutTokens,PredicateVariable.Predicate);
+            }
+            else if(StatementToExamine.IsType<VariableDeclaration_PlayerSelection>())
+            {
+                auto const& PredicateVariable = StatementToExamine.GetType<VariableDeclaration_PlayerSelection>();
+                OutTokens.push_back(MBLSP::SemanticToken(MBLSP::TokenType::Class,h_Convert(PredicateVariable.GamePosition),6));
+                p_ExtractTokens(OutTokens,PredicateVariable.Predicate);
+            }
+            else if(StatementToExamine.IsType<VariableDeclaration_GameList>())
+            {
+                auto const& GameListVariable = StatementToExamine.GetType<VariableDeclaration_GameList>();
+                OutTokens.push_back(MBLSP::SemanticToken(MBLSP::TokenType::Class,h_Convert(GameListVariable.GamePosition),8));
+                p_ExtractTokens(OutTokens,GameListVariable.Selection);
+            }
+        }
+    }
+    void SlippiLSP::p_ExtractTokens(std::vector<MBLSP::SemanticToken>& OutTokens,Selection const& SelectionToExamine)
+    {
+        p_ExtractTokens(OutTokens,SelectionToExamine.Games);
+        p_ExtractTokens(OutTokens,SelectionToExamine.SituationFilter);
+        p_ExtractTokens(OutTokens,SelectionToExamine.Output);
+
+    }
+    std::vector<MBLSP::SemanticToken> SlippiLSP::p_ExtractTokens(Module const& Spec)
     {
         std::vector<MBLSP::SemanticToken> ReturnValue;
-
-        p_ExtractTokens(ReturnValue,Spec.Assignment);
-        p_ExtractTokens(ReturnValue,Spec.Games);
-        p_ExtractTokens(ReturnValue,Spec.SituationFilter);
-        p_ExtractTokens(ReturnValue,Spec.Output);
-
+        for(auto const& Statement : Spec.Statements)
+        {
+            p_ExtractTokens(ReturnValue,Statement);
+        }
         std::sort(ReturnValue.begin(),ReturnValue.end());
         return(ReturnValue);
     }
@@ -116,11 +175,11 @@ namespace MBSlippi
         m_Tokenizer.SetText(Content);
         try
         {
-            ReturnValue.ParsedSpec = ParseSlippiSpec(m_Tokenizer);
-            ReturnValue.Tokens = p_ExtractTokens(ReturnValue.ParsedSpec);
+            ReturnValue.ParsedModule = ParseModule(m_Tokenizer);
+            ReturnValue.Tokens = p_ExtractTokens(ReturnValue.ParsedModule);
             ReturnValue.SemanticTokens = MBLSP::CalculateSemanticTokens(ReturnValue.Tokens);
             SpecEvaluator Evaluator;
-            Evaluator.VerifySpec(ReturnValue.ParsedSpec,ReturnValue.Diagnostics);
+            Evaluator.VerifyModule(ReturnValue.ParsedModule,ReturnValue.Diagnostics);
             if(!m_Tokenizer.IsEOF(m_Tokenizer.Peek()))
             {
 

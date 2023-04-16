@@ -5,344 +5,103 @@
 #include <stdexcept>
 #include <variant>
 #include <memory>
-class Statement_Base
+class Statement_Base :  public MBCC::AST_Base
 {
     public:
+    std::unique_ptr<AST_Base> Copy() const override{return(MBCC::CopyAST(*this));}
     
 };
-class Statement
-{
-    private:
-     std::unique_ptr<Statement_Base> m_Data;
-    size_t m_TypeID = 0;
-    template<typename T> static size_t p_GetTypeID(){return size_t(&p_GetTypeID<T>);}
-    public:
-    template<typename T> void Accept(T& Visitor);
-    template<typename T> void Accept(T& Visitor) const;
-    template<typename T> Statement(T ObjectToStore)
-    {
-        m_Data = std::unique_ptr<Statement_Base>(new T(std::move(ObjectToStore)));
-        m_TypeID = p_GetTypeID<T>();
-    }
-    Statement() = default;
-    Statement(Statement&&) = default;
-    template<typename T> bool IsType() const
-    {
-        return m_TypeID == p_GetTypeID<T>();
-    }
-    bool IsEmpty() const
-    {
-        return m_Data == nullptr;
-    }
-    void operator=(Statement&& StructToMove)
-    {
-        std::swap(m_TypeID,StructToMove.m_TypeID);
-        std::swap(m_Data,StructToMove.m_Data);
-    }
-    template<typename T> T const& GetType() const
-    {
-        if(!IsType<T>() || m_Data == nullptr)
-        {
-            throw std::runtime_error("Invalid type access for abstract AST class");
-        }return static_cast<T const&>(*m_Data);
-    }
-    template<typename T> T& GetType()
-    {
-        if(!IsType<T>() || m_Data == nullptr)
-        {
-            throw std::runtime_error("Invalid type access for abstract AST class");
-        }return static_cast<T&>(*m_Data);
-    }
-    Statement_Base& GetBase()
-    {
-        if(m_Data == nullptr)
-        {
-            throw std::runtime_error("Invalid type access for abstract AST class: data is null");
-        }return static_cast<Statement_Base&>(*m_Data);
-    }
-    Statement_Base const& GetBase() const
-    {
-        if(m_Data == nullptr)
-        {
-            throw std::runtime_error("Invalid type access for abstract AST class: data is null");
-        }return static_cast<Statement_Base const&>(*m_Data);
-    }
-    
-};
-class Filter_Arg_Base
+class Statement : public MBCC::PolyBase<Statement_Base>
 {
     public:
+    typedef MBCC::PolyBase<Statement_Base> Base;
+    using Base::Base;
     
 };
-class Filter_Arg
-{
-    private:
-     std::unique_ptr<Filter_Arg_Base> m_Data;
-    size_t m_TypeID = 0;
-    template<typename T> static size_t p_GetTypeID(){return size_t(&p_GetTypeID<T>);}
-    public:
-    template<typename T> void Accept(T& Visitor);
-    template<typename T> void Accept(T& Visitor) const;
-    template<typename T> Filter_Arg(T ObjectToStore)
-    {
-        m_Data = std::unique_ptr<Filter_Arg_Base>(new T(std::move(ObjectToStore)));
-        m_TypeID = p_GetTypeID<T>();
-    }
-    Filter_Arg() = default;
-    Filter_Arg(Filter_Arg&&) = default;
-    template<typename T> bool IsType() const
-    {
-        return m_TypeID == p_GetTypeID<T>();
-    }
-    bool IsEmpty() const
-    {
-        return m_Data == nullptr;
-    }
-    void operator=(Filter_Arg&& StructToMove)
-    {
-        std::swap(m_TypeID,StructToMove.m_TypeID);
-        std::swap(m_Data,StructToMove.m_Data);
-    }
-    template<typename T> T const& GetType() const
-    {
-        if(!IsType<T>() || m_Data == nullptr)
-        {
-            throw std::runtime_error("Invalid type access for abstract AST class");
-        }return static_cast<T const&>(*m_Data);
-    }
-    template<typename T> T& GetType()
-    {
-        if(!IsType<T>() || m_Data == nullptr)
-        {
-            throw std::runtime_error("Invalid type access for abstract AST class");
-        }return static_cast<T&>(*m_Data);
-    }
-    Filter_Arg_Base& GetBase()
-    {
-        if(m_Data == nullptr)
-        {
-            throw std::runtime_error("Invalid type access for abstract AST class: data is null");
-        }return static_cast<Filter_Arg_Base&>(*m_Data);
-    }
-    Filter_Arg_Base const& GetBase() const
-    {
-        if(m_Data == nullptr)
-        {
-            throw std::runtime_error("Invalid type access for abstract AST class: data is null");
-        }return static_cast<Filter_Arg_Base const&>(*m_Data);
-    }
-    
-};
-class GameInfoPredicate_Data_Base
+class Operator :  public MBCC::AST_Base
 {
     public:
+    std::string Op;
+    std::unique_ptr<AST_Base> Copy() const override{return(MBCC::CopyAST(*this));}
     
 };
-class GameInfoPredicate_Data
+class Filter_Component_Data_Base :  public MBCC::AST_Base
 {
-    private:
-     std::unique_ptr<GameInfoPredicate_Data_Base> m_Data;
-    size_t m_TypeID = 0;
-    template<typename T> static size_t p_GetTypeID(){return size_t(&p_GetTypeID<T>);}
     public:
-    template<typename T> void Accept(T& Visitor);
-    template<typename T> void Accept(T& Visitor) const;
-    template<typename T> GameInfoPredicate_Data(T ObjectToStore)
-    {
-        m_Data = std::unique_ptr<GameInfoPredicate_Data_Base>(new T(std::move(ObjectToStore)));
-        m_TypeID = p_GetTypeID<T>();
-    }
-    GameInfoPredicate_Data() = default;
-    GameInfoPredicate_Data(GameInfoPredicate_Data&&) = default;
-    template<typename T> bool IsType() const
-    {
-        return m_TypeID == p_GetTypeID<T>();
-    }
-    bool IsEmpty() const
-    {
-        return m_Data == nullptr;
-    }
-    void operator=(GameInfoPredicate_Data&& StructToMove)
-    {
-        std::swap(m_TypeID,StructToMove.m_TypeID);
-        std::swap(m_Data,StructToMove.m_Data);
-    }
-    template<typename T> T const& GetType() const
-    {
-        if(!IsType<T>() || m_Data == nullptr)
-        {
-            throw std::runtime_error("Invalid type access for abstract AST class");
-        }return static_cast<T const&>(*m_Data);
-    }
-    template<typename T> T& GetType()
-    {
-        if(!IsType<T>() || m_Data == nullptr)
-        {
-            throw std::runtime_error("Invalid type access for abstract AST class");
-        }return static_cast<T&>(*m_Data);
-    }
-    GameInfoPredicate_Data_Base& GetBase()
-    {
-        if(m_Data == nullptr)
-        {
-            throw std::runtime_error("Invalid type access for abstract AST class: data is null");
-        }return static_cast<GameInfoPredicate_Data_Base&>(*m_Data);
-    }
-    GameInfoPredicate_Data_Base const& GetBase() const
-    {
-        if(m_Data == nullptr)
-        {
-            throw std::runtime_error("Invalid type access for abstract AST class: data is null");
-        }return static_cast<GameInfoPredicate_Data_Base const&>(*m_Data);
-    }
+    std::unique_ptr<AST_Base> Copy() const override{return(MBCC::CopyAST(*this));}
     
 };
-class AttributeComponent
+class Filter_Component_Data : public MBCC::PolyBase<Filter_Component_Data_Base>
+{
+    public:
+    typedef MBCC::PolyBase<Filter_Component_Data_Base> Base;
+    using Base::Base;
+    
+};
+class Result_Base :  public MBCC::AST_Base
+{
+    public:
+    std::unique_ptr<AST_Base> Copy() const override{return(MBCC::CopyAST(*this));}
+    
+};
+class Result : public MBCC::PolyBase<Result_Base>
+{
+    public:
+    typedef MBCC::PolyBase<Result_Base> Base;
+    using Base::Base;
+    
+};
+class AttributeComponent :  public MBCC::AST_Base
 {
     public:
     MBCC::TokenPosition NamePosition;
     std::string Name;
+    std::unique_ptr<AST_Base> Copy() const override{return(MBCC::CopyAST(*this));}
     
 };
-class Filter_Component_Data_Base
+class GameInfoPredicate_Data_Base :  public MBCC::AST_Base
 {
     public:
+    std::unique_ptr<AST_Base> Copy() const override{return(MBCC::CopyAST(*this));}
     
 };
-class Filter_Component_Data
-{
-    private:
-     std::unique_ptr<Filter_Component_Data_Base> m_Data;
-    size_t m_TypeID = 0;
-    template<typename T> static size_t p_GetTypeID(){return size_t(&p_GetTypeID<T>);}
-    public:
-    template<typename T> void Accept(T& Visitor);
-    template<typename T> void Accept(T& Visitor) const;
-    template<typename T> Filter_Component_Data(T ObjectToStore)
-    {
-        m_Data = std::unique_ptr<Filter_Component_Data_Base>(new T(std::move(ObjectToStore)));
-        m_TypeID = p_GetTypeID<T>();
-    }
-    Filter_Component_Data() = default;
-    Filter_Component_Data(Filter_Component_Data&&) = default;
-    template<typename T> bool IsType() const
-    {
-        return m_TypeID == p_GetTypeID<T>();
-    }
-    bool IsEmpty() const
-    {
-        return m_Data == nullptr;
-    }
-    void operator=(Filter_Component_Data&& StructToMove)
-    {
-        std::swap(m_TypeID,StructToMove.m_TypeID);
-        std::swap(m_Data,StructToMove.m_Data);
-    }
-    template<typename T> T const& GetType() const
-    {
-        if(!IsType<T>() || m_Data == nullptr)
-        {
-            throw std::runtime_error("Invalid type access for abstract AST class");
-        }return static_cast<T const&>(*m_Data);
-    }
-    template<typename T> T& GetType()
-    {
-        if(!IsType<T>() || m_Data == nullptr)
-        {
-            throw std::runtime_error("Invalid type access for abstract AST class");
-        }return static_cast<T&>(*m_Data);
-    }
-    Filter_Component_Data_Base& GetBase()
-    {
-        if(m_Data == nullptr)
-        {
-            throw std::runtime_error("Invalid type access for abstract AST class: data is null");
-        }return static_cast<Filter_Component_Data_Base&>(*m_Data);
-    }
-    Filter_Component_Data_Base const& GetBase() const
-    {
-        if(m_Data == nullptr)
-        {
-            throw std::runtime_error("Invalid type access for abstract AST class: data is null");
-        }return static_cast<Filter_Component_Data_Base const&>(*m_Data);
-    }
-    
-};
-class Operator
+class GameInfoPredicate_Data : public MBCC::PolyBase<GameInfoPredicate_Data_Base>
 {
     public:
-    std::string Op;
+    typedef MBCC::PolyBase<GameInfoPredicate_Data_Base> Base;
+    using Base::Base;
     
 };
-class Result_Base
+class Filter_Arg_Base :  public MBCC::AST_Base
 {
     public:
+    std::unique_ptr<AST_Base> Copy() const override{return(MBCC::CopyAST(*this));}
     
 };
-class Result
+class Filter_Arg : public MBCC::PolyBase<Filter_Arg_Base>
 {
-    private:
-     std::unique_ptr<Result_Base> m_Data;
-    size_t m_TypeID = 0;
-    template<typename T> static size_t p_GetTypeID(){return size_t(&p_GetTypeID<T>);}
     public:
-    template<typename T> void Accept(T& Visitor);
-    template<typename T> void Accept(T& Visitor) const;
-    template<typename T> Result(T ObjectToStore)
-    {
-        m_Data = std::unique_ptr<Result_Base>(new T(std::move(ObjectToStore)));
-        m_TypeID = p_GetTypeID<T>();
-    }
-    Result() = default;
-    Result(Result&&) = default;
-    template<typename T> bool IsType() const
-    {
-        return m_TypeID == p_GetTypeID<T>();
-    }
-    bool IsEmpty() const
-    {
-        return m_Data == nullptr;
-    }
-    void operator=(Result&& StructToMove)
-    {
-        std::swap(m_TypeID,StructToMove.m_TypeID);
-        std::swap(m_Data,StructToMove.m_Data);
-    }
-    template<typename T> T const& GetType() const
-    {
-        if(!IsType<T>() || m_Data == nullptr)
-        {
-            throw std::runtime_error("Invalid type access for abstract AST class");
-        }return static_cast<T const&>(*m_Data);
-    }
-    template<typename T> T& GetType()
-    {
-        if(!IsType<T>() || m_Data == nullptr)
-        {
-            throw std::runtime_error("Invalid type access for abstract AST class");
-        }return static_cast<T&>(*m_Data);
-    }
-    Result_Base& GetBase()
-    {
-        if(m_Data == nullptr)
-        {
-            throw std::runtime_error("Invalid type access for abstract AST class: data is null");
-        }return static_cast<Result_Base&>(*m_Data);
-    }
-    Result_Base const& GetBase() const
-    {
-        if(m_Data == nullptr)
-        {
-            throw std::runtime_error("Invalid type access for abstract AST class: data is null");
-        }return static_cast<Result_Base const&>(*m_Data);
-    }
+    typedef MBCC::PolyBase<Filter_Arg_Base> Base;
+    using Base::Base;
     
 };
-class Filter_Component_Function : public Filter_Component_Data_Base
+class VariableDeclaration_Base : public Statement_Base
 {
     public:
     MBCC::TokenPosition NamePosition;
-    std::string FilterName;
+    std::string Name;
+    std::unique_ptr<AST_Base> Copy() const override{return(MBCC::CopyAST(*this));}
+    
+};
+class VariableDeclaration : public MBCC::PolyBase<VariableDeclaration_Base>
+{
+    public:
+    typedef MBCC::PolyBase<VariableDeclaration_Base> Base;
+    using Base::Base;
+    operator Statement()&&
+    {
+        return(Statement(std::move(m_Data),m_TypeID));
+    }
     
 };
 class Filter_Component_Variable : public Filter_Component_Data_Base
@@ -350,6 +109,15 @@ class Filter_Component_Variable : public Filter_Component_Data_Base
     public:
     MBCC::TokenPosition VariablePosition;
     std::string VariableName;
+    std::unique_ptr<AST_Base> Copy() const override{return(MBCC::CopyAST(*this));}
+    
+};
+class Filter_Component_Function : public Filter_Component_Data_Base
+{
+    public:
+    MBCC::TokenPosition NamePosition;
+    std::string FilterName;
+    std::unique_ptr<AST_Base> Copy() const override{return(MBCC::CopyAST(*this));}
     
 };
 class Result_Record : public Result_Base
@@ -358,125 +126,35 @@ class Result_Record : public Result_Base
     MBCC::TokenPosition RecordPosition;
     MBCC::TokenPosition FilePosition;
     std::string OutFile;
+    std::unique_ptr<AST_Base> Copy() const override{return(MBCC::CopyAST(*this));}
     
 };
 class Result_Print : public Result_Base
 {
     public:
     MBCC::TokenPosition PrintPosition;
+    std::unique_ptr<AST_Base> Copy() const override{return(MBCC::CopyAST(*this));}
+    
+};
+class Module :  public MBCC::AST_Base
+{
+    public:
+    std::vector<Statement> Statements;
+    std::unique_ptr<AST_Base> Copy() const override{return(MBCC::CopyAST(*this));}
     
 };
 class Result_Tabulate : public Result_Base
 {
     public:
+    std::unique_ptr<AST_Base> Copy() const override{return(MBCC::CopyAST(*this));}
     
 };
-class AttributeList
+class GameInfoPredicate_Variable : public GameInfoPredicate_Data_Base
 {
     public:
-    std::vector<AttributeComponent> Attributes;
-    
-};
-class ArgList
-{
-    public:
-    std::vector<Filter_Arg> Args;
-    
-};
-class Filter_Arg_Named : public Filter_Arg_Base
-{
-    public:
-    MBCC::TokenPosition NamePosition;
-    std::string Name;
-    MBCC::TokenPosition ValuePosition;
-    std::string Value;
-    
-};
-class Filter_Arg_Positional : public Filter_Arg_Base
-{
-    public:
-    MBCC::TokenPosition ValuePosition;
-    std::string Value;
-    
-};
-class VariableDeclaration_Base : public Statement_Base
-{
-    public:
-    MBCC::TokenPosition NamePosition;
-    std::string Name;
-    
-};
-class VariableDeclaration
-{
-    private:
-     std::unique_ptr<VariableDeclaration_Base> m_Data;
-    size_t m_TypeID = 0;
-    template<typename T> static size_t p_GetTypeID(){return size_t(&p_GetTypeID<T>);}
-    public:
-    template<typename T> void Accept(T& Visitor);
-    template<typename T> void Accept(T& Visitor) const;
-    template<typename T> VariableDeclaration(T ObjectToStore)
-    {
-        m_Data = std::unique_ptr<VariableDeclaration_Base>(new T(std::move(ObjectToStore)));
-        m_TypeID = p_GetTypeID<T>();
-    }
-    VariableDeclaration() = default;
-    VariableDeclaration(VariableDeclaration&&) = default;
-    template<typename T> bool IsType() const
-    {
-        return m_TypeID == p_GetTypeID<T>();
-    }
-    bool IsEmpty() const
-    {
-        return m_Data == nullptr;
-    }
-    void operator=(VariableDeclaration&& StructToMove)
-    {
-        std::swap(m_TypeID,StructToMove.m_TypeID);
-        std::swap(m_Data,StructToMove.m_Data);
-    }
-    template<typename T> T const& GetType() const
-    {
-        if(!IsType<T>() || m_Data == nullptr)
-        {
-            throw std::runtime_error("Invalid type access for abstract AST class");
-        }return static_cast<T const&>(*m_Data);
-    }
-    template<typename T> T& GetType()
-    {
-        if(!IsType<T>() || m_Data == nullptr)
-        {
-            throw std::runtime_error("Invalid type access for abstract AST class");
-        }return static_cast<T&>(*m_Data);
-    }
-    VariableDeclaration_Base& GetBase()
-    {
-        if(m_Data == nullptr)
-        {
-            throw std::runtime_error("Invalid type access for abstract AST class: data is null");
-        }return static_cast<VariableDeclaration_Base&>(*m_Data);
-    }
-    VariableDeclaration_Base const& GetBase() const
-    {
-        if(m_Data == nullptr)
-        {
-            throw std::runtime_error("Invalid type access for abstract AST class: data is null");
-        }return static_cast<VariableDeclaration_Base const&>(*m_Data);
-    }
-    
-};
-class Filter_ArgList
-{
-    public:
-    std::vector<Filter_Arg> Arguments;
-    
-};
-class GameInfoPredicate
-{
-    public:
-    GameInfoPredicate_Data Data;
-    std::string Operator;
-    std::vector<GameInfoPredicate> ExtraTerms;
+    MBCC::TokenPosition VariablePosition;
+    std::string VariableName;
+    std::unique_ptr<AST_Base> Copy() const override{return(MBCC::CopyAST(*this));}
     
 };
 class GameInfoPredicate_Direct : public GameInfoPredicate_Data_Base
@@ -487,28 +165,55 @@ class GameInfoPredicate_Direct : public GameInfoPredicate_Data_Base
     std::string Value;
     std::string Comparison;
     uint64_t DateValue;
+    std::unique_ptr<AST_Base> Copy() const override{return(MBCC::CopyAST(*this));}
     
 };
-class GameInfoPredicate_Variable : public GameInfoPredicate_Data_Base
+class GameInfoPredicate :  public MBCC::AST_Base
 {
     public:
-    MBCC::TokenPosition VariablePosition;
-    std::string VariableName;
+    GameInfoPredicate_Data Data;
+    std::string Operator;
+    std::vector<GameInfoPredicate> ExtraTerms;
+    std::unique_ptr<AST_Base> Copy() const override{return(MBCC::CopyAST(*this));}
     
 };
-class Module
+class Filter_ArgList :  public MBCC::AST_Base
 {
     public:
-    std::vector<Statement> Statements;
+    std::vector<Filter_Arg> Arguments;
+    std::unique_ptr<AST_Base> Copy() const override{return(MBCC::CopyAST(*this));}
     
 };
-class PlayerAssignment
+class Filter_Arg_Positional : public Filter_Arg_Base
 {
     public:
-    MBCC::TokenPosition WithPosition;
-    MBCC::TokenPosition PlayerPosition;
-    std::string AffectedPlayer;
-    GameInfoPredicate PlayerCondition;
+    MBCC::TokenPosition ValuePosition;
+    std::string Value;
+    std::unique_ptr<AST_Base> Copy() const override{return(MBCC::CopyAST(*this));}
+    
+};
+class Filter_Arg_Named : public Filter_Arg_Base
+{
+    public:
+    MBCC::TokenPosition NamePosition;
+    std::string Name;
+    MBCC::TokenPosition ValuePosition;
+    std::string Value;
+    std::unique_ptr<AST_Base> Copy() const override{return(MBCC::CopyAST(*this));}
+    
+};
+class ArgList :  public MBCC::AST_Base
+{
+    public:
+    std::vector<Filter_Arg> Args;
+    std::unique_ptr<AST_Base> Copy() const override{return(MBCC::CopyAST(*this));}
+    
+};
+class AttributeList :  public MBCC::AST_Base
+{
+    public:
+    std::vector<AttributeComponent> Attributes;
+    std::unique_ptr<AST_Base> Copy() const override{return(MBCC::CopyAST(*this));}
     
 };
 class VariableDeclaration_PlayerSelection : public VariableDeclaration_Base
@@ -516,6 +221,7 @@ class VariableDeclaration_PlayerSelection : public VariableDeclaration_Base
     public:
     MBCC::TokenPosition GamePosition;
     GameInfoPredicate Predicate;
+    std::unique_ptr<AST_Base> Copy() const override{return(MBCC::CopyAST(*this));}
     
 };
 class VariableDeclaration_GameInfoPredicate : public VariableDeclaration_Base
@@ -523,48 +229,42 @@ class VariableDeclaration_GameInfoPredicate : public VariableDeclaration_Base
     public:
     MBCC::TokenPosition GamePosition;
     GameInfoPredicate Predicate;
+    std::unique_ptr<AST_Base> Copy() const override{return(MBCC::CopyAST(*this));}
     
 };
-class Filter_Component
+class GameInfoPredicate_Conjunction :  public MBCC::AST_Base
+{
+    public:
+    std::string Conjunction;
+    GameInfoPredicate RHS;
+    std::unique_ptr<AST_Base> Copy() const override{return(MBCC::CopyAST(*this));}
+    
+};
+class PlayerAssignment :  public MBCC::AST_Base
+{
+    public:
+    MBCC::TokenPosition WithPosition;
+    MBCC::TokenPosition PlayerPosition;
+    std::string AffectedPlayer;
+    GameInfoPredicate PlayerCondition;
+    std::unique_ptr<AST_Base> Copy() const override{return(MBCC::CopyAST(*this));}
+    
+};
+class GameInfoPredicate_OperatorList :  public MBCC::AST_Base
+{
+    public:
+    std::vector<GameInfoPredicate> Terms;
+    std::unique_ptr<AST_Base> Copy() const override{return(MBCC::CopyAST(*this));}
+    
+};
+class Filter_Component :  public MBCC::AST_Base
 {
     public:
     Filter_Component_Data Data;
     Filter_ArgList ArgumentList;
     std::string Operator;
     std::vector<Filter_Component> ExtraTerms;
-    
-};
-class GameInfoPredicate_Conjunction
-{
-    public:
-    std::string Conjunction;
-    GameInfoPredicate RHS;
-    
-};
-class GameInfoPredicate_OperatorList
-{
-    public:
-    std::vector<GameInfoPredicate> Terms;
-    
-};
-class GameSelection
-{
-    public:
-    PlayerAssignment Assignment;
-    GameInfoPredicate GameCondition;
-    
-};
-class Filter_OperatorList
-{
-    public:
-    std::vector<Filter_Component> Components;
-    
-};
-class Filter
-{
-    public:
-    MBCC::TokenPosition FilterPosition;
-    Filter_Component Component;
+    std::unique_ptr<AST_Base> Copy() const override{return(MBCC::CopyAST(*this));}
     
 };
 class VariableDeclaration_Filter : public VariableDeclaration_Base
@@ -572,6 +272,31 @@ class VariableDeclaration_Filter : public VariableDeclaration_Base
     public:
     MBCC::TokenPosition FilterPosition;
     Filter_Component Component;
+    std::unique_ptr<AST_Base> Copy() const override{return(MBCC::CopyAST(*this));}
+    
+};
+class GameSelection :  public MBCC::AST_Base
+{
+    public:
+    PlayerAssignment Assignment;
+    MBCC::TokenPosition SelectPosition;
+    GameInfoPredicate GameCondition;
+    std::unique_ptr<AST_Base> Copy() const override{return(MBCC::CopyAST(*this));}
+    
+};
+class Filter_OperatorList :  public MBCC::AST_Base
+{
+    public:
+    std::vector<Filter_Component> Components;
+    std::unique_ptr<AST_Base> Copy() const override{return(MBCC::CopyAST(*this));}
+    
+};
+class Filter :  public MBCC::AST_Base
+{
+    public:
+    MBCC::TokenPosition FilterPosition;
+    Filter_Component Component;
+    std::unique_ptr<AST_Base> Copy() const override{return(MBCC::CopyAST(*this));}
     
 };
 class VariableDeclaration_GameList : public VariableDeclaration_Base
@@ -579,233 +304,86 @@ class VariableDeclaration_GameList : public VariableDeclaration_Base
     public:
     MBCC::TokenPosition GamePosition;
     GameSelection Selection;
+    std::unique_ptr<AST_Base> Copy() const override{return(MBCC::CopyAST(*this));}
     
 };
 class Selection : public Statement_Base
 {
     public:
-    MBCC::TokenPosition SelectPosition;
     GameSelection Games;
     Filter SituationFilter;
     Result Output;
+    std::unique_ptr<AST_Base> Copy() const override{return(MBCC::CopyAST(*this));}
     
 };
-template<typename T> void Statement::Accept(T& Visitor)
-{
-    if(p_GetTypeID<VariableDeclaration>() == m_TypeID)
-    {
-        Visitor(static_cast<VariableDeclaration&>(*m_Data));
-    }
-    else if(p_GetTypeID<Selection>() == m_TypeID)
-    {
-        Visitor(static_cast<Selection&>(*m_Data));
-    }
-    else 
-    {
-        throw std::runtime_error("Invalid object stored in AST abstract class");
-    }
-    
-}
-template<typename T> void Statement::Accept(T& Visitor) const
-{
-    if(p_GetTypeID<VariableDeclaration>() == m_TypeID)
-    {
-        Visitor(static_cast<VariableDeclaration const&>(*m_Data));
-    }
-    else if(p_GetTypeID<Selection>() == m_TypeID)
-    {
-        Visitor(static_cast<Selection const&>(*m_Data));
-    }
-    else 
-    {
-        throw std::runtime_error("Invalid object stored in AST abstract class");
-    }
-    
-}
-template<typename T> void Filter_Arg::Accept(T& Visitor)
-{
-    if(p_GetTypeID<Filter_Arg_Positional>() == m_TypeID)
-    {
-        Visitor(static_cast<Filter_Arg_Positional&>(*m_Data));
-    }
-    else if(p_GetTypeID<Filter_Arg_Named>() == m_TypeID)
-    {
-        Visitor(static_cast<Filter_Arg_Named&>(*m_Data));
-    }
-    else 
-    {
-        throw std::runtime_error("Invalid object stored in AST abstract class");
-    }
-    
-}
-template<typename T> void Filter_Arg::Accept(T& Visitor) const
-{
-    if(p_GetTypeID<Filter_Arg_Positional>() == m_TypeID)
-    {
-        Visitor(static_cast<Filter_Arg_Positional const&>(*m_Data));
-    }
-    else if(p_GetTypeID<Filter_Arg_Named>() == m_TypeID)
-    {
-        Visitor(static_cast<Filter_Arg_Named const&>(*m_Data));
-    }
-    else 
-    {
-        throw std::runtime_error("Invalid object stored in AST abstract class");
-    }
-    
-}
-template<typename T> void GameInfoPredicate_Data::Accept(T& Visitor)
-{
-    if(p_GetTypeID<GameInfoPredicate_Variable>() == m_TypeID)
-    {
-        Visitor(static_cast<GameInfoPredicate_Variable&>(*m_Data));
-    }
-    else if(p_GetTypeID<GameInfoPredicate_Direct>() == m_TypeID)
-    {
-        Visitor(static_cast<GameInfoPredicate_Direct&>(*m_Data));
-    }
-    else 
-    {
-        throw std::runtime_error("Invalid object stored in AST abstract class");
-    }
-    
-}
-template<typename T> void GameInfoPredicate_Data::Accept(T& Visitor) const
-{
-    if(p_GetTypeID<GameInfoPredicate_Variable>() == m_TypeID)
-    {
-        Visitor(static_cast<GameInfoPredicate_Variable const&>(*m_Data));
-    }
-    else if(p_GetTypeID<GameInfoPredicate_Direct>() == m_TypeID)
-    {
-        Visitor(static_cast<GameInfoPredicate_Direct const&>(*m_Data));
-    }
-    else 
-    {
-        throw std::runtime_error("Invalid object stored in AST abstract class");
-    }
-    
-}
-template<typename T> void Filter_Component_Data::Accept(T& Visitor)
-{
-    if(p_GetTypeID<Filter_Component_Variable>() == m_TypeID)
-    {
-        Visitor(static_cast<Filter_Component_Variable&>(*m_Data));
-    }
-    else if(p_GetTypeID<Filter_Component_Function>() == m_TypeID)
-    {
-        Visitor(static_cast<Filter_Component_Function&>(*m_Data));
-    }
-    else 
-    {
-        throw std::runtime_error("Invalid object stored in AST abstract class");
-    }
-    
-}
-template<typename T> void Filter_Component_Data::Accept(T& Visitor) const
-{
-    if(p_GetTypeID<Filter_Component_Variable>() == m_TypeID)
-    {
-        Visitor(static_cast<Filter_Component_Variable const&>(*m_Data));
-    }
-    else if(p_GetTypeID<Filter_Component_Function>() == m_TypeID)
-    {
-        Visitor(static_cast<Filter_Component_Function const&>(*m_Data));
-    }
-    else 
-    {
-        throw std::runtime_error("Invalid object stored in AST abstract class");
-    }
-    
-}
-template<typename T> void Result::Accept(T& Visitor)
-{
-    if(p_GetTypeID<Result_Record>() == m_TypeID)
-    {
-        Visitor(static_cast<Result_Record&>(*m_Data));
-    }
-    else if(p_GetTypeID<Result_Print>() == m_TypeID)
-    {
-        Visitor(static_cast<Result_Print&>(*m_Data));
-    }
-    else if(p_GetTypeID<Result_Tabulate>() == m_TypeID)
-    {
-        Visitor(static_cast<Result_Tabulate&>(*m_Data));
-    }
-    else 
-    {
-        throw std::runtime_error("Invalid object stored in AST abstract class");
-    }
-    
-}
-template<typename T> void Result::Accept(T& Visitor) const
-{
-    if(p_GetTypeID<Result_Record>() == m_TypeID)
-    {
-        Visitor(static_cast<Result_Record const&>(*m_Data));
-    }
-    else if(p_GetTypeID<Result_Print>() == m_TypeID)
-    {
-        Visitor(static_cast<Result_Print const&>(*m_Data));
-    }
-    else if(p_GetTypeID<Result_Tabulate>() == m_TypeID)
-    {
-        Visitor(static_cast<Result_Tabulate const&>(*m_Data));
-    }
-    else 
-    {
-        throw std::runtime_error("Invalid object stored in AST abstract class");
-    }
-    
-}
-template<typename T> void VariableDeclaration::Accept(T& Visitor)
-{
-    if(p_GetTypeID<VariableDeclaration_Filter>() == m_TypeID)
-    {
-        Visitor(static_cast<VariableDeclaration_Filter&>(*m_Data));
-    }
-    else if(p_GetTypeID<VariableDeclaration_GameList>() == m_TypeID)
-    {
-        Visitor(static_cast<VariableDeclaration_GameList&>(*m_Data));
-    }
-    else if(p_GetTypeID<VariableDeclaration_PlayerSelection>() == m_TypeID)
-    {
-        Visitor(static_cast<VariableDeclaration_PlayerSelection&>(*m_Data));
-    }
-    else if(p_GetTypeID<VariableDeclaration_GameInfoPredicate>() == m_TypeID)
-    {
-        Visitor(static_cast<VariableDeclaration_GameInfoPredicate&>(*m_Data));
-    }
-    else 
-    {
-        throw std::runtime_error("Invalid object stored in AST abstract class");
-    }
-    
-}
-template<typename T> void VariableDeclaration::Accept(T& Visitor) const
-{
-    if(p_GetTypeID<VariableDeclaration_Filter>() == m_TypeID)
-    {
-        Visitor(static_cast<VariableDeclaration_Filter const&>(*m_Data));
-    }
-    else if(p_GetTypeID<VariableDeclaration_GameList>() == m_TypeID)
-    {
-        Visitor(static_cast<VariableDeclaration_GameList const&>(*m_Data));
-    }
-    else if(p_GetTypeID<VariableDeclaration_PlayerSelection>() == m_TypeID)
-    {
-        Visitor(static_cast<VariableDeclaration_PlayerSelection const&>(*m_Data));
-    }
-    else if(p_GetTypeID<VariableDeclaration_GameInfoPredicate>() == m_TypeID)
-    {
-        Visitor(static_cast<VariableDeclaration_GameInfoPredicate const&>(*m_Data));
-    }
-    else 
-    {
-        throw std::runtime_error("Invalid object stored in AST abstract class");
-    }
-    
-}
+template<> inline int MBCC::GetTypeBegin<Statement_Base>(){return(0);}
+template<> inline int MBCC::GetTypeEnd<Statement_Base>(){return(7);}
+template<> inline int MBCC::GetTypeBegin<VariableDeclaration_Base>(){return(1);}
+template<> inline int MBCC::GetTypeEnd<VariableDeclaration_Base>(){return(6);}
+template<> inline int MBCC::GetTypeBegin<VariableDeclaration_Filter>(){return(2);}
+template<> inline int MBCC::GetTypeEnd<VariableDeclaration_Filter>(){return(3);}
+template<> inline int MBCC::GetTypeBegin<VariableDeclaration_GameList>(){return(3);}
+template<> inline int MBCC::GetTypeEnd<VariableDeclaration_GameList>(){return(4);}
+template<> inline int MBCC::GetTypeBegin<VariableDeclaration_PlayerSelection>(){return(4);}
+template<> inline int MBCC::GetTypeEnd<VariableDeclaration_PlayerSelection>(){return(5);}
+template<> inline int MBCC::GetTypeBegin<VariableDeclaration_GameInfoPredicate>(){return(5);}
+template<> inline int MBCC::GetTypeEnd<VariableDeclaration_GameInfoPredicate>(){return(6);}
+template<> inline int MBCC::GetTypeBegin<Module>(){return(7);}
+template<> inline int MBCC::GetTypeEnd<Module>(){return(8);}
+template<> inline int MBCC::GetTypeBegin<Operator>(){return(8);}
+template<> inline int MBCC::GetTypeEnd<Operator>(){return(9);}
+template<> inline int MBCC::GetTypeBegin<GameSelection>(){return(9);}
+template<> inline int MBCC::GetTypeEnd<GameSelection>(){return(10);}
+template<> inline int MBCC::GetTypeBegin<GameInfoPredicate_Conjunction>(){return(10);}
+template<> inline int MBCC::GetTypeEnd<GameInfoPredicate_Conjunction>(){return(11);}
+template<> inline int MBCC::GetTypeBegin<AttributeComponent>(){return(11);}
+template<> inline int MBCC::GetTypeEnd<AttributeComponent>(){return(12);}
+template<> inline int MBCC::GetTypeBegin<GameInfoPredicate_Data_Base>(){return(12);}
+template<> inline int MBCC::GetTypeEnd<GameInfoPredicate_Data_Base>(){return(15);}
+template<> inline int MBCC::GetTypeBegin<GameInfoPredicate_Variable>(){return(13);}
+template<> inline int MBCC::GetTypeEnd<GameInfoPredicate_Variable>(){return(14);}
+template<> inline int MBCC::GetTypeBegin<GameInfoPredicate_Direct>(){return(14);}
+template<> inline int MBCC::GetTypeEnd<GameInfoPredicate_Direct>(){return(15);}
+template<> inline int MBCC::GetTypeBegin<GameInfoPredicate>(){return(15);}
+template<> inline int MBCC::GetTypeEnd<GameInfoPredicate>(){return(16);}
+template<> inline int MBCC::GetTypeBegin<GameInfoPredicate_OperatorList>(){return(16);}
+template<> inline int MBCC::GetTypeEnd<GameInfoPredicate_OperatorList>(){return(17);}
+template<> inline int MBCC::GetTypeBegin<PlayerAssignment>(){return(17);}
+template<> inline int MBCC::GetTypeEnd<PlayerAssignment>(){return(18);}
+template<> inline int MBCC::GetTypeBegin<Filter_ArgList>(){return(18);}
+template<> inline int MBCC::GetTypeEnd<Filter_ArgList>(){return(19);}
+template<> inline int MBCC::GetTypeBegin<Filter_Arg_Base>(){return(19);}
+template<> inline int MBCC::GetTypeEnd<Filter_Arg_Base>(){return(22);}
+template<> inline int MBCC::GetTypeBegin<Filter_Arg_Positional>(){return(20);}
+template<> inline int MBCC::GetTypeEnd<Filter_Arg_Positional>(){return(21);}
+template<> inline int MBCC::GetTypeBegin<Filter_Arg_Named>(){return(21);}
+template<> inline int MBCC::GetTypeEnd<Filter_Arg_Named>(){return(22);}
+template<> inline int MBCC::GetTypeBegin<ArgList>(){return(22);}
+template<> inline int MBCC::GetTypeEnd<ArgList>(){return(23);}
+template<> inline int MBCC::GetTypeBegin<AttributeList>(){return(23);}
+template<> inline int MBCC::GetTypeEnd<AttributeList>(){return(24);}
+template<> inline int MBCC::GetTypeBegin<Filter_Component_Data_Base>(){return(24);}
+template<> inline int MBCC::GetTypeEnd<Filter_Component_Data_Base>(){return(27);}
+template<> inline int MBCC::GetTypeBegin<Filter_Component_Variable>(){return(25);}
+template<> inline int MBCC::GetTypeEnd<Filter_Component_Variable>(){return(26);}
+template<> inline int MBCC::GetTypeBegin<Filter_Component_Function>(){return(26);}
+template<> inline int MBCC::GetTypeEnd<Filter_Component_Function>(){return(27);}
+template<> inline int MBCC::GetTypeBegin<Filter_Component>(){return(27);}
+template<> inline int MBCC::GetTypeEnd<Filter_Component>(){return(28);}
+template<> inline int MBCC::GetTypeBegin<Filter_OperatorList>(){return(28);}
+template<> inline int MBCC::GetTypeEnd<Filter_OperatorList>(){return(29);}
+template<> inline int MBCC::GetTypeBegin<Filter>(){return(29);}
+template<> inline int MBCC::GetTypeEnd<Filter>(){return(30);}
+template<> inline int MBCC::GetTypeBegin<Result_Base>(){return(30);}
+template<> inline int MBCC::GetTypeEnd<Result_Base>(){return(34);}
+template<> inline int MBCC::GetTypeBegin<Result_Record>(){return(31);}
+template<> inline int MBCC::GetTypeEnd<Result_Record>(){return(32);}
+template<> inline int MBCC::GetTypeBegin<Result_Print>(){return(32);}
+template<> inline int MBCC::GetTypeEnd<Result_Print>(){return(33);}
+template<> inline int MBCC::GetTypeBegin<Result_Tabulate>(){return(33);}
+template<> inline int MBCC::GetTypeEnd<Result_Tabulate>(){return(34);}
+template<> inline int MBCC::GetTypeBegin<Selection>(){return(6);}
+template<> inline int MBCC::GetTypeEnd<Selection>(){return(7);}
 Operator ParseOperator(MBCC::Tokenizer& Tokenizer);
 Operator ParseOperator_0(MBCC::Tokenizer& Tokenizer);
 Operator ParseOperator_1(MBCC::Tokenizer& Tokenizer);
@@ -903,6 +481,6 @@ Statement ParseStatement_0(MBCC::Tokenizer& Tokenizer);
 Statement ParseStatement_1(MBCC::Tokenizer& Tokenizer);
 inline MBCC::Tokenizer GetTokenizer()
 {
-    MBCC::Tokenizer ReturnValue("( |\\t|\\n|\\r)*",{"\\(","\\)","\\{","\\}","\\[","\\]",";","[[:digit:]]+","$\"((\\\\.|[^\"\\\\])*)\"","true|false","WITH","SELECT","RECORD","GAMES","FILTER","PRINT","$[[:alnum:]_]+","[[:alpha:]_]+[[:alnum:]_]*",";","<=","<",">=",">","!=",":",",","=","\\.","\\|\\|","\\|","&&","&","\\?",});
+    MBCC::Tokenizer ReturnValue("( |\\t|\\n|\\r)*",{"\\(","\\)","\\{","\\}","\\[","\\]","[[:digit:]]+","$\"((\\\\.|[^\"\\\\])*)\"","true|false","WITH","SELECT","RECORD","GAMES","FILTER","PRINT","\\$[[:alnum:]_]+","[[:alpha:]_]+[[:alnum:]_]*",";","<=","<",">=",">","!=",":",",","=","\\.","\\|\\|","\\|","&&","&","\\?",});
     return(ReturnValue);
 }

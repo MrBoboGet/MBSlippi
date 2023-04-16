@@ -4,7 +4,6 @@ term lcurl = "\{";
 term rcurl = "\}";
 term lsquare = "\[";
 term rsquare = "\]";
-term semicolon = ";";
 
 term number = "[[:digit:]]+";
 term string = "$\"((\\.|[^\"\\])*)\"";
@@ -19,7 +18,7 @@ term FILTER = "FILTER";
 term PRINT = "PRINT";
 
 
-term variable = "$[[:alnum:]_]+";
+term variable = "\$[[:alnum:]_]+";
 term idf = "[[:alpha:]_]+[[:alnum:]_]*";
 
 term semi = ";";
@@ -86,6 +85,7 @@ struct Operator
 struct GameSelection
 {
     PlayerAssignment Assignment;
+    tokenPos SelectPosition;
     GameInfoPredicate GameCondition;
 }
 struct GameInfoPredicate_Conjunction
@@ -217,7 +217,6 @@ struct Result_Tabulate : Result
 }
 struct Selection : Statement
 {
-    tokenPos SelectPosition;
     GameSelection Games;
     Filter SituationFilter;
     Result Output;
@@ -303,14 +302,14 @@ GameInfoPredicate_Base = Data=GameInfoPredicate_Data;
 
 GameInfoPredicate = lpar ExtraTerms=GameInfoPredicate rpar ExtraTerms=GameInfoPredicate_OperatorList.Terms? |
     this=GameInfoPredicate_Base ExtraTerms=GameInfoPredicate_OperatorList.Terms?; 
-GameSelection = Assignment=PlayerAssignment? GameCondition=GameInfoPredicate;
+GameSelection = Assignment=PlayerAssignment? SelectPosition = TOKEN.Position SELECT GameCondition=GameInfoPredicate;
 
 PlayerAssignment = WithPosition = TOKEN.Position WITH PlayerPosition = TOKEN.Position AffectedPlayer=idf PlayerCondition=GameInfoPredicate;
 Result_Record = RecordPosition = TOKEN.Position RECORD  FilePosition = TOKEN.Position OutFile=string;
 Result_Print = PrintPosition = TOKEN.Position PRINT;
 Result = this=Result_Record | this=Result_Print;
 
-Selection =  SelectPosition = TOKEN.Position SELECT Games=GameSelection SituationFilter=Filter? Output=Result semi;
+Selection =  Games=GameSelection SituationFilter=Filter? Output=Result semi;
 
 def Statement=Statement;
 def Module=Module;

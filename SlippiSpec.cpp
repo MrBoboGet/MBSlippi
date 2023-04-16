@@ -368,6 +368,40 @@ namespace MBSlippi
     {
         bool ReturnValue = true;
         std::vector<MBLSP::Diagnostic> Diagnostics;
+        if(DeclarationToVerify.IsType<VariableDeclaration_Filter>())
+        {
+            auto const& FilterVariable = DeclarationToVerify.GetType<VariableDeclaration_Filter>();
+            p_VerifyFilterComponent(FilterVariable.Component,Diagnostics);
+        }
+        else if(DeclarationToVerify.IsType<VariableDeclaration_GameInfoPredicate>())
+        {
+            auto& PredicateVariable = DeclarationToVerify.GetType<VariableDeclaration_GameInfoPredicate>();
+            p_VerifyGameInfoPredicate(PredicateVariable.Predicate,false,Diagnostics);
+        }
+        else if(DeclarationToVerify.IsType<VariableDeclaration_PlayerSelection>())
+        {
+            auto& PlayerSelectionVariable = DeclarationToVerify.GetType<VariableDeclaration_PlayerSelection>();
+            p_VerifyGameInfoPredicate(PlayerSelectionVariable.Predicate,true,Diagnostics);
+        }
+        else if(DeclarationToVerify.IsType<VariableDeclaration_GameList>())
+        {
+            auto& GameListVariable = DeclarationToVerify.GetType<VariableDeclaration_GameList>();
+            p_VerifyGameSelection(GameListVariable.Selection,Diagnostics);
+        }
+        else if(DeclarationToVerify.IsEmpty())
+        {
+            assert(false && "Trying to verify empty VariableDeclaration");
+        }
+        else
+        {
+            assert(false && "VerifyVariableDeclaration doesn't cover all cases");
+    
+        }
+        if(Diagnostics.size() > 0)
+        {
+            ReturnValue = false;
+            OutDiagnostics = std::move(Diagnostics);
+        }
         return(ReturnValue);
     }
     void SpecEvaluator::p_VerifyPlayerAssignment(PlayerAssignment& AssignmentToVerify,std::vector<MBLSP::Diagnostic>& OutDiagnostics)
@@ -387,13 +421,18 @@ namespace MBSlippi
             p_VerifyGameInfoPredicate(AssignmentToVerify.PlayerCondition,true,OutDiagnostics);
         } 
     }
+    void SpecEvaluator::p_VerifyGameSelection(GameSelection& SelectionToVerify,std::vector<MBLSP::Diagnostic>& OutDiagnostics)
+    {
+        p_VerifyPlayerAssignment(SelectionToVerify.Assignment,OutDiagnostics);
+        p_VerifyGameInfoPredicate(SelectionToVerify.GameCondition,false,OutDiagnostics);
+    }
     bool SpecEvaluator::VerifySelection(Selection& SpecToVerify,std::vector<MBLSP::Diagnostic>& OutDiagnostics)
     {
         bool ReturnValue = true;
         std::vector<MBLSP::Diagnostic> Diagnostics;
-        p_VerifyPlayerAssignment(SpecToVerify.Games.Assignment,OutDiagnostics);
+        p_VerifyPlayerAssignment(SpecToVerify.Games.Assignment,Diagnostics);
         p_VerifyGameInfoPredicate(SpecToVerify.Games.GameCondition,false,Diagnostics);
-        p_VerifyFilter(SpecToVerify.SituationFilter,OutDiagnostics);
+        p_VerifyFilter(SpecToVerify.SituationFilter,Diagnostics);
         if(Diagnostics.size() > 0)
         {
             ReturnValue = false;
@@ -408,9 +447,9 @@ namespace MBSlippi
         {
             ReturnValue = VerifySelection(SpecToVerify.GetType<Selection>(),OutDiagnostics);
         }
-        else if(SpecToVerify.IsType<VariableDeclaration>())
+        else if(SpecToVerify.IsType<VariableDeclaration_Base>())
         {
-            ReturnValue = VerifyVariableDeclaration(SpecToVerify.GetType<VariableDeclaration>(),OutDiagnostics);
+            //ReturnValue = VerifyVariableDeclaration(SpecToVerify.GetType<VariableDeclaration>(),OutDiagnostics);
         }
         return(ReturnValue);
     }
@@ -545,7 +584,7 @@ namespace MBSlippi
         }
         else if(PredicateToEvaluate.Data.IsType<GameInfoPredicate_Variable>())
         {
-            auto const& VariableData  = PredicateToEvaluate.Data.GetType<Filter_Component_Variable>();
+            auto const& VariableData  = PredicateToEvaluate.Data.GetType<GameInfoPredicate_Variable>();
             GameInfoPredicate const& DereferencedPredicate =std::get<MQL_Variable_GameInfoPredicate>(
                     m_TopContext.GlobalScope.GetVariable(VariableData.VariableName).Data).Predicate;
             ReturnValue = p_SatisfiesPlayerAssignment(PlayerInfo,DereferencedPredicate);
@@ -640,7 +679,7 @@ namespace MBSlippi
             bool IsSwapped = false;
             if(p_IsPlayersSwapped(Candidate,SpecToEvalaute.Assignment.PlayerCondition,IsSwapped))
             {
-                if(p_EvaluateGameSelection(Candidate,IsSwapped,SpecToEvalaute.Games.GameCondition))
+                if(p_EvaluateGameSelection(Candidate,IsSwapped,SpecToEvalaute.GameCondition))
                 {
                     std::ifstream  GameData(Candidate.RelativePath,std::ios::in|std::ios::binary);
                     if(GameData.is_open())
@@ -771,9 +810,9 @@ namespace MBSlippi
         {
             EvaluateSelection(StatementToEvaluate.GetType<Selection>(),OutDiagnostics);
         }
-        else if(StatementToEvaluate.IsType<VariableDeclaration>())
+        else if(StatementToEvaluate.IsType<VariableDeclaration_Base>())
         {
-            EvaluateVariableDeclaration(StatementToEvaluate.GetType<VariableDeclaration>(),OutDiagnostics);
+            //EvaluateVariableDeclaration(StatementToEvaluate.GetType<VariableDeclaration>(),OutDiagnostics);
         }
         else if(StatementToEvaluate.IsEmpty())
         {
@@ -789,6 +828,32 @@ namespace MBSlippi
         if(!VerifyVariableDeclaration(SpecToEvaluate,OutDiagnostics))
         {
             return;
+        }
+        if(SpecToEvaluate.IsType<VariableDeclaration_Filter>())
+        {
+            MQL_Variable NewVariable;
+            NewVariable.Data = SpecToEvaluate.GetType<VariableDeclaration_Filter>().Component;
+                 
+        }
+        else if(SpecToEvaluate.IsType<VariableDeclaration_GameList>())
+        {
+
+        }
+        else if(SpecToEvaluate.IsType<VariableDeclaration_GameInfoPredicate>())
+        {
+            
+        }
+        else if(SpecToEvaluate.IsType<VariableDeclaration_PlayerSelection>())
+        {
+               
+        }
+        else if(SpecToEvaluate.IsEmpty())
+        {
+            assert(false && "Trying to execute empty variable declaration");   
+        }
+        else 
+        {
+            assert(false && "EvaluateVariableDeclaration doesn't cover all cases");   
         }
     }
     void SpecEvaluator::EvaluateModule(Module& ModuleToEvaluate,std::vector<MBLSP::Diagnostic>& OutDiagnostics)

@@ -11,7 +11,7 @@ namespace MBSlippi
         struct DocumentInfo
         {
             bool CorrectParsing = true;
-            SlippiSpec ParsedSpec;
+            Module ParsedModule;
             std::vector<MBLSP::Diagnostic> Diagnostics;
             std::vector<MBLSP::SemanticToken> Tokens;
             std::vector<int> SemanticTokens;
@@ -28,14 +28,15 @@ namespace MBSlippi
         void p_ExtractTokens(std::vector<MBLSP::SemanticToken>& OutTokens,Filter const& FilterToExamine);
         void p_ExtractTokens(std::vector<MBLSP::SemanticToken>& OutTokens,Filter_Component const& ComponentToExamine);
         void p_ExtractTokens(std::vector<MBLSP::SemanticToken>& OutTokens,Filter_ArgList const& ComponentToExamine);
-
         void p_ExtractTokens(std::vector<MBLSP::SemanticToken>& OutTokens,GameInfoPredicate const& PredicateToExamine);
         void p_ExtractTokens(std::vector<MBLSP::SemanticToken>& OutTokens,GameSelection const& SelectionToExamine);
         void p_ExtractTokens(std::vector<MBLSP::SemanticToken>& OutTokens,PlayerAssignment const& AssignmentToExamine);
         void p_ExtractTokens(std::vector<MBLSP::SemanticToken>& OutTokens,Result const& ResultToExamine);
+        void p_ExtractTokens(std::vector<MBLSP::SemanticToken>& OutTokens,Statement const& StatementToExamine);
+        void p_ExtractTokens(std::vector<MBLSP::SemanticToken>& OutTokens,Selection const& SelectionToExamine);
 
         void p_PushDiagnostics(DocumentInfo& DocumentData,std::string const& URI);
-        std::vector<MBLSP::SemanticToken> p_ExtractTokens(SlippiSpec const& Spec);
+        std::vector<MBLSP::SemanticToken> p_ExtractTokens(Module const& Spec);
         DocumentInfo p_CreateDocumentInfo(std::string const& Content);
         std::unordered_map<std::string,DocumentInfo> m_OpenedDocuments;
     public:
