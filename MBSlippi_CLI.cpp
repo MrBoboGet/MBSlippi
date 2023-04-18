@@ -6,7 +6,10 @@
 #include <MrBoboDatabase/MrBoboDatabase.h>
 #include "MeleeID.h"
 
+#include <MBUtility/InterfaceAdaptors.h>
+
 #include <chrono>
+#include <exception>
 #include <filesystem>
 #include <sstream>
 
@@ -14,6 +17,104 @@
 #include "SlippiSpec.h"
 namespace MBSlippi
 {
+    void MQLServer::SendMessage(MBUtility::MBOctetOutputStream& OutStream,MBParsing::JSONObject const& ObjectToSend)
+    {
+        std::string DataToWrite = ObjectToSend.ToString();
+        MBParsing::WriteBigEndianInteger(OutStream,DataToWrite.size(),4);
+        size_t WrittenBytes = OutStream.Write(DataToWrite.data(),DataToWrite.size());
+        if(WrittenBytes < DataToWrite.size())
+        {
+            throw std::runtime_error("error writing request response");
+        }
+    }
+    int MQLServer::Run(MBUtility::MBOctetInputStream& Input,MBUtility::MBOctetOutputStream& Output,SpecEvaluator& Evaluator)
+    {
+        auto Tokenizer = GetTokenizer();
+        try
+        {
+            while(true)
+            {
+                char MessageSizeBuffer[4];
+                size_t ReadBytes = Input.Read(MessageSizeBuffer,4);
+                if(ReadBytes < 4)
+                {
+                    throw std::runtime_error("Unsufficient bytes for message length header");   
+                }
+                size_t MessageSize = MBParsing::ParseBigEndianInteger(MessageSizeBuffer,4,0,nullptr);
+                std::string MessageData = std::string(MessageSize,0);
+                ReadBytes = Input.Read(MessageData.data(),MessageSize);
+                if(ReadBytes != MessageSize)
+                {
+                    throw std::runtime_error("Unsufficient bytes for message body");   
+                }
+                MBError ParseResult = true;
+                MBParsing::JSONObject RecievedMessage = MBParsing::ParseJSONObject(MessageData,0,nullptr,&ParseResult);
+                MBParsing::JSONObject MessageToSend(MBParsing::JSONObjectType::Aggregate);
+                if(!ParseResult)
+                {
+                    MessageToSend["error"] = "Error parsing JSON object";
+                    SendMessage(Output,MessageToSend);
+                    continue;
+                }
+                if(RecievedMessage.GetType() != MBParsing::JSONObjectType::Aggregate)
+                {
+                    MessageToSend["error"] = "Error interpreting json object: object is not of aggregate type";
+                    SendMessage(Output,MessageToSend);
+                    continue;
+                }
+                if(!RecievedMessage.HasAttribute("method"))
+                {
+                    MessageToSend["error"] = "Request needs \"method\" field";
+                    SendMessage(Output,MessageToSend);
+                    continue;
+                }
+                if(!(RecievedMessage["method"].GetType() == MBParsing::JSONObjectType::String))
+                {
+                    MessageToSend["error"] = "Request field \"method\" needs to be a string";
+                    SendMessage(Output,MessageToSend);
+                    continue;
+                }
+                if(RecievedMessage["method"].GetStringData() == "execute")
+                {
+                    std::string const& StringToExecute = RecievedMessage["params"]["statement"].GetStringData();
+                    Tokenizer.SetText(StringToExecute);
+                    try
+                    {
+                        Statement StatementsToExecute = ParseStatement(Tokenizer);
+                        std::vector<MBLSP::Diagnostic> Errors;
+                        Evaluator.EvaluateStatement(StatementsToExecute,Errors);
+                        if(Errors.size() > 0)
+                        {
+                            MessageToSend["error"] = Errors[0].message;
+                        }
+                        else
+                        {
+                            MessageToSend["result"] = "";
+                        }
+                    }
+                    catch(std::exception const& e)
+                    {
+                        MessageToSend["error"] = "Error parsing statement: "+std::string(e.what());
+                    }
+                }
+                else if(RecievedMessage["method"].GetStringData() == "exit")
+                {
+                    return(0);
+                }
+                else
+                {
+                    MessageToSend["error"] = "Unkown method \""+RecievedMessage["method"].GetStringData()+"\"";   
+                }
+                SendMessage(Output,MessageToSend);
+            }
+               
+        }
+        catch(std::exception const& e)
+        {
+            return(1);
+        }
+        return(0);
+    }
     std::vector<SlippiGameInfo> MBSlippiCLIHandler::RetrieveGames(std::string const& WhereCondition)
     {
         std::vector<SlippiGameInfo> ReturnValue;
@@ -407,6 +508,12 @@ namespace MBSlippi
             std::exit(1);
         }
     }
+    int MBSlippiCLIHandler::p_HandleServer(MBCLI::ProcessedCLInput const& Input)
+    {
+        MQLServer Server;
+        MBUtility::NO_IndeterminateToRegular InputStream = MBUtility::NO_IndeterminateToRegular(&m_Terminal.GetInputStream());
+        Server.Run(InputStream,m_Terminal.GetOutputStream());
+    }
     void MBSlippiCLIHandler::p_Handle_Execute_Legacy(MBCLI::ProcessedCLInput const& Input)
 	{
 		if (Input.TopCommandArguments.size() != 1)
@@ -500,8 +607,9 @@ namespace MBSlippi
             m_Terminal.PrintLine("");
         }
 	}
-	void MBSlippiCLIHandler::Run(int argc, const char** argv)
+	int MBSlippiCLIHandler::Run(int argc, const char** argv)
 	{
+        int ReturnValue = 0;
 		MBCLI::ProcessedCLInput Input(argc, argv);
         try
         {
@@ -515,6 +623,10 @@ namespace MBSlippi
             {
                 p_Handle_Execute(Input);
             }
+            else if(Input.TopCommand == "server")
+            {
+                ReturnValue = p_HandleServer(Input);
+            }
             else if (Input.TopCommand == "play")
             {
                 p_Handle_Play(Input);
@@ -526,7 +638,9 @@ namespace MBSlippi
         }
         catch(std::exception const& e)
         {
+            ReturnValue = 1;
             m_Terminal.PrintLine("Uncaught exception executing command: "+std::string(e.what())); 
         }
+        return(ReturnValue);
 	}
 }

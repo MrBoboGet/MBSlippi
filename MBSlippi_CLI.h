@@ -7,7 +7,14 @@
 #include "SlippiSpec.h"
 namespace MBSlippi
 {
-	
+
+    class MQLServer
+    {
+    private:
+        void SendMessage(MBUtility::MBOctetOutputStream& OutStream,MBParsing::JSONObject const& ObjectToSend);
+    public:
+        int Run(MBUtility::MBOctetInputStream& Input,MBUtility::MBOctetOutputStream& Output,SpecEvaluator& Evaluator);
+    };
 
 	class MBSlippiCLIHandler : MeleeGameRecorder,MeleeGameDBAdapter
 	{
@@ -31,9 +38,10 @@ namespace MBSlippi
 		void p_Handle_UpdateIndex(MBCLI::ProcessedCLInput const& Input);
 		void p_Handle_Execute_Legacy(MBCLI::ProcessedCLInput const& Input);
 		void p_Handle_Execute(MBCLI::ProcessedCLInput const& Input);
+        int p_HandleServer(MBCLI::ProcessedCLInput const& Input);
 		void p_Handle_Play(MBCLI::ProcessedCLInput const& Input);
 		void p_Handle_Query(MBCLI::ProcessedCLInput const& Input);
 	public:
-		void Run(int argc, const char** argv);
+		int Run(int argc, const char** argv);
 	};
 }
