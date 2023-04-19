@@ -15,6 +15,8 @@
 
 #include "SlippiSpecParser.h"
 #include "SlippiSpec.h"
+
+#include <MBSystem/MBSystem.h>
 namespace MBSlippi
 {
     void MQLServer::SendMessage(MBUtility::MBOctetOutputStream& OutStream,MBParsing::JSONObject const& ObjectToSend)
@@ -111,6 +113,7 @@ namespace MBSlippi
         }
         catch(std::exception const& e)
         {
+            std::cerr <<"Error when executing server: "<<e.what()<<std::endl;
             return(1);
         }
         return(0);
@@ -253,7 +256,8 @@ namespace MBSlippi
 	{
 		try
 		{
-			std::string TotalConfigData = MBUtility::ReadWholeFile("MBSlippiConfig.json");
+            std::filesystem::path FileToRead = MBSystem::GetUserHomeDirectory()/".mbslippi/MBSlippiConfig.json";
+			std::string TotalConfigData = MBUtility::ReadWholeFile(MBUnicode::PathToUTF8(FileToRead));
 			if (TotalConfigData == "")
 			{
 				m_Terminal.SetTextColor(MBCLI::ANSITerminalColor::Red);
@@ -511,8 +515,11 @@ namespace MBSlippi
     int MBSlippiCLIHandler::p_HandleServer(MBCLI::ProcessedCLInput const& Input)
     {
         MQLServer Server;
+        SpecEvaluator Evaluator;
+        Evaluator.SetDBAdapter(this);
+        Evaluator.SetRecorder(this);
         MBUtility::NO_IndeterminateToRegular InputStream = MBUtility::NO_IndeterminateToRegular(&m_Terminal.GetInputStream());
-        Server.Run(InputStream,m_Terminal.GetOutputStream());
+        return(Server.Run(InputStream,m_Terminal.GetOutputStream(),Evaluator));
     }
     void MBSlippiCLIHandler::p_Handle_Execute_Legacy(MBCLI::ProcessedCLInput const& Input)
 	{
