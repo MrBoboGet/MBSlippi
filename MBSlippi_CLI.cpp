@@ -29,93 +29,66 @@ namespace MBSlippi
             throw std::runtime_error("error writing request response");
         }
     }
-    int MQLServer::Run(MBUtility::MBOctetInputStream& Input,MBUtility::MBOctetOutputStream& Output,SpecEvaluator& Evaluator)
+    MBParsing::JSONObject MQLServer::HandleGenericRequest(MBParsing::JSONObject const& GenericRequest)
     {
         auto Tokenizer = GetTokenizer();
+        MBParsing::JSONObject MessageToSend(MBParsing::JSONObjectType::Aggregate);
+        MessageToSend["jsonrpc"] = "2.0";
         try
         {
-            while(true)
+            MBError ParseResult = true;
+            if(!ParseResult)
             {
-                char MessageSizeBuffer[4];
-                size_t ReadBytes = Input.Read(MessageSizeBuffer,4);
-                if(ReadBytes < 4)
-                {
-                    throw std::runtime_error("Unsufficient bytes for message length header");   
-                }
-                size_t MessageSize = MBParsing::ParseBigEndianInteger(MessageSizeBuffer,4,0,nullptr);
-                std::string MessageData = std::string(MessageSize,0);
-                ReadBytes = Input.Read(MessageData.data(),MessageSize);
-                if(ReadBytes != MessageSize)
-                {
-                    throw std::runtime_error("Unsufficient bytes for message body");   
-                }
-                MBError ParseResult = true;
-                MBParsing::JSONObject RecievedMessage = MBParsing::ParseJSONObject(MessageData,0,nullptr,&ParseResult);
-                MBParsing::JSONObject MessageToSend(MBParsing::JSONObjectType::Aggregate);
-                if(!ParseResult)
-                {
-                    MessageToSend["error"] = "Error parsing JSON object";
-                    SendMessage(Output,MessageToSend);
-                    continue;
-                }
-                if(RecievedMessage.GetType() != MBParsing::JSONObjectType::Aggregate)
-                {
-                    MessageToSend["error"] = "Error interpreting json object: object is not of aggregate type";
-                    SendMessage(Output,MessageToSend);
-                    continue;
-                }
-                if(!RecievedMessage.HasAttribute("method"))
-                {
-                    MessageToSend["error"] = "Request needs \"method\" field";
-                    SendMessage(Output,MessageToSend);
-                    continue;
-                }
-                if(!(RecievedMessage["method"].GetType() == MBParsing::JSONObjectType::String))
-                {
-                    MessageToSend["error"] = "Request field \"method\" needs to be a string";
-                    SendMessage(Output,MessageToSend);
-                    continue;
-                }
-                if(RecievedMessage["method"].GetStringData() == "execute")
-                {
-                    std::string const& StringToExecute = RecievedMessage["params"]["statement"].GetStringData();
-                    Tokenizer.SetText(StringToExecute);
-                    try
-                    {
-                        Statement StatementsToExecute = ParseStatement(Tokenizer);
-                        std::vector<MBLSP::Diagnostic> Errors;
-                        Evaluator.EvaluateStatement(StatementsToExecute,Errors);
-                        if(Errors.size() > 0)
-                        {
-                            MessageToSend["error"] = Errors[0].message;
-                        }
-                        else
-                        {
-                            MessageToSend["result"] = "";
-                        }
-                    }
-                    catch(std::exception const& e)
-                    {
-                        MessageToSend["error"] = "Error parsing statement: "+std::string(e.what());
-                    }
-                }
-                else if(RecievedMessage["method"].GetStringData() == "exit")
-                {
-                    return(0);
-                }
-                else
-                {
-                    MessageToSend["error"] = "Unkown method \""+RecievedMessage["method"].GetStringData()+"\"";   
-                }
-                SendMessage(Output,MessageToSend);
+                MessageToSend["error"] = "Error parsing JSON object";
+                return(MessageToSend);
             }
-               
+            if(GenericRequest.GetType() != MBParsing::JSONObjectType::Aggregate)
+            {
+                MessageToSend["error"] = "Error interpreting json object: object is not of aggregate type";
+                return(MessageToSend);
+            }
+            if(GenericRequest["method"].GetStringData() == "execute")
+            {
+                std::string const& StringToExecute = GenericRequest["params"]["statement"].GetStringData();
+                Tokenizer.SetText(StringToExecute);
+                try
+                {
+                    Statement StatementsToExecute = ParseStatement(Tokenizer);
+                    std::vector<MBLSP::Diagnostic> Errors;
+                    m_Evaluator->VerifyStatement(StatementsToExecute,Errors);
+                    if(Errors.size() > 0)
+                    {
+                        MessageToSend["error"] = Errors[0].message;
+                    }
+                    m_Evaluator->EvaluateStatement(StatementsToExecute,Errors);
+                    if(Errors.size() > 0)
+                    {
+                        MessageToSend["error"] = Errors[0].message;
+                    }
+                    else
+                    {
+                        MessageToSend["result"] = "executing";
+                    }
+                }
+                catch(std::exception const& e)
+                {
+                    MessageToSend["error"] = std::string(e.what());
+                }
+            }
+            else if(GenericRequest["method"].GetStringData() == "exit")
+            {
+                return(0);
+            }
+            else
+            {
+                MessageToSend["error"] = "Unkown method \""+GenericRequest["method"].GetStringData()+"\"";   
+            }
         }
         catch(std::exception const& e)
         {
             std::cerr <<"Error when executing server: "<<e.what()<<std::endl;
-            return(1);
         }
+        return(MessageToSend);
         return(0);
     }
     std::vector<SlippiGameInfo> MBSlippiCLIHandler::RetrieveGames(std::string const& WhereCondition)

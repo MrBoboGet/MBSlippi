@@ -5,15 +5,44 @@
 #include <MBPacketManager/MB_PacketProtocol.h>
 
 #include "SlippiSpec.h"
+
+
 namespace MBSlippi
 {
-
-    class MQLServer
+    //LSP in syntax transporatation only
+    class MQLServer : public MBLSP::LSP_Server
     {
     private:
         void SendMessage(MBUtility::MBOctetOutputStream& OutStream,MBParsing::JSONObject const& ObjectToSend);
+        SpecEvaluator* m_Evaluator = nullptr;
     public:
-        int Run(MBUtility::MBOctetInputStream& Input,MBUtility::MBOctetOutputStream& Output,SpecEvaluator& Evaluator);
+        MQLServer(SpecEvaluator* Evalator)
+        {
+            m_Evaluator = Evalator;   
+        }
+        virtual MBLSP::Initialize_Response HandleRequest(MBLSP::InitializeRequest const& Request)
+        {
+            MBLSP::Initialize_Response ReturnValue;
+            return ReturnValue;
+        }
+        virtual void OpenedDocument(std::string const& URI,std::string const& Content) 
+        {
+               
+        }
+        virtual void ClosedDocument(std::string const& URI) 
+        {
+               
+        }
+        virtual void DocumentChanged(std::string const& URI,std::string const& NewContent) 
+        {
+               
+        }
+        virtual void SetHandler(MBLSP::LSP_ServerHandler* AssociatedHandler) 
+        {
+               
+        }
+        virtual MBParsing::JSONObject HandleGenericRequest(MBParsing::JSONObject const& GenericRequest);
+        virtual void HandleGenericNotification(MBParsing::JSONObject const& GenericNotification);
     };
 
 	class MBSlippiCLIHandler : MeleeGameRecorder,MeleeGameDBAdapter

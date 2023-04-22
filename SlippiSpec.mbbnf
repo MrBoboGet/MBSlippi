@@ -38,7 +38,7 @@ term pipe = "\|";
 term AND = "&&";
 term add = "&";
 term que = "\?";
-skip "( |\t|\n|\r)*";
+skip "((( |\t|\n|\r)*)|(#.*\n))*";
 
 struct Statement
 {
