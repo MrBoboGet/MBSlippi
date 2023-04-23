@@ -3,7 +3,7 @@
 #include "MBSlippiConfig.h"
 #include <MBCLI/MBCLI.h>
 #include <MBPacketManager/MB_PacketProtocol.h>
-
+#include <deque>
 #include "SlippiSpec.h"
 
 
@@ -14,11 +14,25 @@ namespace MBSlippi
     {
     private:
         void SendMessage(MBUtility::MBOctetOutputStream& OutStream,MBParsing::JSONObject const& ObjectToSend);
+        MBLSP::LSP_ServerHandler* m_AssociatedHandler = nullptr;
+
+        std::mutex m_StatementLock;
+        std::deque<Statement> m_StatementsToEvaluate;
+        std::condition_variable m_NotifyConditional;
+        std::thread m_EvaluatorThread;
+        std::atomic<bool> m_Evalutating{false};
+        std::atomic<bool> m_IsRunning{true};
+
+        std::mutex m_EvaluatorMutex;
         SpecEvaluator* m_Evaluator = nullptr;
+        
+        void p_EvaluatorThread();
+        void p_ExecuteAsync(Statement StatementToExecute);
     public:
         MQLServer(SpecEvaluator* Evalator)
         {
             m_Evaluator = Evalator;   
+            m_EvaluatorThread = std::thread(&MQLServer::p_EvaluatorThread,this);
         }
         virtual MBLSP::Initialize_Response HandleRequest(MBLSP::InitializeRequest const& Request)
         {
@@ -39,10 +53,13 @@ namespace MBSlippi
         }
         virtual void SetHandler(MBLSP::LSP_ServerHandler* AssociatedHandler) 
         {
-               
+            m_AssociatedHandler = AssociatedHandler;
         }
         virtual MBParsing::JSONObject HandleGenericRequest(MBParsing::JSONObject const& GenericRequest);
-        virtual void HandleGenericNotification(MBParsing::JSONObject const& GenericNotification);
+        virtual void HandleGenericNotification(MBParsing::JSONObject const& GenericNotification)
+        {
+               
+        }
     };
 
 	class MBSlippiCLIHandler : MeleeGameRecorder,MeleeGameDBAdapter

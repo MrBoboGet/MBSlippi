@@ -29,6 +29,53 @@ namespace MBSlippi
             throw std::runtime_error("error writing request response");
         }
     }
+    void MQLServer::p_EvaluatorThread()
+    {
+        while(m_IsRunning.load())
+        {
+            std::unique_lock<std::mutex> Lock(m_StatementLock);
+            while(m_IsRunning.load() && m_StatementsToEvaluate.size() == 0)
+            {
+                m_Evalutating.store(false);
+                m_NotifyConditional.wait(Lock);
+            }
+            if(m_IsRunning.load() == false)
+            {
+                break;
+            }
+            m_Evalutating.store(true);
+            Statement StatementToExecute = std::move(m_StatementsToEvaluate.front());
+            m_StatementsToEvaluate.pop_front();
+            {
+                std::vector<MBLSP::Diagnostic> Errors;
+                {
+                    std::lock_guard<std::mutex> EvalLock(m_EvaluatorMutex);
+                    m_Evaluator->EvaluateStatement(StatementToExecute,Errors);
+                }
+                MBParsing::JSONObject Result(MBParsing::JSONObjectType::Aggregate);
+                Result["method"] = "execute/result";
+                Result["jsonrpc"] = "2.0";
+                if(Errors.size() != 0)
+                {
+                    Result["params"] = std::map<std::string,MBParsing::JSONObject>{{"result","Error: "+Errors[0].message}};
+                }
+                else
+                {
+                    Result["params"] = std::map<std::string,MBParsing::JSONObject>{{"result",""}};
+                }
+                m_AssociatedHandler->SendRawNotificaction(Result);
+                //assert(Errors.size() == 0 && "p_EvaluatorThread should only have");
+            }
+        }
+    }
+    void MQLServer::p_ExecuteAsync(Statement StatementToExecute)
+    {
+        {
+            std::lock_guard<std::mutex> Lock(m_StatementLock);
+            m_StatementsToEvaluate.push_back(std::move(StatementToExecute));
+            m_NotifyConditional.notify_one();
+        }
+    }
     MBParsing::JSONObject MQLServer::HandleGenericRequest(MBParsing::JSONObject const& GenericRequest)
     {
         auto Tokenizer = GetTokenizer();
@@ -39,40 +86,48 @@ namespace MBSlippi
             MBError ParseResult = true;
             if(!ParseResult)
             {
-                MessageToSend["error"] = "Error parsing JSON object";
+                MessageToSend["error"] =
+                std::map<std::string,MBParsing::JSONObject>{{"message", "Error parsing JSON object"},{"code",1}};
                 return(MessageToSend);
             }
             if(GenericRequest.GetType() != MBParsing::JSONObjectType::Aggregate)
             {
-                MessageToSend["error"] = "Error interpreting json object: object is not of aggregate type";
+                MessageToSend["error"] =
+                std::map<std::string,MBParsing::JSONObject>{{"message", "Error interpreting json object: object is not of aggregate type"},{"code",1}};
                 return(MessageToSend);
             }
             if(GenericRequest["method"].GetStringData() == "execute")
             {
                 std::string const& StringToExecute = GenericRequest["params"]["statement"].GetStringData();
                 Tokenizer.SetText(StringToExecute);
+                if(m_Evalutating.load())
+                {
+                    MessageToSend["error"] = 
+                        std::map<std::string,MBParsing::JSONObject>{{"message","Already evaluating statement"},{"code",1}};
+                }
                 try
                 {
                     Statement StatementsToExecute = ParseStatement(Tokenizer);
                     std::vector<MBLSP::Diagnostic> Errors;
-                    m_Evaluator->VerifyStatement(StatementsToExecute,Errors);
-                    if(Errors.size() > 0)
                     {
-                        MessageToSend["error"] = Errors[0].message;
+                        std::lock_guard<std::mutex> Lock(m_EvaluatorMutex);
+                        m_Evaluator->VerifyStatement(StatementsToExecute,Errors);
                     }
-                    m_Evaluator->EvaluateStatement(StatementsToExecute,Errors);
                     if(Errors.size() > 0)
                     {
-                        MessageToSend["error"] = Errors[0].message;
+                        MessageToSend["error"] = 
+                        std::map<std::string,MBParsing::JSONObject>{{"message",Errors[0].message},{"code",1}};
                     }
                     else
                     {
-                        MessageToSend["result"] = "executing";
+                        MessageToSend["result"] = "executing...";
                     }
+                    p_ExecuteAsync(std::move(StatementsToExecute));
                 }
                 catch(std::exception const& e)
                 {
-                    MessageToSend["error"] = std::string(e.what());
+                    MessageToSend["error"] = 
+                std::map<std::string,MBParsing::JSONObject>{{"message",std::string(e.what())},{"code",1}};
                 }
             }
             else if(GenericRequest["method"].GetStringData() == "exit")
@@ -81,7 +136,8 @@ namespace MBSlippi
             }
             else
             {
-                MessageToSend["error"] = "Unkown method \""+GenericRequest["method"].GetStringData()+"\"";   
+                MessageToSend["error"] =
+                std::map<std::string,MBParsing::JSONObject>{{"message","Unkown method \""+GenericRequest["method"].GetStringData()+"\""},{"code",1}};
             }
         }
         catch(std::exception const& e)
@@ -89,7 +145,6 @@ namespace MBSlippi
             std::cerr <<"Error when executing server: "<<e.what()<<std::endl;
         }
         return(MessageToSend);
-        return(0);
     }
     std::vector<SlippiGameInfo> MBSlippiCLIHandler::RetrieveGames(std::string const& WhereCondition)
     {
@@ -487,12 +542,18 @@ namespace MBSlippi
     }
     int MBSlippiCLIHandler::p_HandleServer(MBCLI::ProcessedCLInput const& Input)
     {
-        MQLServer Server;
+        std::unique_ptr<MBUtility::IndeterminateInputStream> InputStream = 
+            std::unique_ptr<MBUtility::IndeterminateInputStream>(new MBUtility::NonOwningIndeterminateInputStream(&m_Terminal.GetInputStream()));
+        std::unique_ptr<MBUtility::MBOctetOutputStream> OutStream = 
+           std::unique_ptr<MBUtility::MBOctetOutputStream>(new MBUtility::NonOwningOutputStream(&m_Terminal.GetOutputStream()));
         SpecEvaluator Evaluator;
+        std::unique_ptr<MBLSP::LSP_Server> Server = 
+            std::unique_ptr<MBLSP::LSP_Server>( new MQLServer(&Evaluator));
         Evaluator.SetDBAdapter(this);
         Evaluator.SetRecorder(this);
-        MBUtility::NO_IndeterminateToRegular InputStream = MBUtility::NO_IndeterminateToRegular(&m_Terminal.GetInputStream());
-        return(Server.Run(InputStream,m_Terminal.GetOutputStream(),Evaluator));
+        MBLSP::LSP_ServerHandler Handler = 
+            MBLSP::LSP_ServerHandler(std::move(InputStream),std::move(OutStream),std::move(Server));
+        return(Handler.Run());
     }
     void MBSlippiCLIHandler::p_Handle_Execute_Legacy(MBCLI::ProcessedCLInput const& Input)
 	{

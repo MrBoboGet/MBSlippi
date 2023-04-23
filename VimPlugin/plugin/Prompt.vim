@@ -6,10 +6,7 @@ let s:ResultBuffer = -1
 let s:PromptWindow = -1
 let s:ResultWindow = -1
 
-let g:Response = ""
-let g:MessageLength = -1
-let g:Data = -1
-
+let s:Executing = v:false
 function BigEndianParseInteger(Blob,Offset,IntSize) abort
     let ReturnValue = 0
     let i = 0
@@ -35,62 +32,50 @@ function s:Reset()
     exec "bdelete! " .. s:PromptBuffer .. " " .. s:ResultBuffer
 endfunction
 
+function NotificationCallback(Channel,Notification) abort
+    if(a:Notification.method == "execute/result")
+        "Replace last line with result, or more if printing
+        call deletebufline(s:ResultBuffer,"$")
+        let Lines = split(a:Notification.params.result,"\n")
+        for Line in Lines
+            call appendbufline(s:ResultBuffer,"$","#" .. Line)
+        endfor
+        let s:Executing = v:false
+    endif
+endfunction
 
 function! PromptCallback(Text) abort
+    if(s:Executing)
+        echo "Server is busy with executing previous statement"
+    endif
     let MessageToSend = #{method: "execute",params: #{statement: a:Text}}
-    let g:Response = s:SendMessage(json_encode(MessageToSend))
-    echo g:Response
-    echo s:ResultBuffer
-    if (g:Response->has_key("error"))
-        call appendbufline(s:ResultBuffer,"$","#" .. g:Response["error"])
+    let Response = ch_evalexpr(s:JobChannel,MessageToSend)
+    if (Response->has_key("error"))
+        call appendbufline(s:ResultBuffer,"$","#" .. Response["error"].message)
         call deletebufline(s:PromptBuffer,line("$",s:PromptWindow)-1)
-    elseif(g:Response->has_key("result"))
+    elseif(Response->has_key("result"))
+        let s:Executing = v:true
         call appendbufline(s:ResultBuffer,"$",a:Text)
-        if(g:Response["result"] != "")
-            call appendbufline(s:ResultBuffer,"$","#" .. g:Response["result"])
+        if(Response["result"] != "")
+            call appendbufline(s:ResultBuffer,"$","#" .. Response["result"])
         endif
         call deletebufline(s:PromptBuffer,line("$",s:PromptWindow)-1)
     endif
-    exec "normal \<c-w>k"
-    w
-    exec "normal \<c-w>j"
-    "exec "normal! " .. win_id2win(s:ResultWindow) ..  "\<c-w>\<c-w>"
-    ""try
-    "    CocCommand semanticTokens.refreshCurrent
-    "    call CocAction('diagnosticRefresh')
-    "    call CocAction('semanticHighlight')
-    ""catch /.*/
-
-    ""endtry
-    "exec "normal! " .. win_id2win(s:PromptWindow) ..  "\<c-w>\<c-w>"
+    "exec "normal \<c-w>k"
+    "w
+    "exec "normal \<c-w>j"
 endfunction
 
-function s:ReadMessage(Channel) abort
-    let g:Data = ch_readblob(a:Channel)
-    echo g:Data
-    if(len(g:Data) < 4)
-        echo "Recieved to few bytes for s:ReadMessage, aborting"
-        call <SID>Reset()
-        return {}
-    endif
-    let g:MessageLength = BigEndianParseInteger(g:Data,0,4)
-    while(ch_status(s:JobChannel) == "open" && len(g:Data) - 4 < g:MessageLength)
-        let g:Data += ch_readblob(a:Channel)
-    endwhile
-    let MessageString =list2str(blob2list(g:Data[4:-1]))
-    return json_decode(MessageString)
+function s:SendNotification(ObjectToSend)
+    call ch_sendexpr(ObjectToSend)
 endfunction
-
 
 function s:SendMessage(StringToSend) abort
-    call ch_sendraw(s:JobChannel,BigEndianEncodeInteger(len(a:StringToSend),4))
-    call ch_sendraw(s:JobChannel,a:StringToSend)
-    "returns dictionary
-    return s:ReadMessage(s:JobChannel)
+    return ch_evalexpr(s:JobChannel,StringToSend)
 endfunction
 
 function! StartPrompt() abort
-    let s:GlobalJob = job_start("mbslippi server",#{in_mode: "raw",out_mode: "raw"})
+    let s:GlobalJob = job_start("mbslippi server",#{in_mode: "lsp",out_mode: "lsp",callback: function("NotificationCallback")})
     let s:JobChannel = job_getchannel(s:GlobalJob)
     let s:PromptBuffer = bufadd("")
     let s:ResultBuffer = bufadd("asdasdasdasdasdassd")
