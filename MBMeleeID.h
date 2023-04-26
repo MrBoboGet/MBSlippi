@@ -165,7 +165,7 @@ namespace MBSlippi
     };
 	struct SlippiGameInfo
 	{
-		std::string RelativePath;
+		std::string AbsolutePath;
 		uint64_t Date;
 		std::string Stage;
         SlippiGamePlayerInfo PlayerInfo[4];

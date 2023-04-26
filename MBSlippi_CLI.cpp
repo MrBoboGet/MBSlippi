@@ -160,16 +160,28 @@ namespace MBSlippi
         for(MBDB::MBDB_RowData const& Row : Result)
         {
             SlippiGameInfo NewGameInfo;
-            NewGameInfo.RelativePath =m_Config.ReplaysDirectory + "/" + Row.GetColumnData<std::string>(0);
-            NewGameInfo.Date = Row.GetColumnData<int>(1);
-            NewGameInfo.Stage = Row.GetColumnData<std::string>(2);
-            NewGameInfo.PlayerInfo[0].Code = Row.GetColumnData<std::string>(3);
-            NewGameInfo.PlayerInfo[0].Tag = Row.GetColumnData<std::string>(4);
-            NewGameInfo.PlayerInfo[0].Character = Row.GetColumnData<std::string>(5);
-            NewGameInfo.PlayerInfo[1].Code = Row.GetColumnData<std::string>(6);
-            NewGameInfo.PlayerInfo[1].Tag = Row.GetColumnData<std::string>(7);
-            NewGameInfo.PlayerInfo[1].Character = Row.GetColumnData<std::string>(8);
-            NewGameInfo.FrameDuration = Row.GetColumnData<int>(9);
+            MBDB::MaxInt GameID = Row.GetColumnData<int>(0);
+            NewGameInfo.AbsolutePath = m_Config.ReplaysDirectory + "/" + Row.GetColumnData<std::string>(1);
+            NewGameInfo.Date = Row.GetColumnData<int>(2);
+            NewGameInfo.Stage = Row.GetColumnData<std::string>(3);
+            NewGameInfo.FrameDuration = Row.GetColumnData<int>(4);
+
+
+            auto PlayerQuery = Database.GetSQLStatement("SELECT * FROM PLAYERS WHERE GameID = ?");
+            PlayerQuery->BindInt(GameID,1);
+            auto Rows = Database.GetAllRows(PlayerQuery,&QueryError);
+            Database.FreeSQLStatement(PlayerQuery);
+            for(auto const& Row : Rows)
+            {
+                int Index = Row.GetColumnData<int>(1);
+                if(Index < 0 || Index > 3)
+                {
+                    throw std::runtime_error("Error retrieving specgames: player port above 3 or below 0 in database index");
+                }
+                NewGameInfo.PlayerInfo[Index].Code = Row.GetColumnData<std::string>(2);
+                NewGameInfo.PlayerInfo[Index].Tag = Row.GetColumnData<std::string>(3);
+                NewGameInfo.PlayerInfo[Index].Code = Row.GetColumnData<std::string>(4);
+            }
             ReturnValue.push_back(NewGameInfo);
         }
         return(ReturnValue);
@@ -343,16 +355,22 @@ namespace MBSlippi
 		{
 			ReturnValue.PlayerInfo[0].Code = TotalGameData["metadata"]["players"]["0"]["names"]["code"].GetStringData();
 			ReturnValue.PlayerInfo[1].Code = TotalGameData["metadata"]["players"]["1"]["names"]["code"].GetStringData();
+			ReturnValue.PlayerInfo[2].Code = TotalGameData["metadata"]["players"]["2"]["names"]["code"].GetStringData();
+			ReturnValue.PlayerInfo[3].Code = TotalGameData["metadata"]["players"]["3"]["names"]["code"].GetStringData();
 		}
 		if (TotalGameData["metadata"]["players"]["0"]["names"].HasAttribute("netplay"))
 		{
 			ReturnValue.PlayerInfo[0].Tag = TotalGameData["metadata"]["players"]["0"]["names"]["netplay"].GetStringData();
 			ReturnValue.PlayerInfo[1].Tag = TotalGameData["metadata"]["players"]["1"]["names"]["netplay"].GetStringData();
+			ReturnValue.PlayerInfo[2].Tag = TotalGameData["metadata"]["players"]["2"]["names"]["netplay"].GetStringData();
+			ReturnValue.PlayerInfo[3].Tag = TotalGameData["metadata"]["players"]["3"]["names"]["netplay"].GetStringData();
 		}
 		if (TotalGameData["metadata"]["players"]["0"].HasAttribute("characters"))
 		{
 			ReturnValue.PlayerInfo[0].Character = MBSlippi::CharacterToString(InternalCharacterID(std::stoi(TotalGameData["metadata"]["players"]["0"]["characters"].GetMapData().begin()->first)));
 			ReturnValue.PlayerInfo[1].Character = MBSlippi::CharacterToString(InternalCharacterID(std::stoi(TotalGameData["metadata"]["players"]["1"]["characters"].GetMapData().begin()->first)));
+			ReturnValue.PlayerInfo[2].Character = MBSlippi::CharacterToString(InternalCharacterID(std::stoi(TotalGameData["metadata"]["players"]["2"]["characters"].GetMapData().begin()->first)));
+			ReturnValue.PlayerInfo[3].Character = MBSlippi::CharacterToString(InternalCharacterID(std::stoi(TotalGameData["metadata"]["players"]["3"]["characters"].GetMapData().begin()->first)));
 		}
 		return(ReturnValue);
 	}
@@ -363,11 +381,14 @@ namespace MBSlippi
 			throw std::runtime_error("Invalid replay directory");
 		}
 		MBDB::MrBoboDatabase Database(DirectoryToCreate + "\\SlippiGames.db",MBDB::DBOpenOptions::ReadWrite);
-		std::string DatabaseStatement = "CREATE TABLE GAMES (RelativePath VARCHAR(65535),Date INTEGER,Stage VARCHAR(255),Player1Code VARCHAR(255),Player1Tag VARCHAR(255),Player1Character VARCHAR(255),"
-			"Player2Code VARCHAR(255),Player2Tag VARCHAR(255),Player2Character VARCHAR(255), FrameDuration INTEGER);";
-
-		MBDB::SQLStatement* Statement = Database.GetSQLStatement(DatabaseStatement);
+		std::string GamesTable = "CREATE TABLE GAMES (GameID INTEGER PRIMARY KEY,RelativePath VARCHAR(65535),Date INTEGER,Stage VARCHAR(255),FrameDuration INTEGER);";
+        std::string PlayerTable = "CREATE TABLE Players(GameID INTEGER,Port INTEGER,Code VARCHAR(255),Tag VARCHAR(255),Character VARCHAR(255));";
+		MBDB::SQLStatement* Statement = Database.GetSQLStatement(GamesTable);
 		MBError Result = true;
+		Database.GetAllRows(Statement,&Result);
+        Database.FreeSQLStatement(Statement);
+		Statement = Database.GetSQLStatement(PlayerTable);
+		Result = true;
 		Database.GetAllRows(Statement,&Result);
         Database.FreeSQLStatement(Statement);
 	}
@@ -414,24 +435,31 @@ namespace MBSlippi
 			{
 				continue;
 			}
-			NewGame.RelativePath =  FileIterator.GetCurrentDirectory() + "/" + FileIterator->FileName;
-			
-			
-			std::string QuerryToInsert = "INSERT INTO GAMES VALUES(?,?,?,?,?,?,?,?,?,?);";
+            std::string RelativePath = FileIterator.GetCurrentDirectory() + "/" + FileIterator->FileName;
+            
+            //Should actually check for errors...
+			std::string QuerryToInsert = "INSERT INTO GAMES VALUES (RelativePath,Date,Stage,FrameDuration) (?,?,?,?);";
 			MBDB::SQLStatement* Statement = Database.GetSQLStatement(QuerryToInsert);
-			Statement->BindString(NewGame.RelativePath, 1);
+			Statement->BindString(RelativePath, 1);
 			Statement->BindInt(NewGame.Date, 2);
 			Statement->BindString(NewGame.Stage, 3);
-			Statement->BindString(NewGame.PlayerInfo[0].Code, 4);
-			Statement->BindString(NewGame.PlayerInfo[0].Tag, 5);
-			Statement->BindString(NewGame.PlayerInfo[0].Character, 6);
-			Statement->BindString(NewGame.PlayerInfo[1].Code, 7);
-			Statement->BindString(NewGame.PlayerInfo[1].Tag, 8);
-			Statement->BindString(NewGame.PlayerInfo[1].Character, 9);
 			Statement->BindInt(NewGame.FrameDuration, 10);
 			MBError Result = true;
 			Database.GetAllRows(Statement, &Result);
 			Database.FreeSQLStatement(Statement);
+            for(int i = 0; i < 4; i++)
+            {
+                std::string PlayerQuery = "INSERT INTO PLAYERS VALUES (GameID,Port,Code,Tag,Character)(?,?,?,?,?);";
+                //how to get GameID?
+                static_assert(false && "Fix GameID");
+                Statement = Database.GetSQLStatement(QuerryToInsert);
+                Statement->BindInt(i,2);
+                Statement->BindString(NewGame.PlayerInfo[i].Code,3);
+                Statement->BindString(NewGame.PlayerInfo[i].Tag,4);
+                Statement->BindString(NewGame.PlayerInfo[i].Character,5);
+                Database.GetAllRows(Statement, &Result);
+                Database.FreeSQLStatement(Statement);
+            }
 
 			ParsedFiles += 1;
 		}
