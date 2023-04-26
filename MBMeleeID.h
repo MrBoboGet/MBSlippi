@@ -161,13 +161,14 @@ namespace MBSlippi
         std::string Code;
         std::string Tag;
         std::string Character;
+        //Color?
     };
 	struct SlippiGameInfo
 	{
 		std::string RelativePath;
 		uint64_t Date;
 		std::string Stage;
-        SlippiGamePlayerInfo PlayerInfo[2];
+        SlippiGamePlayerInfo PlayerInfo[4];
 		uint64_t FrameDuration = 0;
 	};
 }

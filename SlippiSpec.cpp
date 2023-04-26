@@ -585,24 +585,18 @@ namespace MBSlippi
         std::swap(TopScope,m_TopContext.GlobalScope);
         return(ReturnValue);
     }
-    bool SpecEvaluator::p_EvaluateGameSelection(SlippiGameInfo const& GameInfo,bool IsSwapped,GameInfoPredicate const& PredicateToEvaluate)
+    bool SpecEvaluator::p_EvaluateGameSelection(SlippiGameInfo const& GameInfo,char InAssignment[4],GameInfoPredicate const& PredicateToEvaluate)
     {
         bool ReturnValue = true;
         if(PredicateToEvaluate.Data.IsType<GameInfoPredicate_Direct>())
         {
             auto const& DirectData = PredicateToEvaluate.Data.GetType<GameInfoPredicate_Direct>();
-            SlippiGamePlayerInfo const* Player1Pointer = &GameInfo.PlayerInfo[0];
-            SlippiGamePlayerInfo const* Player2Pointer = &GameInfo.PlayerInfo[1];
-            if(IsSwapped)
-            {
-                std::swap(Player1Pointer,Player1Pointer);   
-            }
-            SlippiGamePlayerInfo  const*  PlayerToEvaluatePointer = Player1Pointer;
+            int PlayerIndex = 0;
             if(DirectData.Attribute[0].Name == "Player2")
             {
-                PlayerToEvaluatePointer = Player2Pointer;
+                PlayerIndex = 1;
             }
-            SlippiGamePlayerInfo const& CurrentPlayer = *PlayerToEvaluatePointer;
+            SlippiGamePlayerInfo const& CurrentPlayer = GameInfo.PlayerInfo[InAssignment[PlayerIndex]];
             if(DirectData.Attribute[0].Name == "Player1" || DirectData.Attribute[0].Name == "Player2")
             {
                 if(DirectData.Attribute[1].Name == "Character")
@@ -664,7 +658,7 @@ namespace MBSlippi
             else if(std::holds_alternative<MQL_Variable_GameInfoPredicate>(Variable.Data))
             {
                 MQL_Variable_GameInfoPredicate const& DereferencedPredicate = std::get<MQL_Variable_GameInfoPredicate>(Variable.Data);
-                ReturnValue = p_EvaluateGameSelection(GameInfo,IsSwapped,DereferencedPredicate.Predicate);
+                ReturnValue = p_EvaluateGameSelection(GameInfo,InAssignment,DereferencedPredicate.Predicate);
             }
         }
         else if(PredicateToEvaluate.Data.IsEmpty())
@@ -681,12 +675,12 @@ namespace MBSlippi
             {
                 if(!ReturnValue)
                 {
-                    ReturnValue = p_EvaluateGameSelection(GameInfo,IsSwapped,ExtraTerm);           
+                    ReturnValue = p_EvaluateGameSelection(GameInfo,InAssignment,ExtraTerm);           
                 }
             }
             else if(ExtraTerm.Operator == "&&")
             {
-                if(!p_EvaluateGameSelection(GameInfo,IsSwapped,ExtraTerm))
+                if(!p_EvaluateGameSelection(GameInfo,InAssignment,ExtraTerm))
                 {
                     ReturnValue = false;   
                     break;
@@ -694,7 +688,7 @@ namespace MBSlippi
             }
             else if(ExtraTerm.Operator == "")
             {
-                ReturnValue = p_EvaluateGameSelection(GameInfo,IsSwapped,ExtraTerm);
+                ReturnValue = p_EvaluateGameSelection(GameInfo,InAssignment,ExtraTerm);
             }
             else
             {
@@ -771,27 +765,50 @@ namespace MBSlippi
         }
         return(ReturnValue);
     }
-    bool SpecEvaluator::p_IsPlayersSwapped(SlippiGameInfo const& GameInfo, GameInfoPredicate const& PredicateToEvaluate,bool& IsSwapped)
+    bool SpecEvaluator::p_GetPlayerAssignments(SlippiGameInfo const& GameInfo,PlayerAssignment const& AssignemntToApply,char OutAssignemnts[4])
     {
-        bool ReturnValue = false;        
-        if(PredicateToEvaluate.Data.IsEmpty())
+        //TODO Slow implementation, partly because of frame structure
+        //Starts with determining which player is 1, then 2, etc
+        //currently only has support to truly specify player1
+        bool PlayerWasAssigned = false;
+        for(int i = 0; i < 4;i++)
         {
-            return(true);   
+            OutAssignemnts[i] = i;
         }
-        if(p_SatisfiesPlayerAssignment(GameInfo.PlayerInfo[1],PredicateToEvaluate))
+        //assigns player 1
+        for(int i = 0; i < 4;i++)
         {
-           IsSwapped = true;   
-           ReturnValue = true;
-        } 
-        else
-        {
-            ReturnValue = p_SatisfiesPlayerAssignment(GameInfo.PlayerInfo[0],PredicateToEvaluate);   
-            if(ReturnValue)
+            if(p_SatisfiesPlayerAssignment(GameInfo.PlayerInfo[i],AssignemntToApply.PlayerCondition))
             {
-               IsSwapped = false;    
+                std::swap(OutAssignemnts[0],OutAssignemnts[i]);
+                PlayerWasAssigned = true;
             }
         }
-        return(ReturnValue);
+        //assigns player 2
+        for(int i = 0; i < 4;i++)
+        {
+            if(i == OutAssignemnts[0])
+            {
+                continue;
+            }
+            if(GameInfo.PlayerInfo[i].Character != "")
+            {
+                std::swap(OutAssignemnts[i],OutAssignemnts[1]);   
+            }
+        }
+        return(PlayerWasAssigned);
+    }
+    void SpecEvaluator::p_ApplyAssignment(MeleeGame& GameToModify,char InAssignments[4])
+    {
+        for(auto& Frames : GameToModify.Frames)
+        {
+            //TODO inefficient
+            PlayerFrameInfo FrameCopies[4] = {Frames.PlayerInfo[0],Frames.PlayerInfo[1],Frames.PlayerInfo[2],Frames.PlayerInfo[3]};
+            for(int i = 0; i < 4;i++)
+            {
+                Frames.PlayerInfo[i] = FrameCopies[InAssignments[i]];
+            }
+        }
     }
     void SpecEvaluator::SetDBAdapter(MeleeGameDBAdapter* NewAdapter)
     {
@@ -826,14 +843,15 @@ namespace MBSlippi
     std::vector<MeleeGame> SpecEvaluator::p_RetrieveSpecGames(GameSelection const& SpecToEvalaute)
     {
         std::vector<MeleeGame> ReturnValue;
-        //TODO improve this could with SQL querry so unneccesary game info doesn't need to be parsed
+        //TODO improve this, use SQL query so unneccesary game info doesn't need to be parsed
         std::vector<SlippiGameInfo> Candidates = m_DBAdapter->RetrieveGames("");
         for(auto& Candidate : Candidates)
         {
             bool IsSwapped = false;
-            if(p_IsPlayersSwapped(Candidate,SpecToEvalaute.Assignment.PlayerCondition,IsSwapped))
+            char AssignmentIndexes[4] = {0,1,2,3};
+            if(p_GetPlayerAssignments(Candidate,SpecToEvalaute.Assignment,AssignmentIndexes))
             {
-                if(p_EvaluateGameSelection(Candidate,IsSwapped,SpecToEvalaute.GameCondition))
+                if(p_EvaluateGameSelection(Candidate,AssignmentIndexes,SpecToEvalaute.GameCondition))
                 {
                     std::ifstream  GameData(Candidate.RelativePath,std::ios::in|std::ios::binary);
                     if(GameData.is_open())
@@ -844,10 +862,7 @@ namespace MBSlippi
                         GameToAdd.Metadata.GamePath = Candidate.RelativePath;
                         if(ParseResult)
                         {
-                            if(IsSwapped)
-                            {
-                                h_SwapPlayers(GameToAdd);
-                            }   
+                            p_ApplyAssignment(GameToAdd,AssignmentIndexes);   
                             ReturnValue.emplace_back(std::move(GameToAdd));
                         }
                     }
