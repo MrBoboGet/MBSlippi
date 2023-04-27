@@ -1117,6 +1117,30 @@ namespace MBSlippi
 
 	inline std::string StageIDToString(StageID IDToConvert)
 	{
+		if (IDToConvert == StageID::Battlefield)
+		{
+			return("BF");
+		}
+		else if (IDToConvert == StageID::DreamLandN64)
+		{
+			return("DL");
+		}
+		else if (IDToConvert == StageID::FinalDestination)
+		{
+			return("FD");
+		}
+		else if (IDToConvert == StageID::FountainOfDreams)
+		{
+			return("FOD");
+		}
+		else if (IDToConvert == StageID::YoshisIsland)
+		{
+			return("YS");
+		}
+		else if (IDToConvert == StageID::PokémonStadium)
+		{
+			return("PS");
+		}
 		return("");
 	}
 

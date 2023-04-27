@@ -651,9 +651,9 @@ namespace MBSlippi
                 auto LowestIt = std::lower_bound(GameList.Games.begin(),GameList.Games.end(),GameInfo,
                         [](MeleeGame const& lhs,SlippiGameInfo const& rhs)
                         {
-                            return(lhs.Metadata.GamePath < rhs.RelativePath);
+                            return(lhs.Metadata.GamePath < rhs.AbsolutePath);
                         });
-                ReturnValue = LowestIt != GameList.Games.end() && LowestIt->Metadata.GamePath == GameInfo.RelativePath;
+                ReturnValue = LowestIt != GameList.Games.end() && LowestIt->Metadata.GamePath == GameInfo.AbsolutePath;
             }
             else if(std::holds_alternative<MQL_Variable_GameInfoPredicate>(Variable.Data))
             {
@@ -782,6 +782,7 @@ namespace MBSlippi
             {
                 std::swap(OutAssignemnts[0],OutAssignemnts[i]);
                 PlayerWasAssigned = true;
+                break;
             }
         }
         //assigns player 2
@@ -849,17 +850,21 @@ namespace MBSlippi
         {
             bool IsSwapped = false;
             char AssignmentIndexes[4] = {0,1,2,3};
+            if (Candidate.PlayerInfo[0].Tag == "MrBoboGet" && Candidate.PlayerInfo[1].Code == "AB#177")
+            {
+                IsSwapped = false;
+            }
             if(p_GetPlayerAssignments(Candidate,SpecToEvalaute.Assignment,AssignmentIndexes))
             {
                 if(p_EvaluateGameSelection(Candidate,AssignmentIndexes,SpecToEvalaute.GameCondition))
                 {
-                    std::ifstream  GameData(Candidate.RelativePath,std::ios::in|std::ios::binary);
+                    std::ifstream  GameData(Candidate.AbsolutePath,std::ios::in|std::ios::binary);
                     if(GameData.is_open())
                     {
                         MBUtility::MBFileInputStream InStream(&GameData);
                         MeleeGame GameToAdd;
                         MBError ParseResult = MeleeGame::ParseSlippiGame(InStream,GameToAdd);
-                        GameToAdd.Metadata.GamePath = Candidate.RelativePath;
+                        GameToAdd.Metadata.GamePath = Candidate.AbsolutePath;
                         if(ParseResult)
                         {
                             p_ApplyAssignment(GameToAdd,AssignmentIndexes);   

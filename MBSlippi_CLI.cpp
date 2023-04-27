@@ -157,6 +157,7 @@ namespace MBSlippi
         }
         MBError QueryError = true;
         std::vector<MBDB::MBDB_RowData> Result = Database.GetAllRows(QueryString,&QueryError);
+        ReturnValue.reserve(Result.size());
         for(MBDB::MBDB_RowData const& Row : Result)
         {
             SlippiGameInfo NewGameInfo;
@@ -166,11 +167,10 @@ namespace MBSlippi
             NewGameInfo.Stage = Row.GetColumnData<std::string>(3);
             NewGameInfo.FrameDuration = Row.GetColumnData<int>(4);
 
-
             auto PlayerQuery = Database.GetSQLStatement("SELECT * FROM PLAYERS WHERE GameID = ?");
+
             PlayerQuery->BindInt(GameID,1);
             auto Rows = Database.GetAllRows(PlayerQuery,&QueryError);
-            Database.FreeSQLStatement(PlayerQuery);
             for(auto const& Row : Rows)
             {
                 int Index = Row.GetColumnData<int>(1);
@@ -180,9 +180,10 @@ namespace MBSlippi
                 }
                 NewGameInfo.PlayerInfo[Index].Code = Row.GetColumnData<std::string>(2);
                 NewGameInfo.PlayerInfo[Index].Tag = Row.GetColumnData<std::string>(3);
-                NewGameInfo.PlayerInfo[Index].Code = Row.GetColumnData<std::string>(4);
+                NewGameInfo.PlayerInfo[Index].Character = Row.GetColumnData<std::string>(4);
             }
             ReturnValue.push_back(NewGameInfo);
+            Database.FreeSQLStatement(PlayerQuery);
         }
         return(ReturnValue);
     }
@@ -351,26 +352,47 @@ namespace MBSlippi
 		
 		//std::cout << TotalGameData["metadata"].ToString() << std::endl;
 
-		if (TotalGameData["metadata"]["players"]["0"]["names"].HasAttribute("code"))
+        auto const& PlayersData = TotalGameData["metadata"]["players"];
+		if (PlayersData.GetMapData().begin()->second["names"].HasAttribute("code"))
 		{
-			ReturnValue.PlayerInfo[0].Code = TotalGameData["metadata"]["players"]["0"]["names"]["code"].GetStringData();
-			ReturnValue.PlayerInfo[1].Code = TotalGameData["metadata"]["players"]["1"]["names"]["code"].GetStringData();
-			ReturnValue.PlayerInfo[2].Code = TotalGameData["metadata"]["players"]["2"]["names"]["code"].GetStringData();
-			ReturnValue.PlayerInfo[3].Code = TotalGameData["metadata"]["players"]["3"]["names"]["code"].GetStringData();
+            if(PlayersData.HasAttribute("0"))
+			    ReturnValue.PlayerInfo[0].Code = PlayersData["0"]["names"].HasAttribute("code") ? PlayersData["0"]["names"]["code"].GetStringData() : "";
+            if (PlayersData.HasAttribute("1"))
+                ReturnValue.PlayerInfo[1].Code = PlayersData["1"]["names"].HasAttribute("code") ? PlayersData["1"]["names"]["code"].GetStringData() : "";
+            if (PlayersData.HasAttribute("2"))
+                ReturnValue.PlayerInfo[2].Code = PlayersData["2"]["names"].HasAttribute("code") ? PlayersData["2"]["names"]["code"].GetStringData() : "";
+            if (PlayersData.HasAttribute("3"))
+                ReturnValue.PlayerInfo[3].Code = PlayersData["3"]["names"].HasAttribute("code") ? PlayersData["3"]["names"]["code"].GetStringData() : "";
 		}
-		if (TotalGameData["metadata"]["players"]["0"]["names"].HasAttribute("netplay"))
+		if (PlayersData.GetMapData().begin()->second["names"].HasAttribute("netplay"))
 		{
-			ReturnValue.PlayerInfo[0].Tag = TotalGameData["metadata"]["players"]["0"]["names"]["netplay"].GetStringData();
-			ReturnValue.PlayerInfo[1].Tag = TotalGameData["metadata"]["players"]["1"]["names"]["netplay"].GetStringData();
-			ReturnValue.PlayerInfo[2].Tag = TotalGameData["metadata"]["players"]["2"]["names"]["netplay"].GetStringData();
-			ReturnValue.PlayerInfo[3].Tag = TotalGameData["metadata"]["players"]["3"]["names"]["netplay"].GetStringData();
+            if (PlayersData.HasAttribute("0"))
+                ReturnValue.PlayerInfo[0].Tag = PlayersData["0"]["names"].HasAttribute("netplay") ? PlayersData["0"]["names"]["netplay"].GetStringData() : "";
+            if (PlayersData.HasAttribute("1"))
+                ReturnValue.PlayerInfo[1].Tag = PlayersData["1"]["names"].HasAttribute("netplay") ? PlayersData["1"]["names"]["netplay"].GetStringData() : "";
+            if (PlayersData.HasAttribute("2"))
+                ReturnValue.PlayerInfo[2].Tag = PlayersData["2"]["names"].HasAttribute("netplay") ? PlayersData["2"]["names"]["netplay"].GetStringData() : "";
+            if (PlayersData.HasAttribute("3"))
+                ReturnValue.PlayerInfo[3].Tag = PlayersData["3"]["names"].HasAttribute("netplay") ? PlayersData["3"]["names"]["netplay"].GetStringData() : "";
 		}
-		if (TotalGameData["metadata"]["players"]["0"].HasAttribute("characters"))
+		if (PlayersData.GetMapData().begin()->second.HasAttribute("characters"))
 		{
-			ReturnValue.PlayerInfo[0].Character = MBSlippi::CharacterToString(InternalCharacterID(std::stoi(TotalGameData["metadata"]["players"]["0"]["characters"].GetMapData().begin()->first)));
-			ReturnValue.PlayerInfo[1].Character = MBSlippi::CharacterToString(InternalCharacterID(std::stoi(TotalGameData["metadata"]["players"]["1"]["characters"].GetMapData().begin()->first)));
-			ReturnValue.PlayerInfo[2].Character = MBSlippi::CharacterToString(InternalCharacterID(std::stoi(TotalGameData["metadata"]["players"]["2"]["characters"].GetMapData().begin()->first)));
-			ReturnValue.PlayerInfo[3].Character = MBSlippi::CharacterToString(InternalCharacterID(std::stoi(TotalGameData["metadata"]["players"]["3"]["characters"].GetMapData().begin()->first)));
+            if (PlayersData.HasAttribute("0") && PlayersData["0"].HasAttribute("characters"))
+            {
+                ReturnValue.PlayerInfo[0].Character = MBSlippi::CharacterToString(InternalCharacterID(std::stoi(PlayersData["0"]["characters"].GetMapData().begin()->first)));
+            }
+            if (PlayersData.HasAttribute("1") && PlayersData["1"].HasAttribute("characters"))
+            {
+                ReturnValue.PlayerInfo[1].Character = MBSlippi::CharacterToString(InternalCharacterID(std::stoi(PlayersData["1"]["characters"].GetMapData().begin()->first)));
+            }
+            if (PlayersData.HasAttribute("2") && PlayersData["2"].HasAttribute("characters"))
+            {
+                ReturnValue.PlayerInfo[2].Character = MBSlippi::CharacterToString(InternalCharacterID(std::stoi(PlayersData["2"]["characters"].GetMapData().begin()->first)));
+            }
+            if (PlayersData.HasAttribute("3") && PlayersData["3"].HasAttribute("characters"))
+            {
+                ReturnValue.PlayerInfo[3].Character = MBSlippi::CharacterToString(InternalCharacterID(std::stoi(PlayersData["3"]["characters"].GetMapData().begin()->first)));
+            }
 		}
 		return(ReturnValue);
 	}
@@ -438,21 +460,27 @@ namespace MBSlippi
             std::string RelativePath = FileIterator.GetCurrentDirectory() + "/" + FileIterator->FileName;
             
             //Should actually check for errors...
-			std::string QuerryToInsert = "INSERT INTO GAMES VALUES (RelativePath,Date,Stage,FrameDuration) (?,?,?,?);";
+			std::string QuerryToInsert = "INSERT INTO GAMES (RelativePath,Date,Stage,FrameDuration) VALUES (?,?,?,?);";
 			MBDB::SQLStatement* Statement = Database.GetSQLStatement(QuerryToInsert);
 			Statement->BindString(RelativePath, 1);
 			Statement->BindInt(NewGame.Date, 2);
 			Statement->BindString(NewGame.Stage, 3);
-			Statement->BindInt(NewGame.FrameDuration, 10);
+			Statement->BindInt(NewGame.FrameDuration, 4);
 			MBError Result = true;
 			Database.GetAllRows(Statement, &Result);
 			Database.FreeSQLStatement(Statement);
             for(int i = 0; i < 4; i++)
             {
-                std::string PlayerQuery = "INSERT INTO PLAYERS VALUES (GameID,Port,Code,Tag,Character)(?,?,?,?,?);";
+                std::string PlayerQuery = "INSERT INTO PLAYERS (GameID,Port,Code,Tag,Character) VALUES (?,?,?,?,?);";
                 //how to get GameID?
-                static_assert(false && "Fix GameID");
-                Statement = Database.GetSQLStatement(QuerryToInsert);
+                std::vector<MBDB::MBDB_RowData> GameIDResult = Database.GetAllRows("SELECT MAX(GameID) FROM GAMES;");
+                if(GameIDResult.size() == 0)
+                {
+                    throw std::runtime_error("Error retrieving GameID from database");
+                }
+                MBDB::MaxInt GameID = GameIDResult[0].GetColumnData<MBDB::MaxInt>(0);
+                Statement = Database.GetSQLStatement(PlayerQuery);
+                Statement->BindInt(GameID,1);
                 Statement->BindInt(i,2);
                 Statement->BindString(NewGame.PlayerInfo[i].Code,3);
                 Statement->BindString(NewGame.PlayerInfo[i].Tag,4);
@@ -460,7 +488,6 @@ namespace MBSlippi
                 Database.GetAllRows(Statement, &Result);
                 Database.FreeSQLStatement(Statement);
             }
-
 			ParsedFiles += 1;
 		}
 		if (TotalFiles > ParsedFiles)
@@ -477,7 +504,7 @@ namespace MBSlippi
 			m_Terminal.Print("Cannot update Index: filesystem object doesnt exist or isn't a directory");
 			return;
 		}
-		if (!std::filesystem::exists(m_Config.ReplaysDirectory+"/MBPM_FileInfo") || Input.CommandOptions.find("override") != Input.CommandOptions.end())
+		if (!std::filesystem::exists(m_Config.ReplaysDirectory+"/MBPM_FileInfo") || Input.CommandOptions.find("rebuild") != Input.CommandOptions.end())
 		{
 			MBPM::MBPP_FileInfoReader ReplayFileInfo;
 			MBPM::MBPP_FileInfoReader::CreateFileInfo(m_Config.ReplaysDirectory,&ReplayFileInfo);
@@ -487,6 +514,10 @@ namespace MBSlippi
 				m_Terminal.Print("Failed to create FileInfoIndex for replay directory");
 				return;
 			}
+            if(std::filesystem::exists(m_Config.ReplaysDirectory + "/SlippiGames.db"))
+            {
+                std::filesystem::remove(m_Config.ReplaysDirectory + "/SlippiGames.db");
+            }
 			p_UpdateGameSQLDatabase(m_Config.ReplaysDirectory, ReplayFileInfo);
 			std::ofstream OutFile(m_Config.ReplaysDirectory + "/MBPM_FileInfo", std::ios::out | std::ios::binary);
 			MBUtility::MBFileOutputStream OutStream(&OutFile);
@@ -684,7 +715,7 @@ namespace MBSlippi
         {
 		    p_LoadGlobalConfig();
             //DEPRECATED Input.TopCommand
-            if (Input.TopCommand == "update-index")
+            if (Input.TopCommand == "index")
             {
                 p_Handle_UpdateIndex(Input);
             }
