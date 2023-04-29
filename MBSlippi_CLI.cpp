@@ -344,12 +344,23 @@ namespace MBSlippi
         std::unique_ptr<MBUtility::MBOctetInputStream> InputStream = std::make_unique<MBUtility::MBBufferInputStream>(RawData.data(), RawData.size());
         SlippiEventParser EventParser(std::move(InputStream));
         Event CurrentEvent = EventParser.GetNextEvent();
+        auto const& PlayersData = TotalGameData["metadata"]["players"];
         while (CurrentEvent.GetType() != EventType::Null)
         {
             if (CurrentEvent.GetType() == EventType::GameStart)
             {
                 Event_GameStart const& CurrentEventData = CurrentEvent.GetEventData<Event_GameStart>();
-                ReturnValue.Stage = StageIDToString(GameInfoBlock(CurrentEventData.GameInfoBlock, sizeof(CurrentEventData.GameInfoBlock)).Stage);
+                GameInfoBlock GameInfo(CurrentEventData.GameInfoBlock,sizeof(CurrentEventData.GameInfoBlock));
+                if(!PlayersData.HasAttribute("names"))
+                {
+                    for(int i = 0; i< 4;i++)
+                    {
+                        ReturnValue.PlayerInfo[i].Tag = CurrentEventData.NameTags[i];
+                        ReturnValue.PlayerInfo[i].Code = CurrentEventData.ConnectCode[i];
+                        ReturnValue.PlayerInfo[i].Character = CharacterToString( GameInfo.PlayerInfo[i].Character);
+                    }
+                }
+                ReturnValue.Stage = StageIDToString(GameInfo.Stage);
                 break;
             }
             CurrentEvent = EventParser.GetNextEvent();
@@ -363,30 +374,32 @@ namespace MBSlippi
         
         //std::cout << TotalGameData["metadata"].ToString() << std::endl;
 
-        auto const& PlayersData = TotalGameData["metadata"]["players"];
-        if (PlayersData.GetMapData().begin()->second["names"].HasAttribute("code"))
+        if(PlayersData.HasAttribute("names"))
         {
-            if(PlayersData.HasAttribute("0"))
-                ReturnValue.PlayerInfo[0].Code = PlayersData["0"]["names"].HasAttribute("code") ? PlayersData["0"]["names"]["code"].GetStringData() : "";
-            if (PlayersData.HasAttribute("1"))
-                ReturnValue.PlayerInfo[1].Code = PlayersData["1"]["names"].HasAttribute("code") ? PlayersData["1"]["names"]["code"].GetStringData() : "";
-            if (PlayersData.HasAttribute("2"))
-                ReturnValue.PlayerInfo[2].Code = PlayersData["2"]["names"].HasAttribute("code") ? PlayersData["2"]["names"]["code"].GetStringData() : "";
-            if (PlayersData.HasAttribute("3"))
-                ReturnValue.PlayerInfo[3].Code = PlayersData["3"]["names"].HasAttribute("code") ? PlayersData["3"]["names"]["code"].GetStringData() : "";
+            if (PlayersData.GetMapData().begin()->second["names"].HasAttribute("code"))
+            {
+                if(PlayersData.HasAttribute("0"))
+                    ReturnValue.PlayerInfo[0].Code = PlayersData["0"]["names"].HasAttribute("code") ? PlayersData["0"]["names"]["code"].GetStringData() : "";
+                if (PlayersData.HasAttribute("1"))
+                    ReturnValue.PlayerInfo[1].Code = PlayersData["1"]["names"].HasAttribute("code") ? PlayersData["1"]["names"]["code"].GetStringData() : "";
+                if (PlayersData.HasAttribute("2"))
+                    ReturnValue.PlayerInfo[2].Code = PlayersData["2"]["names"].HasAttribute("code") ? PlayersData["2"]["names"]["code"].GetStringData() : "";
+                if (PlayersData.HasAttribute("3"))
+                    ReturnValue.PlayerInfo[3].Code = PlayersData["3"]["names"].HasAttribute("code") ? PlayersData["3"]["names"]["code"].GetStringData() : "";
+            }
+            if (PlayersData.GetMapData().begin()->second["names"].HasAttribute("netplay"))
+            {
+                if (PlayersData.HasAttribute("0"))
+                    ReturnValue.PlayerInfo[0].Tag = PlayersData["0"]["names"].HasAttribute("netplay") ? PlayersData["0"]["names"]["netplay"].GetStringData() : "";
+                if (PlayersData.HasAttribute("1"))
+                    ReturnValue.PlayerInfo[1].Tag = PlayersData["1"]["names"].HasAttribute("netplay") ? PlayersData["1"]["names"]["netplay"].GetStringData() : "";
+                if (PlayersData.HasAttribute("2"))
+                    ReturnValue.PlayerInfo[2].Tag = PlayersData["2"]["names"].HasAttribute("netplay") ? PlayersData["2"]["names"]["netplay"].GetStringData() : "";
+                if (PlayersData.HasAttribute("3"))
+                    ReturnValue.PlayerInfo[3].Tag = PlayersData["3"]["names"].HasAttribute("netplay") ? PlayersData["3"]["names"]["netplay"].GetStringData() : "";
+            }
         }
-        if (PlayersData.GetMapData().begin()->second["names"].HasAttribute("netplay"))
-        {
-            if (PlayersData.HasAttribute("0"))
-                ReturnValue.PlayerInfo[0].Tag = PlayersData["0"]["names"].HasAttribute("netplay") ? PlayersData["0"]["names"]["netplay"].GetStringData() : "";
-            if (PlayersData.HasAttribute("1"))
-                ReturnValue.PlayerInfo[1].Tag = PlayersData["1"]["names"].HasAttribute("netplay") ? PlayersData["1"]["names"]["netplay"].GetStringData() : "";
-            if (PlayersData.HasAttribute("2"))
-                ReturnValue.PlayerInfo[2].Tag = PlayersData["2"]["names"].HasAttribute("netplay") ? PlayersData["2"]["names"]["netplay"].GetStringData() : "";
-            if (PlayersData.HasAttribute("3"))
-                ReturnValue.PlayerInfo[3].Tag = PlayersData["3"]["names"].HasAttribute("netplay") ? PlayersData["3"]["names"]["netplay"].GetStringData() : "";
-        }
-        if (PlayersData.GetMapData().begin()->second.HasAttribute("characters"))
+        if (PlayersData.GetMapData().size() != 0 && PlayersData.GetMapData().begin()->second.HasAttribute("characters"))
         {
             if (PlayersData.HasAttribute("0") && PlayersData["0"].HasAttribute("characters"))
             {
@@ -413,7 +426,7 @@ namespace MBSlippi
         {
             throw std::runtime_error("Invalid replay directory");
         }
-        MBDB::MrBoboDatabase Database(DirectoryToCreate + "\\SlippiGames.db",MBDB::DBOpenOptions::ReadWrite);
+        MBDB::MrBoboDatabase Database(DirectoryToCreate +"/SlippiGames.db",MBDB::DBOpenOptions::ReadWrite);
         std::string GamesTable = "CREATE TABLE GAMES (GameID INTEGER PRIMARY KEY,RelativePath VARCHAR(65535),Date INTEGER,Stage VARCHAR(255),FrameDuration INTEGER);";
         std::string PlayerTable = "CREATE TABLE Players(GameID INTEGER,Port INTEGER,Code VARCHAR(255),Tag VARCHAR(255),Character VARCHAR(255));";
         MBDB::SQLStatement Statement = Database.GetSQLStatement(GamesTable);
@@ -423,28 +436,19 @@ namespace MBSlippi
         Result = true;
         Database.GetAllRows(Statement,&Result);
     }
-    void MBSlippiCLIHandler::p_UpdateGameSQLDatabase(std::string const& ReplayDirectory, MBPM::MBPP_FileInfoReader const& FileInfo)
+    void MBSlippiCLIHandler::p_UpdateGameSQLDatabase(MBDB::MrBoboDatabase& DatabaseToUpdate,std::filesystem::path const& ReplayDirectory,
+                std::vector<std::string> const& NewFiles)    
     {
-        auto FileIterator = FileInfo.GetDirectoryInfo("/")->begin();
-        auto End = FileInfo.GetDirectoryInfo("/")->end();
         uint32_t ParsedFiles = 0;
         uint32_t TotalFiles = 0;
-        if (!std::filesystem::exists(ReplayDirectory + "/SlippiGames.db") || !std::filesystem::directory_entry(ReplayDirectory + "/SlippiGames.db").is_regular_file())
+        for(auto const& NewFile : NewFiles)
         {
-            p_CreateDatabase(ReplayDirectory);
-        }
-        MBDB::MrBoboDatabase Database(ReplayDirectory + "/SlippiGames.db", MBDB::DBOpenOptions::ReadWrite);
-        for(;FileIterator != End;FileIterator++)
-        {
-            if (!std::filesystem::exists(ReplayDirectory + FileIterator.GetCurrentDirectory() + "/" + FileIterator->FileName))
+            if (!std::filesystem::exists(ReplayDirectory/NewFile))
             {
                 continue;
             }
-            if (FileIterator->FileName.find('.') == FileIterator->FileName.npos || FileIterator->FileName.substr(FileIterator->FileName.find('.') + 1) != "slp")
-            {
-                continue;
-            }
-            std::string TotalFileData = MBUtility::ReadWholeFile(ReplayDirectory+FileIterator.GetCurrentDirectory() + "/" + FileIterator->FileName);
+            //can assume files are valid slp files, that is ends with .slp
+            std::string TotalFileData = MBUtility::ReadWholeFile(MBUnicode::PathToUTF8( ReplayDirectory/NewFile));
             if (TotalFileData == "")
             {
                 continue;
@@ -466,34 +470,33 @@ namespace MBSlippi
             {
                 continue;
             }
-            std::string RelativePath = FileIterator.GetCurrentDirectory() + "/" + FileIterator->FileName;
             
             //Should actually check for errors...
             std::string QuerryToInsert = "INSERT INTO GAMES (RelativePath,Date,Stage,FrameDuration) VALUES (?,?,?,?);";
-            MBDB::SQLStatement Statement = Database.GetSQLStatement(QuerryToInsert);
-            Statement.BindString(RelativePath, 1);
+            MBDB::SQLStatement Statement = DatabaseToUpdate.GetSQLStatement(QuerryToInsert);
+            Statement.BindString(NewFile, 1);
             Statement.BindInt(NewGame.Date, 2);
             Statement.BindString(NewGame.Stage, 3);
             Statement.BindInt(NewGame.FrameDuration, 4);
             MBError Result = true;
-            Database.GetAllRows(Statement, &Result);
+            DatabaseToUpdate.GetAllRows(Statement, &Result);
             for(int i = 0; i < 4; i++)
             {
                 std::string PlayerQuery = "INSERT INTO PLAYERS (GameID,Port,Code,Tag,Character) VALUES (?,?,?,?,?);";
                 //how to get GameID?
-                std::vector<MBDB::MBDB_RowData> GameIDResult = Database.GetAllRows("SELECT MAX(GameID) FROM GAMES;");
+                std::vector<MBDB::MBDB_RowData> GameIDResult = DatabaseToUpdate.GetAllRows("SELECT MAX(GameID) FROM GAMES;");
                 if(GameIDResult.size() == 0)
                 {
                     throw std::runtime_error("Error retrieving GameID from database");
                 }
                 MBDB::IntType GameID = GameIDResult[0].GetColumnData<MBDB::IntType>(0);
-                Statement = std::move(Database.GetSQLStatement(PlayerQuery));
+                Statement = std::move(DatabaseToUpdate.GetSQLStatement(PlayerQuery));
                 Statement.BindInt(GameID,1);
                 Statement.BindInt(i,2);
                 Statement.BindString(NewGame.PlayerInfo[i].Code,3);
                 Statement.BindString(NewGame.PlayerInfo[i].Tag,4);
                 Statement.BindString(NewGame.PlayerInfo[i].Character,5);
-                Database.GetAllRows(Statement, &Result);
+                DatabaseToUpdate.GetAllRows(Statement, &Result);
             }
             ParsedFiles += 1;
         }
@@ -513,59 +516,39 @@ namespace MBSlippi
                 m_Terminal.Print("Invalid replay directory: "+MBUnicode::PathToUTF8(ReplayDirectory) + " doesn't exist");
                 return;
             }
-            if (!std::filesystem::exists(ReplayDirectory) || Input.CommandOptions.find("rebuild") != Input.CommandOptions.end())
+            std::filesystem::path DatabasePath = ReplayDirectory/"SlippiGames.db";
+            if (!std::filesystem::exists(DatabasePath) || Input.CommandOptions.find("rebuild") != Input.CommandOptions.end())
             {
-                MBPM::MBPP_FileInfoReader ReplayFileInfo;
-                MBPM::MBPP_FileInfoReader::CreateFileInfo(MBUnicode::PathToUTF8(ReplayDirectory),&ReplayFileInfo);
-                if (!ReplayFileInfo.ObjectExists("/"))
+                //in case of rebuild
+                if(std::filesystem::exists(DatabasePath))
                 {
-                    m_Terminal.SetTextColor(MBCLI::ANSITerminalColor::Red);
-                    m_Terminal.Print("Failed to create FileInfoIndex for replay directory");
-                    return;
+                    std::filesystem::remove(DatabasePath);
                 }
-                if(std::filesystem::exists(ReplayDirectory /"SlippiGames.db"))
-                {
-                    std::filesystem::remove(ReplayDirectory/"SlippiGames.db");
-                }
-                p_UpdateGameSQLDatabase(MBUnicode::PathToUTF8(ReplayDirectory), ReplayFileInfo);
-                std::ofstream OutFile(ReplayDirectory/"MBPM_FileInfo", std::ios::out | std::ios::binary);
-                MBUtility::MBFileOutputStream OutStream(&OutFile);
-                ReplayFileInfo.WriteData(&OutStream);
+                p_CreateDatabase(MBUnicode::PathToUTF8(ReplayDirectory));
             }
-            else
+            MBDB::MrBoboDatabase Database(MBUnicode::PathToUTF8(DatabasePath),MBDB::DBOpenOptions::ReadWrite);
+            std::vector<std::string> StoredGames;
+            std::vector<MBDB::MBDB_RowData> ResultRows = Database.GetAllRows("SELECT RelativePath FROM GAMES ORDER BY RelativePath;"); 
+            for(auto const & Row : ResultRows)
             {
-                MBPM::MBPP_FileInfoReader UpdatedFiles = MBPM::MBPP_FileInfoReader::GetLocalUpdatedFiles(MBUnicode::PathToUTF8(ReplayDirectory));
-                if (UpdatedFiles.GetDirectoryInfo("/") == nullptr)
+                StoredGames.push_back(Row.GetColumnData<std::string>(0));
+            }
+            //get local games
+            std::vector<std::string> GamesInDirectory;
+            std::filesystem::recursive_directory_iterator DirIterator(ReplayDirectory);
+            for(auto const& Entry : DirIterator)
+            {
+                if(Entry.is_regular_file() && Entry.path().extension() == ".slp")
                 {
-                    m_Terminal.SetTextColor(MBCLI::ANSITerminalColor::Red);
-                    m_Terminal.Print("Error getting local file info difference");
-                    return;
+                    GamesInDirectory.push_back(MBUnicode::PathToUTF8(std::filesystem::relative(Entry.path(),ReplayDirectory)));
                 }
-                MBPM::MBPP_DirectoryInfoNode const* TopDirectory = UpdatedFiles.GetDirectoryInfo("/");
-                MBPM::MBPP_FileInfoDiff FileDiff = MBPM::MBPP_FileInfoReader::GetLocalInfoDiff(MBUnicode::PathToUTF8(ReplayDirectory));
-                if ((TopDirectory->Files.size() == 0 && TopDirectory->Directories.size() == 0) && (FileDiff.RemovedFiles.size() == 0 && FileDiff.DeletedDirectories.size() == 0))
-                {
-                    m_Terminal.Print("Index already up to date");
-                    return;
-                }
-                try
-                {
-                    p_UpdateGameSQLDatabase(MBUnicode::PathToUTF8(ReplayDirectory), UpdatedFiles);
-                }
-                catch(std::exception const& e)
-                {
-                    m_Terminal.PrintLine("Error updating index: Error updateing SQL database: "+std::string(e.what()));   
-                    return;
-                }
-                MBPM::MBPP_FileInfoReader OldInfo = MBPM::MBPP_FileInfoReader( MBUnicode::PathToUTF8(ReplayDirectory/"MBPM_FileInfo"));
-                OldInfo.UpdateInfo(UpdatedFiles);
-                OldInfo.DeleteObjects(FileDiff.RemovedFiles);
-                OldInfo.DeleteObjects(FileDiff.DeletedDirectories);
-                std::ofstream OutFile(ReplayDirectory/"MBPM_FileInfo", std::ios::out | std::ios::binary);
-                MBUtility::MBFileOutputStream OutStream(&OutFile);
-                OldInfo.WriteData(&OutStream);
+            }
+            std::sort(GamesInDirectory.begin(),GamesInDirectory.end());
 
-            }
+            std::vector<std::string> NewFiles;
+            std::set_difference(GamesInDirectory.begin(),GamesInDirectory.end(),StoredGames.begin(),StoredGames.end(),
+                    std::inserter(NewFiles,NewFiles.begin()));
+            p_UpdateGameSQLDatabase(Database,ReplayDirectory,NewFiles);
         }
     }
     void MBSlippiCLIHandler::p_Handle_Execute(MBCLI::ProcessedCLInput const& Input)

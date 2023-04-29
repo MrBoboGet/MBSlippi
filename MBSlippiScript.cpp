@@ -320,6 +320,7 @@ namespace MBSlippi
 		{
 			throw MBScript::MBSRuntimeException("Actionable frames takes only 1 argument");
 		}
+        throw MBScript::MBSRuntimeException("Not implemented");
 	}
 	std::unique_ptr<MBScript::MBSObject> MBS_SlippiModule::InShieldStun(MBScript::ArgumentList Argumnets)
 	{
@@ -327,6 +328,7 @@ namespace MBSlippi
 		{
 			throw MBScript::MBSRuntimeException("InShieldStun frames takes only 1 argument");
 		}
+        throw MBScript::MBSRuntimeException("Not implemented");
 	}
 	std::unique_ptr<MBScript::MBSObject> MBS_SlippiModule::LoadGame(MBScript::ArgumentList Argumnets)
 	{
@@ -596,7 +598,7 @@ namespace MBSlippi
 		MBDB::MrBoboDatabase DataBase(m_Config.ReplaysDirectory + "/SlippiGames.db", MBDB::DBOpenOptions::ReadOnly);
 		std::string GameQuery = MBScript::CastObject<MBScript::MBSObject_String>(*Arguments.Arguments[0]).Value;
 		
-		MBDB::SQLStatement* Statement = DataBase.GetSQLStatement(GameQuery);
+		MBDB::SQLStatement Statement = DataBase.GetSQLStatement(GameQuery);
 		MBError ErrorResult = true;
 		std::vector<MBDB::MBDB_RowData> Result = DataBase.GetAllRows(Statement, &ErrorResult);
 		if (!ErrorResult)
@@ -610,11 +612,11 @@ namespace MBSlippi
 			{
 				if (Row.GetColumnValueType(i) == MBDB::MBDB_ColumnValueTypes::Int32)
 				{
-					*NewList += std::make_unique<MBScript::MBSObject_Integer>(Row.GetColumnData<int>(i));
+					*NewList += std::make_unique<MBScript::MBSObject_Integer>(Row.GetColumnData<MBDB::IntType>(i));
 				}
 				else if (Row.GetColumnValueType(i) == MBDB::MBDB_ColumnValueTypes::Int64)
 				{
-					*NewList += std::make_unique<MBScript::MBSObject_Integer>(Row.GetColumnData<long long>(i));
+					*NewList += std::make_unique<MBScript::MBSObject_Integer>(Row.GetColumnData<MBDB::IntType>(i));
 				}
 				else if (Row.GetColumnValueType(i) == MBDB::MBDB_ColumnValueTypes::Double)
 				{

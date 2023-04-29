@@ -6,6 +6,8 @@
 #include <deque>
 #include "SlippiSpec.h"
 
+#include <MrBoboDatabase/MrBoboDatabase.h>
+
 
 namespace MBSlippi
 {
@@ -81,7 +83,8 @@ namespace MBSlippi
 
 		void p_CreateDatabase(std::string const& DirectoryToCreate);
 		SlippiGameInfo p_SlippiFileToGameInfo(MBParsing::JSONObject const& TotalGameData);
-		void p_UpdateGameSQLDatabase(std::string const& ReplayDirectory,MBPM::MBPP_FileInfoReader const& FileInfo);
+		void p_UpdateGameSQLDatabase(MBDB::MrBoboDatabase& DatabaseToUpdate,std::filesystem::path const& ReplayDirectory,
+                std::vector<std::string> const& NewFiles);
 
 		void p_Handle_UpdateIndex(MBCLI::ProcessedCLInput const& Input);
 		void p_Handle_Execute_Legacy(MBCLI::ProcessedCLInput const& Input);

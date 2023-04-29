@@ -1190,7 +1190,7 @@ namespace MBSlippi
 	}
 	static inline const char* __ExternalCharacterStringMap[34] =
 	{
-		"CaptainFalcon"     ,
+		"Captain"     ,
         "DonkeyKong"        ,
         "Fox"               ,
         "MrGameWatch"       ,
@@ -1231,6 +1231,10 @@ namespace MBSlippi
 		{
 			throw std::runtime_error("InternalCharacterID out of range");
 		}
+        if(uint64_t(IdToConvert) > uint64_t(ExternalCharacterID::Ganondorf))
+        {
+            return("");
+        }
 		return(__ExternalCharacterStringMap[uint64_t(IdToConvert)]);
 	}
 

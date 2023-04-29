@@ -21,10 +21,6 @@ int main(int argc, const char** argv)
     //       
     //}
     //return 0;
-    std::filesystem::current_path(std::filesystem::current_path().parent_path().parent_path());
-    const char* NewArgv[] = {"mbslippi", "execute", "TestSpec.slpspec"};
-    argv = NewArgv;
-    argc = sizeof(NewArgv) / sizeof(const char*);
     MBSlippi::MBSlippiCLIHandler HandlerToUse;
 	//std::filesystem::current_path(std::filesystem::current_path().parent_path().parent_path());
 	//MBSlippi::RunTests();

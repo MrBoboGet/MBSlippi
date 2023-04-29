@@ -25,6 +25,52 @@ namespace MBSlippi
 
 		Null,
 	};
+    inline char ShiftJSConvert(uint16_t charCode)
+    {
+        char ReturnValue = charCode;
+        if (charCode > 0xff00 && charCode < 0xff5f) 
+        {
+          return 0x0020 + (charCode - 0xff00);
+        }
+        if (charCode == 0x3000) 
+        {
+          return 0x0020;
+        }
+        if (charCode == 0x2019) 
+        {
+          return 0x0027;
+        }
+        if (charCode == 0x201d) 
+        {
+          return 0x0022;
+        }
+        return(ReturnValue);
+    }
+    //only works for ascii
+    inline std::string ShiftJISConvert(const char* Data,size_t DataSize)
+    {
+        std::string ReturnValue;
+        if(DataSize % 2 != 0)
+        {
+            throw std::runtime_error("ShiftJIS requires event amount of bytes, wide characters");   
+        }
+        size_t ParseOffset = 0;
+        while(ParseOffset < DataSize)
+        {
+            if(Data[ParseOffset] == 0)
+            {
+                break;   
+            }
+            uint16_t NextCharacter = MBParsing::ParseBigEndianInteger(Data,2,ParseOffset,&ParseOffset);
+            if(NextCharacter == 0)
+            {
+                break;
+            }
+            ReturnValue += ShiftJSConvert(NextCharacter);
+        }
+
+        return(ReturnValue);
+    }
 	struct ParseVersion
 	{
 		uint8_t Major  = uint8_t( - 1);
@@ -192,18 +238,31 @@ namespace MBSlippi
 			return(ReturnValue);
 		}
 	};
+    struct GamePlayerInfo
+    {
+        ExternalCharacterID Character;
 
+        void Parse(const char* Data,size_t DataSize)
+        {
+            Character = ExternalCharacterID(Data[0]);
+        }
+    };
 	struct GameInfoBlock
 	{
 		StageID Stage;
-
+        GamePlayerInfo PlayerInfo[4];
 		GameInfoBlock() {};
 		GameInfoBlock(const void* Data, size_t DataSize)
 		{
 			size_t ParseOffset = 0;
+            const char* CharData = (const char*)Data;
 			//lat, vill bara ha stage
 			ParseOffset = 0x0e;
-			Stage = StageID(MBParsing::ParseBigEndianInteger(Data, 2,0,nullptr));
+			Stage = StageID(MBParsing::ParseBigEndianInteger(CharData+ParseOffset, 2,0,nullptr));
+            for(int i = 0; i < 4;i++)
+            {
+                PlayerInfo[i].Parse( ((const char*)Data)+0x60+0x24*i,0x24);
+            }
 		}
 	};
 
@@ -250,7 +309,8 @@ namespace MBSlippi
 			}
 			for (size_t i = 0; i < 4; i++)
 			{
-				NameTags[i] = std::string((const char*)ByteData + ParseOffset);
+				//NameTags[i] = std::string((const char*)ByteData + ParseOffset);
+				NameTags[i] = ShiftJISConvert((const char*)ByteData+ParseOffset,16);
 				ParseOffset += 16;
 			}
 			if (Version < ParseVersion{ 1,5,0,0 })
