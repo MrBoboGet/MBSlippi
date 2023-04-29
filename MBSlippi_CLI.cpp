@@ -149,80 +149,82 @@ namespace MBSlippi
     std::vector<SlippiGameInfo> MBSlippiCLIHandler::RetrieveGames(std::string const& WhereCondition)
     {
         std::vector<SlippiGameInfo> ReturnValue;
-        MBDB::MrBoboDatabase Database(m_Config.ReplaysDirectory + "/SlippiGames.db", MBDB::DBOpenOptions::ReadWrite);
-        std::string QueryString = "SELECT * FROM GAMES";
-        if(WhereCondition != "")
+        for(auto const& Path : m_ReplayDirectories)
         {
-            QueryString += "WHERE "+WhereCondition;   
-        }
-        MBError QueryError = true;
-        std::vector<MBDB::MBDB_RowData> Result = Database.GetAllRows(QueryString,&QueryError);
-        ReturnValue.reserve(Result.size());
-        for(MBDB::MBDB_RowData const& Row : Result)
-        {
-            SlippiGameInfo NewGameInfo;
-            MBDB::MaxInt GameID = Row.GetColumnData<int>(0);
-            NewGameInfo.AbsolutePath = m_Config.ReplaysDirectory + "/" + Row.GetColumnData<std::string>(1);
-            NewGameInfo.Date = Row.GetColumnData<int>(2);
-            NewGameInfo.Stage = Row.GetColumnData<std::string>(3);
-            NewGameInfo.FrameDuration = Row.GetColumnData<int>(4);
-
+            MBDB::MrBoboDatabase Database(m_Config.ReplaysDirectory + "/SlippiGames.db", MBDB::DBOpenOptions::ReadOnly);
             auto PlayerQuery = Database.GetSQLStatement("SELECT * FROM PLAYERS WHERE GameID = ?");
-
-            PlayerQuery->BindInt(GameID,1);
-            auto Rows = Database.GetAllRows(PlayerQuery,&QueryError);
-            for(auto const& Row : Rows)
+            std::string QueryString = "SELECT * FROM GAMES";
+            if(WhereCondition != "")
             {
-                int Index = Row.GetColumnData<int>(1);
-                if(Index < 0 || Index > 3)
-                {
-                    throw std::runtime_error("Error retrieving specgames: player port above 3 or below 0 in database index");
-                }
-                NewGameInfo.PlayerInfo[Index].Code = Row.GetColumnData<std::string>(2);
-                NewGameInfo.PlayerInfo[Index].Tag = Row.GetColumnData<std::string>(3);
-                NewGameInfo.PlayerInfo[Index].Character = Row.GetColumnData<std::string>(4);
+                QueryString += "WHERE "+WhereCondition;   
             }
-            ReturnValue.push_back(NewGameInfo);
-            Database.FreeSQLStatement(PlayerQuery);
+            MBError QueryError = true;
+            std::vector<MBDB::MBDB_RowData> Result = Database.GetAllRows(QueryString,&QueryError);
+            ReturnValue.reserve(ReturnValue.size() + Result.size());
+            for(MBDB::MBDB_RowData const& Row : Result)
+            {
+                SlippiGameInfo NewGameInfo;
+                MBDB::IntType GameID = Row.GetColumnData<MBDB::IntType>(0);
+                NewGameInfo.AbsolutePath = m_Config.ReplaysDirectory + "/" + Row.GetColumnData<std::string>(1);
+                NewGameInfo.Date = Row.GetColumnData<MBDB::IntType>(2);
+                NewGameInfo.Stage = Row.GetColumnData<std::string>(3);
+                NewGameInfo.FrameDuration = Row.GetColumnData<MBDB::IntType>(4);
+
+
+                PlayerQuery.BindInt(GameID,1);
+                auto Rows = Database.GetAllRows(PlayerQuery,&QueryError);
+                for(auto const& Row : Rows)
+                {
+                    int Index = Row.GetColumnData<MBDB::IntType>(1);
+                    if(Index < 0 || Index > 3)
+                    {
+                        throw std::runtime_error("Error retrieving specgames: player port above 3 or below 0 in database index");
+                    }
+                    NewGameInfo.PlayerInfo[Index].Code = Row.GetColumnData<std::string>(2);
+                    NewGameInfo.PlayerInfo[Index].Tag = Row.GetColumnData<std::string>(3);
+                    NewGameInfo.PlayerInfo[Index].Character = Row.GetColumnData<std::string>(4);
+                }
+                ReturnValue.push_back(NewGameInfo);
+            }
         }
         return(ReturnValue);
     }
     
     void MBSlippiCLIHandler::p_WriteReplayInfo(std::vector<RecordingInfo> const& RecordingsToWrite,MBUtility::MBOctetOutputStream& OutStream)
     {
-		MBParsing::JSONObject JSONToWrite(MBParsing::JSONObjectType::Aggregate);
-		JSONToWrite["mode"] = "queue";
-		JSONToWrite["replay"] = "";
-		JSONToWrite["isRealTimeMode"] = false;
-		JSONToWrite["outputOverlayFiles"] = true;
-		std::vector<MBParsing::JSONObject> QueueElements;
-		for(auto const& Recording : RecordingsToWrite)
-		{
-			std::string Path = Recording.GamePath;
-			for (auto const& Intervall : Recording.IntervallsToRecord)
-			{
-				MBParsing::JSONObject NewQueueElement(MBParsing::JSONObjectType::Aggregate);
-				NewQueueElement["path"] = Path;
+        MBParsing::JSONObject JSONToWrite(MBParsing::JSONObjectType::Aggregate);
+        JSONToWrite["mode"] = "queue";
+        JSONToWrite["replay"] = "";
+        JSONToWrite["isRealTimeMode"] = false;
+        JSONToWrite["outputOverlayFiles"] = true;
+        std::vector<MBParsing::JSONObject> QueueElements;
+        for(auto const& Recording : RecordingsToWrite)
+        {
+            std::string Path = Recording.GamePath;
+            for (auto const& Intervall : Recording.IntervallsToRecord)
+            {
+                MBParsing::JSONObject NewQueueElement(MBParsing::JSONObjectType::Aggregate);
+                NewQueueElement["path"] = Path;
                 //replays start at -123, lmao, just hardcode it here.
-				NewQueueElement["startFrame"] =int64_t(Intervall.FirstFrame-123);
-				NewQueueElement["endFrame"] = int64_t(Intervall.LastFrame-123);
-				QueueElements.push_back(std::move(NewQueueElement));
-			}
-		}
-		JSONToWrite["queue"] = std::move(QueueElements);
+                NewQueueElement["startFrame"] =int64_t(Intervall.FirstFrame-123);
+                NewQueueElement["endFrame"] = int64_t(Intervall.LastFrame-123);
+                QueueElements.push_back(std::move(NewQueueElement));
+            }
+        }
+        JSONToWrite["queue"] = std::move(QueueElements);
         OutStream<<JSONToWrite.ToString();
         OutStream.Flush();
     }
-	void MBSlippiCLIHandler::p_RestoreDolphinConfigs(std::string const& DumpDirectory, DolphinConfigParser const& DolphinINI, DolphinConfigParser const& DolphinGFX)
-	{
-		std::filesystem::remove_all(DumpDirectory);
-		if (!std::filesystem::exists(m_Config.ReplayDolphinDirectory + "/User/Config/Dolphin.ini") || !std::filesystem::exists(m_Config.ReplayDolphinDirectory + "/User/Config/GFX.ini"))
-		{
-			throw MBScript::MBSRuntimeException("Dolphin configs doesnt exist. Invalid dolphin replay path specified?");
-		}
-		DolphinGFX.WriteValues(m_Config.ReplayDolphinDirectory + "/User/Config/GFX.ini");
-		DolphinINI.WriteValues(m_Config.ReplayDolphinDirectory + "/User/Config/Dolphin.ini");
-	}
+    void MBSlippiCLIHandler::p_RestoreDolphinConfigs(std::string const& DumpDirectory, DolphinConfigParser const& DolphinINI, DolphinConfigParser const& DolphinGFX)
+    {
+        std::filesystem::remove_all(DumpDirectory);
+        if (!std::filesystem::exists(m_Config.ReplayDolphinDirectory + "/User/Config/Dolphin.ini") || !std::filesystem::exists(m_Config.ReplayDolphinDirectory + "/User/Config/GFX.ini"))
+        {
+            throw MBScript::MBSRuntimeException("Dolphin configs doesnt exist. Invalid dolphin replay path specified?");
+        }
+        DolphinGFX.WriteValues(m_Config.ReplayDolphinDirectory + "/User/Config/GFX.ini");
+        DolphinINI.WriteValues(m_Config.ReplayDolphinDirectory + "/User/Config/Dolphin.ini");
+    }
     std::string MBSlippiCLIHandler::p_UpdateDolphinConfigs(DolphinConfigParser* OutOriginalIni,DolphinConfigParser* OutOriginalGFX)
     {
         std::string DumpPath = ".__DolphinDumpDirectory";
@@ -293,79 +295,88 @@ namespace MBSlippi
         int FFMPEGResult = std::system(FFMPEGCommand.c_str());
         p_RestoreDolphinConfigs(DumpDirectory,OriginalIni,OriginalGFX);
     }
-	void MBSlippiCLIHandler::p_LoadGlobalConfig()
-	{
-		try
-		{
+    void MBSlippiCLIHandler::p_LoadGlobalConfig()
+    {
+        try
+        {
             std::filesystem::path FileToRead = MBSystem::GetUserHomeDirectory()/".mbslippi/MBSlippiConfig.json";
-			std::string TotalConfigData = MBUtility::ReadWholeFile(MBUnicode::PathToUTF8(FileToRead));
-			if (TotalConfigData == "")
-			{
-				m_Terminal.SetTextColor(MBCLI::ANSITerminalColor::Red);
-				m_Terminal.Print("Couldnt find or load data from MBSlippiConfig.json");
-				m_Terminal.SetTextColor(MBCLI::ANSITerminalColor::White);
-				std::exit(1);
-			}
-			MBError ParseResult = true;
-			MBParsing::JSONObject ConfigJSON = MBParsing::ParseJSONObject(TotalConfigData, 0, 0, &ParseResult);
-			if (!ParseResult)
-			{
-				m_Terminal.SetTextColor(MBCLI::ANSITerminalColor::Red);
-				m_Terminal.Print("Error parsing MBSlippiConfig file: " + ParseResult.ErrorMessage);
-				m_Terminal.SetTextColor(MBCLI::ANSITerminalColor::White);
-				std::exit(1);
-			}
-			m_Config = MBSlippiConfig(ConfigJSON);
-		}
-		catch (std::exception const& e)
-		{
-			m_Terminal.SetTextColor(MBCLI::ANSITerminalColor::Red);
-			m_Terminal.Print("Error loading config: " +std::string(e.what()));
-			m_Terminal.SetTextColor(MBCLI::ANSITerminalColor::White);
-			std::exit(1);
-		}
-	}
-	SlippiGameInfo MBSlippiCLIHandler::p_SlippiFileToGameInfo(MBParsing::JSONObject const& TotalGameData)
-	{
-		SlippiGameInfo ReturnValue;
-		
-		std::string const& RawData = TotalGameData["raw"].GetStringData();
-		std::unique_ptr<MBUtility::MBOctetInputStream> InputStream = std::make_unique<MBUtility::MBBufferInputStream>(RawData.data(), RawData.size());
-		SlippiEventParser EventParser(std::move(InputStream));
-		Event CurrentEvent = EventParser.GetNextEvent();
-		while (CurrentEvent.GetType() != EventType::Null)
-		{
-			if (CurrentEvent.GetType() == EventType::GameStart)
-			{
-				Event_GameStart const& CurrentEventData = CurrentEvent.GetEventData<Event_GameStart>();
-				ReturnValue.Stage = StageIDToString(GameInfoBlock(CurrentEventData.GameInfoBlock, sizeof(CurrentEventData.GameInfoBlock)).Stage);
-				break;
-			}
-			CurrentEvent = EventParser.GetNextEvent();
-		}
-		std::tm StoredTime{};
-		std::istringstream(TotalGameData["metadata"]["startAt"].GetStringData()) >> std::get_time(&StoredTime, "%Y-%m-%d");
-		StoredTime.tm_isdst = -1;
-		ReturnValue.Date = uint64_t(std::mktime(&StoredTime));
-		
-		ReturnValue.FrameDuration = TotalGameData.GetAttribute("metadata").GetAttribute("lastFrame").GetIntegerData();
-		
-		//std::cout << TotalGameData["metadata"].ToString() << std::endl;
+            std::string TotalConfigData = MBUtility::ReadWholeFile(MBUnicode::PathToUTF8(FileToRead));
+            if (TotalConfigData == "")
+            {
+                m_Terminal.SetTextColor(MBCLI::ANSITerminalColor::Red);
+                m_Terminal.Print("Couldnt find or load data from MBSlippiConfig.json");
+                m_Terminal.SetTextColor(MBCLI::ANSITerminalColor::White);
+                std::exit(1);
+            }
+            MBError ParseResult = true;
+            MBParsing::JSONObject ConfigJSON = MBParsing::ParseJSONObject(TotalConfigData, 0, 0, &ParseResult);
+            if (!ParseResult)
+            {
+                m_Terminal.SetTextColor(MBCLI::ANSITerminalColor::Red);
+                m_Terminal.Print("Error parsing MBSlippiConfig file: " + ParseResult.ErrorMessage);
+                m_Terminal.SetTextColor(MBCLI::ANSITerminalColor::White);
+                std::exit(1);
+            }
+            m_Config = MBSlippiConfig(ConfigJSON);
+            //Every directory in the ~/.mbslippi/Replays/ counts as a replay directory
+            std::filesystem::directory_iterator DirIterator(MBSystem::GetUserHomeDirectory()/".mbslippi/Replays");
+            for(auto const& Entry : DirIterator)
+            {
+                if(Entry.is_directory())
+                {
+                    m_ReplayDirectories.push_back(Entry.path());   
+                }
+            }
+        }
+        catch (std::exception const& e)
+    {
+            m_Terminal.SetTextColor(MBCLI::ANSITerminalColor::Red);
+            m_Terminal.Print("Error loading config: " +std::string(e.what()));
+            m_Terminal.SetTextColor(MBCLI::ANSITerminalColor::White);
+            std::exit(1);
+        }
+    }
+    SlippiGameInfo MBSlippiCLIHandler::p_SlippiFileToGameInfo(MBParsing::JSONObject const& TotalGameData)
+    {
+        SlippiGameInfo ReturnValue;
+        
+        std::string const& RawData = TotalGameData["raw"].GetStringData();
+        std::unique_ptr<MBUtility::MBOctetInputStream> InputStream = std::make_unique<MBUtility::MBBufferInputStream>(RawData.data(), RawData.size());
+        SlippiEventParser EventParser(std::move(InputStream));
+        Event CurrentEvent = EventParser.GetNextEvent();
+        while (CurrentEvent.GetType() != EventType::Null)
+        {
+            if (CurrentEvent.GetType() == EventType::GameStart)
+            {
+                Event_GameStart const& CurrentEventData = CurrentEvent.GetEventData<Event_GameStart>();
+                ReturnValue.Stage = StageIDToString(GameInfoBlock(CurrentEventData.GameInfoBlock, sizeof(CurrentEventData.GameInfoBlock)).Stage);
+                break;
+            }
+            CurrentEvent = EventParser.GetNextEvent();
+        }
+        std::tm StoredTime{};
+        std::istringstream(TotalGameData["metadata"]["startAt"].GetStringData()) >> std::get_time(&StoredTime, "%Y-%m-%d");
+        StoredTime.tm_isdst = -1;
+        ReturnValue.Date = uint64_t(std::mktime(&StoredTime));
+        
+        ReturnValue.FrameDuration = TotalGameData.GetAttribute("metadata").GetAttribute("lastFrame").GetIntegerData();
+        
+        //std::cout << TotalGameData["metadata"].ToString() << std::endl;
 
         auto const& PlayersData = TotalGameData["metadata"]["players"];
-		if (PlayersData.GetMapData().begin()->second["names"].HasAttribute("code"))
-		{
+        if (PlayersData.GetMapData().begin()->second["names"].HasAttribute("code"))
+        {
             if(PlayersData.HasAttribute("0"))
-			    ReturnValue.PlayerInfo[0].Code = PlayersData["0"]["names"].HasAttribute("code") ? PlayersData["0"]["names"]["code"].GetStringData() : "";
+                ReturnValue.PlayerInfo[0].Code = PlayersData["0"]["names"].HasAttribute("code") ? PlayersData["0"]["names"]["code"].GetStringData() : "";
             if (PlayersData.HasAttribute("1"))
                 ReturnValue.PlayerInfo[1].Code = PlayersData["1"]["names"].HasAttribute("code") ? PlayersData["1"]["names"]["code"].GetStringData() : "";
             if (PlayersData.HasAttribute("2"))
                 ReturnValue.PlayerInfo[2].Code = PlayersData["2"]["names"].HasAttribute("code") ? PlayersData["2"]["names"]["code"].GetStringData() : "";
             if (PlayersData.HasAttribute("3"))
                 ReturnValue.PlayerInfo[3].Code = PlayersData["3"]["names"].HasAttribute("code") ? PlayersData["3"]["names"]["code"].GetStringData() : "";
-		}
-		if (PlayersData.GetMapData().begin()->second["names"].HasAttribute("netplay"))
-		{
+        }
+        if (PlayersData.GetMapData().begin()->second["names"].HasAttribute("netplay"))
+        {
             if (PlayersData.HasAttribute("0"))
                 ReturnValue.PlayerInfo[0].Tag = PlayersData["0"]["names"].HasAttribute("netplay") ? PlayersData["0"]["names"]["netplay"].GetStringData() : "";
             if (PlayersData.HasAttribute("1"))
@@ -374,9 +385,9 @@ namespace MBSlippi
                 ReturnValue.PlayerInfo[2].Tag = PlayersData["2"]["names"].HasAttribute("netplay") ? PlayersData["2"]["names"]["netplay"].GetStringData() : "";
             if (PlayersData.HasAttribute("3"))
                 ReturnValue.PlayerInfo[3].Tag = PlayersData["3"]["names"].HasAttribute("netplay") ? PlayersData["3"]["names"]["netplay"].GetStringData() : "";
-		}
-		if (PlayersData.GetMapData().begin()->second.HasAttribute("characters"))
-		{
+        }
+        if (PlayersData.GetMapData().begin()->second.HasAttribute("characters"))
+        {
             if (PlayersData.HasAttribute("0") && PlayersData["0"].HasAttribute("characters"))
             {
                 ReturnValue.PlayerInfo[0].Character = MBSlippi::CharacterToString(InternalCharacterID(std::stoi(PlayersData["0"]["characters"].GetMapData().begin()->first)));
@@ -393,82 +404,79 @@ namespace MBSlippi
             {
                 ReturnValue.PlayerInfo[3].Character = MBSlippi::CharacterToString(InternalCharacterID(std::stoi(PlayersData["3"]["characters"].GetMapData().begin()->first)));
             }
-		}
-		return(ReturnValue);
-	}
-	void MBSlippiCLIHandler::p_CreateDatabase(std::string const& DirectoryToCreate)
-	{
-		if (!std::filesystem::exists(DirectoryToCreate))
-		{
-			throw std::runtime_error("Invalid replay directory");
-		}
-		MBDB::MrBoboDatabase Database(DirectoryToCreate + "\\SlippiGames.db",MBDB::DBOpenOptions::ReadWrite);
-		std::string GamesTable = "CREATE TABLE GAMES (GameID INTEGER PRIMARY KEY,RelativePath VARCHAR(65535),Date INTEGER,Stage VARCHAR(255),FrameDuration INTEGER);";
+        }
+        return(ReturnValue);
+    }
+    void MBSlippiCLIHandler::p_CreateDatabase(std::string const& DirectoryToCreate)
+    {
+        if (!std::filesystem::exists(DirectoryToCreate))
+        {
+            throw std::runtime_error("Invalid replay directory");
+        }
+        MBDB::MrBoboDatabase Database(DirectoryToCreate + "\\SlippiGames.db",MBDB::DBOpenOptions::ReadWrite);
+        std::string GamesTable = "CREATE TABLE GAMES (GameID INTEGER PRIMARY KEY,RelativePath VARCHAR(65535),Date INTEGER,Stage VARCHAR(255),FrameDuration INTEGER);";
         std::string PlayerTable = "CREATE TABLE Players(GameID INTEGER,Port INTEGER,Code VARCHAR(255),Tag VARCHAR(255),Character VARCHAR(255));";
-		MBDB::SQLStatement* Statement = Database.GetSQLStatement(GamesTable);
-		MBError Result = true;
-		Database.GetAllRows(Statement,&Result);
-        Database.FreeSQLStatement(Statement);
-		Statement = Database.GetSQLStatement(PlayerTable);
-		Result = true;
-		Database.GetAllRows(Statement,&Result);
-        Database.FreeSQLStatement(Statement);
-	}
-	void MBSlippiCLIHandler::p_UpdateGameSQLDatabase(std::string const& ReplayDirectory, MBPM::MBPP_FileInfoReader const& FileInfo)
-	{
-		auto FileIterator = FileInfo.GetDirectoryInfo("/")->begin();
-		auto End = FileInfo.GetDirectoryInfo("/")->end();
-		uint32_t ParsedFiles = 0;
-		uint32_t TotalFiles = 0;
-		if (!std::filesystem::exists(ReplayDirectory + "/SlippiGames.db") || !std::filesystem::directory_entry(ReplayDirectory + "/SlippiGames.db").is_regular_file())
-		{
-			p_CreateDatabase(ReplayDirectory);
-		}
-		MBDB::MrBoboDatabase Database(ReplayDirectory + "/SlippiGames.db", MBDB::DBOpenOptions::ReadWrite);
-		for(;FileIterator != End;FileIterator++)
-		{
-			if (!std::filesystem::exists(ReplayDirectory + FileIterator.GetCurrentDirectory() + "/" + FileIterator->FileName))
-			{
-				continue;
-			}
-			if (FileIterator->FileName.find('.') == FileIterator->FileName.npos || FileIterator->FileName.substr(FileIterator->FileName.find('.') + 1) != "slp")
-			{
-				continue;
-			}
-			std::string TotalFileData = MBUtility::ReadWholeFile(ReplayDirectory+FileIterator.GetCurrentDirectory() + "/" + FileIterator->FileName);
-			if (TotalFileData == "")
-			{
-				continue;
-			}
-			TotalFiles++;
-			MBError ParseResult = true;
-			MBUtility::MBBufferInputStream InputStream(TotalFileData.data(), TotalFileData.size());
-			MBParsing::JSONObject SlippiData = MBParsing::ParseUBJSON(&InputStream, &ParseResult);
-			if (!ParseResult)
-			{
-				continue;
-			}
-			SlippiGameInfo NewGame;
-			try
-			{
-				NewGame = p_SlippiFileToGameInfo(SlippiData);
-			}
-			catch(std::exception const& e)
-			{
-				continue;
-			}
+        MBDB::SQLStatement Statement = Database.GetSQLStatement(GamesTable);
+        MBError Result = true;
+        Database.GetAllRows(Statement,&Result);
+        Statement = Database.GetSQLStatement(PlayerTable);
+        Result = true;
+        Database.GetAllRows(Statement,&Result);
+    }
+    void MBSlippiCLIHandler::p_UpdateGameSQLDatabase(std::string const& ReplayDirectory, MBPM::MBPP_FileInfoReader const& FileInfo)
+    {
+        auto FileIterator = FileInfo.GetDirectoryInfo("/")->begin();
+        auto End = FileInfo.GetDirectoryInfo("/")->end();
+        uint32_t ParsedFiles = 0;
+        uint32_t TotalFiles = 0;
+        if (!std::filesystem::exists(ReplayDirectory + "/SlippiGames.db") || !std::filesystem::directory_entry(ReplayDirectory + "/SlippiGames.db").is_regular_file())
+        {
+            p_CreateDatabase(ReplayDirectory);
+        }
+        MBDB::MrBoboDatabase Database(ReplayDirectory + "/SlippiGames.db", MBDB::DBOpenOptions::ReadWrite);
+        for(;FileIterator != End;FileIterator++)
+        {
+            if (!std::filesystem::exists(ReplayDirectory + FileIterator.GetCurrentDirectory() + "/" + FileIterator->FileName))
+            {
+                continue;
+            }
+            if (FileIterator->FileName.find('.') == FileIterator->FileName.npos || FileIterator->FileName.substr(FileIterator->FileName.find('.') + 1) != "slp")
+            {
+                continue;
+            }
+            std::string TotalFileData = MBUtility::ReadWholeFile(ReplayDirectory+FileIterator.GetCurrentDirectory() + "/" + FileIterator->FileName);
+            if (TotalFileData == "")
+            {
+                continue;
+            }
+            TotalFiles++;
+            MBError ParseResult = true;
+            MBUtility::MBBufferInputStream InputStream(TotalFileData.data(), TotalFileData.size());
+            MBParsing::JSONObject SlippiData = MBParsing::ParseUBJSON(&InputStream, &ParseResult);
+            if (!ParseResult)
+            {
+                continue;
+            }
+            SlippiGameInfo NewGame;
+            try
+            {
+                NewGame = p_SlippiFileToGameInfo(SlippiData);
+            }
+            catch(std::exception const& e)
+            {
+                continue;
+            }
             std::string RelativePath = FileIterator.GetCurrentDirectory() + "/" + FileIterator->FileName;
             
             //Should actually check for errors...
-			std::string QuerryToInsert = "INSERT INTO GAMES (RelativePath,Date,Stage,FrameDuration) VALUES (?,?,?,?);";
-			MBDB::SQLStatement* Statement = Database.GetSQLStatement(QuerryToInsert);
-			Statement->BindString(RelativePath, 1);
-			Statement->BindInt(NewGame.Date, 2);
-			Statement->BindString(NewGame.Stage, 3);
-			Statement->BindInt(NewGame.FrameDuration, 4);
-			MBError Result = true;
-			Database.GetAllRows(Statement, &Result);
-			Database.FreeSQLStatement(Statement);
+            std::string QuerryToInsert = "INSERT INTO GAMES (RelativePath,Date,Stage,FrameDuration) VALUES (?,?,?,?);";
+            MBDB::SQLStatement Statement = Database.GetSQLStatement(QuerryToInsert);
+            Statement.BindString(RelativePath, 1);
+            Statement.BindInt(NewGame.Date, 2);
+            Statement.BindString(NewGame.Stage, 3);
+            Statement.BindInt(NewGame.FrameDuration, 4);
+            MBError Result = true;
+            Database.GetAllRows(Statement, &Result);
             for(int i = 0; i < 4; i++)
             {
                 std::string PlayerQuery = "INSERT INTO PLAYERS (GameID,Port,Code,Tag,Character) VALUES (?,?,?,?,?);";
@@ -478,95 +486,97 @@ namespace MBSlippi
                 {
                     throw std::runtime_error("Error retrieving GameID from database");
                 }
-                MBDB::MaxInt GameID = GameIDResult[0].GetColumnData<MBDB::MaxInt>(0);
-                Statement = Database.GetSQLStatement(PlayerQuery);
-                Statement->BindInt(GameID,1);
-                Statement->BindInt(i,2);
-                Statement->BindString(NewGame.PlayerInfo[i].Code,3);
-                Statement->BindString(NewGame.PlayerInfo[i].Tag,4);
-                Statement->BindString(NewGame.PlayerInfo[i].Character,5);
+                MBDB::IntType GameID = GameIDResult[0].GetColumnData<MBDB::IntType>(0);
+                Statement = std::move(Database.GetSQLStatement(PlayerQuery));
+                Statement.BindInt(GameID,1);
+                Statement.BindInt(i,2);
+                Statement.BindString(NewGame.PlayerInfo[i].Code,3);
+                Statement.BindString(NewGame.PlayerInfo[i].Tag,4);
+                Statement.BindString(NewGame.PlayerInfo[i].Character,5);
                 Database.GetAllRows(Statement, &Result);
-                Database.FreeSQLStatement(Statement);
             }
-			ParsedFiles += 1;
-		}
-		if (TotalFiles > ParsedFiles)
-		{
-			m_Terminal.PrintLine("Totalfiles: " + std::to_string(TotalFiles) + " Parsed Files: " + std::to_string(ParsedFiles));
-		}
+            ParsedFiles += 1;
+        }
+        if (TotalFiles > ParsedFiles)
+        {
+            m_Terminal.PrintLine("Totalfiles: " + std::to_string(TotalFiles) + " Parsed Files: " + std::to_string(ParsedFiles));
+        }
 
-	}
-	void MBSlippiCLIHandler::p_Handle_UpdateIndex(MBCLI::ProcessedCLInput const& Input)
-	{
-		if (!std::filesystem::exists(m_Config.ReplaysDirectory) || !std::filesystem::directory_entry(m_Config.ReplaysDirectory).is_directory())
-		{
-			m_Terminal.SetTextColor(MBCLI::ANSITerminalColor::Red);
-			m_Terminal.Print("Cannot update Index: filesystem object doesnt exist or isn't a directory");
-			return;
-		}
-		if (!std::filesystem::exists(m_Config.ReplaysDirectory+"/MBPM_FileInfo") || Input.CommandOptions.find("rebuild") != Input.CommandOptions.end())
-		{
-			MBPM::MBPP_FileInfoReader ReplayFileInfo;
-			MBPM::MBPP_FileInfoReader::CreateFileInfo(m_Config.ReplaysDirectory,&ReplayFileInfo);
-			if (!ReplayFileInfo.ObjectExists("/"))
-			{
-				m_Terminal.SetTextColor(MBCLI::ANSITerminalColor::Red);
-				m_Terminal.Print("Failed to create FileInfoIndex for replay directory");
-				return;
-			}
-            if(std::filesystem::exists(m_Config.ReplaysDirectory + "/SlippiGames.db"))
+    }
+    void MBSlippiCLIHandler::p_Handle_UpdateIndex(MBCLI::ProcessedCLInput const& Input)
+    {
+        for(auto const& ReplayDirectory : m_ReplayDirectories)
+        {
+            if (!std::filesystem::exists(ReplayDirectory) || !std::filesystem::directory_entry(ReplayDirectory).is_directory())
             {
-                std::filesystem::remove(m_Config.ReplaysDirectory + "/SlippiGames.db");
-            }
-			p_UpdateGameSQLDatabase(m_Config.ReplaysDirectory, ReplayFileInfo);
-			std::ofstream OutFile(m_Config.ReplaysDirectory + "/MBPM_FileInfo", std::ios::out | std::ios::binary);
-			MBUtility::MBFileOutputStream OutStream(&OutFile);
-			ReplayFileInfo.WriteData(&OutStream);
-		}
-		else
-		{
-			MBPM::MBPP_FileInfoReader UpdatedFiles = MBPM::MBPP_FileInfoReader::GetLocalUpdatedFiles(m_Config.ReplaysDirectory);
-			if (UpdatedFiles.GetDirectoryInfo("/") == nullptr)
-			{
-				m_Terminal.SetTextColor(MBCLI::ANSITerminalColor::Red);
-				m_Terminal.Print("Error getting local file info difference");
-				return;
-			}
-			MBPM::MBPP_DirectoryInfoNode const* TopDirectory = UpdatedFiles.GetDirectoryInfo("/");
-			MBPM::MBPP_FileInfoDiff FileDiff = MBPM::MBPP_FileInfoReader::GetLocalInfoDiff(m_Config.ReplaysDirectory);
-			if ((TopDirectory->Files.size() == 0 && TopDirectory->Directories.size() == 0) && (FileDiff.RemovedFiles.size() == 0 && FileDiff.DeletedDirectories.size() == 0))
-			{
-				m_Terminal.Print("Index already up to date");
-				return;
-			}
-            try
-            {
-                p_UpdateGameSQLDatabase(m_Config.ReplaysDirectory, UpdatedFiles);
-            }
-            catch(std::exception const& e)
-            {
-                m_Terminal.PrintLine("Error updating index: Error updateing SQL database: "+std::string(e.what()));   
+                m_Terminal.SetTextColor(MBCLI::ANSITerminalColor::Red);
+                m_Terminal.Print("Invalid replay directory: "+MBUnicode::PathToUTF8(ReplayDirectory) + " doesn't exist");
                 return;
             }
-			MBPM::MBPP_FileInfoReader OldInfo = MBPM::MBPP_FileInfoReader(m_Config.ReplaysDirectory + "/MBPM_FileInfo");
-			OldInfo.UpdateInfo(UpdatedFiles);
-			OldInfo.DeleteObjects(FileDiff.RemovedFiles);
-			OldInfo.DeleteObjects(FileDiff.DeletedDirectories);
-			std::ofstream OutFile(m_Config.ReplaysDirectory+"/MBPM_FileInfo", std::ios::out | std::ios::binary);
-			MBUtility::MBFileOutputStream OutStream(&OutFile);
-			OldInfo.WriteData(&OutStream);
+            if (!std::filesystem::exists(ReplayDirectory) || Input.CommandOptions.find("rebuild") != Input.CommandOptions.end())
+            {
+                MBPM::MBPP_FileInfoReader ReplayFileInfo;
+                MBPM::MBPP_FileInfoReader::CreateFileInfo(MBUnicode::PathToUTF8(ReplayDirectory),&ReplayFileInfo);
+                if (!ReplayFileInfo.ObjectExists("/"))
+                {
+                    m_Terminal.SetTextColor(MBCLI::ANSITerminalColor::Red);
+                    m_Terminal.Print("Failed to create FileInfoIndex for replay directory");
+                    return;
+                }
+                if(std::filesystem::exists(ReplayDirectory /"SlippiGames.db"))
+                {
+                    std::filesystem::remove(ReplayDirectory/"SlippiGames.db");
+                }
+                p_UpdateGameSQLDatabase(MBUnicode::PathToUTF8(ReplayDirectory), ReplayFileInfo);
+                std::ofstream OutFile(ReplayDirectory/"MBPM_FileInfo", std::ios::out | std::ios::binary);
+                MBUtility::MBFileOutputStream OutStream(&OutFile);
+                ReplayFileInfo.WriteData(&OutStream);
+            }
+            else
+            {
+                MBPM::MBPP_FileInfoReader UpdatedFiles = MBPM::MBPP_FileInfoReader::GetLocalUpdatedFiles(MBUnicode::PathToUTF8(ReplayDirectory));
+                if (UpdatedFiles.GetDirectoryInfo("/") == nullptr)
+                {
+                    m_Terminal.SetTextColor(MBCLI::ANSITerminalColor::Red);
+                    m_Terminal.Print("Error getting local file info difference");
+                    return;
+                }
+                MBPM::MBPP_DirectoryInfoNode const* TopDirectory = UpdatedFiles.GetDirectoryInfo("/");
+                MBPM::MBPP_FileInfoDiff FileDiff = MBPM::MBPP_FileInfoReader::GetLocalInfoDiff(MBUnicode::PathToUTF8(ReplayDirectory));
+                if ((TopDirectory->Files.size() == 0 && TopDirectory->Directories.size() == 0) && (FileDiff.RemovedFiles.size() == 0 && FileDiff.DeletedDirectories.size() == 0))
+                {
+                    m_Terminal.Print("Index already up to date");
+                    return;
+                }
+                try
+                {
+                    p_UpdateGameSQLDatabase(MBUnicode::PathToUTF8(ReplayDirectory), UpdatedFiles);
+                }
+                catch(std::exception const& e)
+                {
+                    m_Terminal.PrintLine("Error updating index: Error updateing SQL database: "+std::string(e.what()));   
+                    return;
+                }
+                MBPM::MBPP_FileInfoReader OldInfo = MBPM::MBPP_FileInfoReader( MBUnicode::PathToUTF8(ReplayDirectory/"MBPM_FileInfo"));
+                OldInfo.UpdateInfo(UpdatedFiles);
+                OldInfo.DeleteObjects(FileDiff.RemovedFiles);
+                OldInfo.DeleteObjects(FileDiff.DeletedDirectories);
+                std::ofstream OutFile(ReplayDirectory/"MBPM_FileInfo", std::ios::out | std::ios::binary);
+                MBUtility::MBFileOutputStream OutStream(&OutFile);
+                OldInfo.WriteData(&OutStream);
 
-		}
-	}
+            }
+        }
+    }
     void MBSlippiCLIHandler::p_Handle_Execute(MBCLI::ProcessedCLInput const& Input)
     {
-		if (Input.TopCommandArguments.size() != 1)
-		{
-			m_Terminal.SetTextColor(MBCLI::ANSITerminalColor::Red);
-			m_Terminal.Print("execute needs exactly 1 argument: the path to a MBScript file");
-			std::exit(1);
-		}
-		std::string SlippiScriptToExecute = Input.TopCommandArguments[0];
+        if (Input.TopCommandArguments.size() != 1)
+        {
+            m_Terminal.SetTextColor(MBCLI::ANSITerminalColor::Red);
+            m_Terminal.Print("execute needs exactly 1 argument: the path to a MBScript file");
+            std::exit(1);
+        }
+        std::string SlippiScriptToExecute = Input.TopCommandArguments[0];
         Module ModuleToEvaluate;
         SpecEvaluator Evaluator;
         auto Tokenizer = GetTokenizer();
@@ -615,82 +625,82 @@ namespace MBSlippi
         return(Handler.Run());
     }
     void MBSlippiCLIHandler::p_Handle_Execute_Legacy(MBCLI::ProcessedCLInput const& Input)
-	{
-		if (Input.TopCommandArguments.size() != 1)
-		{
-			m_Terminal.SetTextColor(MBCLI::ANSITerminalColor::Red);
-			m_Terminal.Print("execute needs exactly 1 argument: the path to a MBScript file");
-			std::exit(1);
-		}
-		std::string SlippiScriptToExecute = Input.TopCommandArguments[0];
-		MBError Result = true;
-		std::vector<std::unique_ptr<MBScript::MBSStatement>> StatementsToExecute = MBScript::ParseFile(SlippiScriptToExecute, &Result);
-		if (!Result)
-		{
-			m_Terminal.SetTextColor(MBCLI::ANSITerminalColor::Red);
-			m_Terminal.Print("Error parsing MBScript file: " + Result.ErrorMessage);
-			m_Terminal.SetTextColor(MBCLI::ANSITerminalColor::White);
-			std::exit(1);
-		}
-		MBScript::ExecutionEnvironment ExecutionEnvironment;
-		ExecutionEnvironment.AddModule(std::unique_ptr<MBS_SlippiModule>(new MBS_SlippiModule(m_Config)));
-		try
-		{
-			MBError ExecutionResult = ExecutionEnvironment.Execute(StatementsToExecute);
-			if (!ExecutionResult)
-			{
-				m_Terminal.SetTextColor(MBCLI::ANSITerminalColor::Red);
-				m_Terminal.Print("Error executing MBScript file" + ExecutionResult.ErrorMessage);
-				m_Terminal.SetTextColor(MBCLI::ANSITerminalColor::White);
-				std::exit(1);
-			}
-		}
-		catch (MBScript::MBSRuntimeException const& e)
-		{
-			m_Terminal.SetTextColor(MBCLI::ANSITerminalColor::Red);
-			m_Terminal.Print("Unhandled MBScript runtime error: " + std::string(e.what()));
-			m_Terminal.SetTextColor(MBCLI::ANSITerminalColor::White);
-			std::exit(1);
-		}
-		catch (std::runtime_error const& e)
-		{
-			m_Terminal.SetTextColor(MBCLI::ANSITerminalColor::Red);
-			m_Terminal.Print("Error with MBScript implementation: " + std::string(e.what()));
-			m_Terminal.SetTextColor(MBCLI::ANSITerminalColor::White);
-			std::exit(1);
-		}
-		catch (std::exception const& e)
-		{
-			m_Terminal.SetTextColor(MBCLI::ANSITerminalColor::Red);
-			m_Terminal.Print("Unkown error occured: " + std::string(e.what()));
-			m_Terminal.SetTextColor(MBCLI::ANSITerminalColor::White);
-			std::exit(1);
-		}
-	}
-	void MBSlippiCLIHandler::p_Handle_Play(MBCLI::ProcessedCLInput const& Input)
-	{
-		if (Input.TopCommandArguments.size() != 1)
-		{
-			m_Terminal.SetTextColor(MBCLI::ANSITerminalColor::Red);
-			m_Terminal.Print("play needs exactly 1 argument: the path to a recorded replay file");
-			std::exit(1);
-		}
-	}
-	void MBSlippiCLIHandler::p_Handle_Query(MBCLI::ProcessedCLInput const& Input)
-	{
-		if (Input.TopCommandArguments.size() != 1)
-		{
-			m_Terminal.SetTextColor(MBCLI::ANSITerminalColor::Red);
-			m_Terminal.Print("Query needs exactly 1 argument: SQL querry to run");
-			m_Terminal.SetTextColor(MBCLI::ANSITerminalColor::White);
-			std::exit(1);
-		}
+    {
+        if (Input.TopCommandArguments.size() != 1)
+        {
+            m_Terminal.SetTextColor(MBCLI::ANSITerminalColor::Red);
+            m_Terminal.Print("execute needs exactly 1 argument: the path to a MBScript file");
+            std::exit(1);
+        }
+        std::string SlippiScriptToExecute = Input.TopCommandArguments[0];
+        MBError Result = true;
+        std::vector<std::unique_ptr<MBScript::MBSStatement>> StatementsToExecute = MBScript::ParseFile(SlippiScriptToExecute, &Result);
+        if (!Result)
+        {
+            m_Terminal.SetTextColor(MBCLI::ANSITerminalColor::Red);
+            m_Terminal.Print("Error parsing MBScript file: " + Result.ErrorMessage);
+            m_Terminal.SetTextColor(MBCLI::ANSITerminalColor::White);
+            std::exit(1);
+        }
+        MBScript::ExecutionEnvironment ExecutionEnvironment;
+        ExecutionEnvironment.AddModule(std::unique_ptr<MBS_SlippiModule>(new MBS_SlippiModule(m_Config)));
+        try
+        {
+            MBError ExecutionResult = ExecutionEnvironment.Execute(StatementsToExecute);
+            if (!ExecutionResult)
+            {
+                m_Terminal.SetTextColor(MBCLI::ANSITerminalColor::Red);
+                m_Terminal.Print("Error executing MBScript file" + ExecutionResult.ErrorMessage);
+                m_Terminal.SetTextColor(MBCLI::ANSITerminalColor::White);
+                std::exit(1);
+            }
+        }
+        catch (MBScript::MBSRuntimeException const& e)
+        {
+            m_Terminal.SetTextColor(MBCLI::ANSITerminalColor::Red);
+            m_Terminal.Print("Unhandled MBScript runtime error: " + std::string(e.what()));
+            m_Terminal.SetTextColor(MBCLI::ANSITerminalColor::White);
+            std::exit(1);
+        }
+        catch (std::runtime_error const& e)
+        {
+            m_Terminal.SetTextColor(MBCLI::ANSITerminalColor::Red);
+            m_Terminal.Print("Error with MBScript implementation: " + std::string(e.what()));
+            m_Terminal.SetTextColor(MBCLI::ANSITerminalColor::White);
+            std::exit(1);
+        }
+        catch (std::exception const& e)
+        {
+            m_Terminal.SetTextColor(MBCLI::ANSITerminalColor::Red);
+            m_Terminal.Print("Unkown error occured: " + std::string(e.what()));
+            m_Terminal.SetTextColor(MBCLI::ANSITerminalColor::White);
+            std::exit(1);
+        }
+    }
+    void MBSlippiCLIHandler::p_Handle_Play(MBCLI::ProcessedCLInput const& Input)
+    {
+        if (Input.TopCommandArguments.size() != 1)
+        {
+            m_Terminal.SetTextColor(MBCLI::ANSITerminalColor::Red);
+            m_Terminal.Print("play needs exactly 1 argument: the path to a recorded replay file");
+            std::exit(1);
+        }
+    }
+    void MBSlippiCLIHandler::p_Handle_Query(MBCLI::ProcessedCLInput const& Input)
+    {
+        if (Input.TopCommandArguments.size() != 1)
+        {
+            m_Terminal.SetTextColor(MBCLI::ANSITerminalColor::Red);
+            m_Terminal.Print("Query needs exactly 1 argument: SQL querry to run");
+            m_Terminal.SetTextColor(MBCLI::ANSITerminalColor::White);
+            std::exit(1);
+        }
         if(!std::filesystem::exists(m_Config.ReplaysDirectory+"/SlippiGames.db") || !std::filesystem::is_regular_file(m_Config.ReplaysDirectory+"/SlippiGames.db"))
         {
             m_Terminal.PrintLine("Can't find database, try to run mbslippi index-update");
             return;
         }
-		MBDB::MrBoboDatabase Database(m_Config.ReplaysDirectory + "/SlippiGames.db", MBDB::DBOpenOptions::ReadOnly);
+        MBDB::MrBoboDatabase Database(m_Config.ReplaysDirectory + "/SlippiGames.db", MBDB::DBOpenOptions::ReadOnly);
         MBError QueryResult = true;
         std::vector<MBDB::MBDB_RowData> QuerryRows = Database.GetAllRows(Input.TopCommandArguments[0],&QueryResult);
         if(!QueryResult)
@@ -706,14 +716,14 @@ namespace MBSlippi
             }   
             m_Terminal.PrintLine("");
         }
-	}
-	int MBSlippiCLIHandler::Run(int argc, const char** argv)
-	{
+    }
+    int MBSlippiCLIHandler::Run(int argc, const char** argv)
+    {
         int ReturnValue = 0;
-		MBCLI::ProcessedCLInput Input(argc, argv);
+        MBCLI::ProcessedCLInput Input(argc, argv);
         try
         {
-		    p_LoadGlobalConfig();
+            p_LoadGlobalConfig();
             //DEPRECATED Input.TopCommand
             if (Input.TopCommand == "index")
             {
@@ -742,5 +752,5 @@ namespace MBSlippi
             m_Terminal.PrintLine("Uncaught exception executing command: "+std::string(e.what())); 
         }
         return(ReturnValue);
-	}
+    }
 }

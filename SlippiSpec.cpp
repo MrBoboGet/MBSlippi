@@ -850,10 +850,6 @@ namespace MBSlippi
         {
             bool IsSwapped = false;
             char AssignmentIndexes[4] = {0,1,2,3};
-            if (Candidate.PlayerInfo[0].Tag == "MrBoboGet" && Candidate.PlayerInfo[1].Code == "AB#177")
-            {
-                IsSwapped = false;
-            }
             if(p_GetPlayerAssignments(Candidate,SpecToEvalaute.Assignment,AssignmentIndexes))
             {
                 if(p_EvaluateGameSelection(Candidate,AssignmentIndexes,SpecToEvalaute.GameCondition))

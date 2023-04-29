@@ -71,6 +71,8 @@ namespace MBSlippi
         virtual std::vector<SlippiGameInfo> RetrieveGames(std::string const& WhereCondition) override;
         virtual void RecordGames(std::vector<RecordingInfo> const& GamesToRecord,std::filesystem::path const& OutPath) override;
 
+
+        std::vector<std::filesystem::path> m_ReplayDirectories;
 		MBParsing::JSONObject m_GlobalConfig;
 		MBSlippiConfig m_Config;
 
