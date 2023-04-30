@@ -151,8 +151,7 @@ namespace MBSlippi
         std::vector<SlippiGameInfo> ReturnValue;
         for(auto const& Path : m_ReplayDirectories)
         {
-            MBDB::MrBoboDatabase Database(m_Config.ReplaysDirectory + "/SlippiGames.db", MBDB::DBOpenOptions::ReadOnly);
-            auto PlayerQuery = Database.GetSQLStatement("SELECT * FROM PLAYERS WHERE GameID = ?");
+            MBDB::MrBoboDatabase Database(MBUnicode::PathToUTF8(Path/"SlippiGames.db"), MBDB::DBOpenOptions::ReadOnly);
             std::string QueryString = "SELECT * FROM GAMES";
             if(WhereCondition != "")
             {
@@ -165,12 +164,13 @@ namespace MBSlippi
             {
                 SlippiGameInfo NewGameInfo;
                 MBDB::IntType GameID = Row.GetColumnData<MBDB::IntType>(0);
-                NewGameInfo.AbsolutePath = m_Config.ReplaysDirectory + "/" + Row.GetColumnData<std::string>(1);
+                NewGameInfo.AbsolutePath = MBUnicode::PathToUTF8( Path/Row.GetColumnData<std::string>(1));
                 NewGameInfo.Date = Row.GetColumnData<MBDB::IntType>(2);
                 NewGameInfo.Stage = Row.GetColumnData<std::string>(3);
                 NewGameInfo.FrameDuration = Row.GetColumnData<MBDB::IntType>(4);
 
 
+                auto PlayerQuery = Database.GetSQLStatement("SELECT * FROM PLAYERS WHERE GameID = ?");
                 PlayerQuery.BindInt(GameID,1);
                 auto Rows = Database.GetAllRows(PlayerQuery,&QueryError);
                 for(auto const& Row : Rows)
@@ -355,6 +355,10 @@ namespace MBSlippi
                 {
                     for(int i = 0; i< 4;i++)
                     {
+                        if(!(GameInfo.PlayerInfo[i].Type == PlayerType::Human))
+                        {
+                            continue;
+                        }
                         ReturnValue.PlayerInfo[i].Tag = CurrentEventData.NameTags[i];
                         ReturnValue.PlayerInfo[i].Code = CurrentEventData.ConnectCode[i];
                         ReturnValue.PlayerInfo[i].Character = CharacterToString( GameInfo.PlayerInfo[i].Character);

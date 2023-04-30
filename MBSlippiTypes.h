@@ -28,21 +28,43 @@ namespace MBSlippi
     inline char ShiftJSConvert(uint16_t charCode)
     {
         char ReturnValue = charCode;
+        //taken from slippi sources
         if (charCode > 0xff00 && charCode < 0xff5f) 
         {
           return 0x0020 + (charCode - 0xff00);
         }
-        if (charCode == 0x3000) 
+        else if (charCode == 0x3000) 
         {
           return 0x0020;
         }
-        if (charCode == 0x2019) 
+        else if (charCode == 0x2019) 
         {
           return 0x0027;
         }
-        if (charCode == 0x201d) 
+        else if (charCode == 0x201d) 
         {
           return 0x0022;
+        }
+        else if( (charCode >> 8) == 0x82 || (charCode >> 8) == 0x81)
+        {
+            //special case for weird ascii symbols, I guess
+            //SOURCE: http://www.rikai.com/library/kanjitables/kanji_codes.sjis.shtml
+            if(charCode == 0x8190)
+            {
+                ReturnValue = '$';
+            }
+            else if(charCode >= 0x824f && charCode <= 0x8258)
+            {
+                ReturnValue = '0'+((charCode &0xff)-0x4f);
+            }
+            else if(charCode >= 0x8260 && charCode <= 0x827a)
+            {
+                ReturnValue = 'A' + ((charCode&0xff)-0x60);
+            }
+            else if(charCode >= 0x8281 && charCode <= 0x829a)
+            {
+                ReturnValue = 'a' + ((charCode&0xff)-0x81);
+            }
         }
         return(ReturnValue);
     }
@@ -50,10 +72,6 @@ namespace MBSlippi
     inline std::string ShiftJISConvert(const char* Data,size_t DataSize)
     {
         std::string ReturnValue;
-        if(DataSize % 2 != 0)
-        {
-            throw std::runtime_error("ShiftJIS requires event amount of bytes, wide characters");   
-        }
         size_t ParseOffset = 0;
         while(ParseOffset < DataSize)
         {
@@ -61,12 +79,21 @@ namespace MBSlippi
             {
                 break;   
             }
-            uint16_t NextCharacter = MBParsing::ParseBigEndianInteger(Data,2,ParseOffset,&ParseOffset);
-            if(NextCharacter == 0)
+            else if((Data[ParseOffset] & (1<<8)) == 0)
             {
-                break;
+                ReturnValue += Data[ParseOffset];
+                ParseOffset += 1;
             }
-            ReturnValue += ShiftJSConvert(NextCharacter);
+            else
+            {
+                //if 2 available charactesr are available, otherwise invalid encoding i guess
+                if(!(ParseOffset + 1 < DataSize))
+                {
+                    break;   
+                }
+                uint16_t NextCharacter = MBParsing::ParseBigEndianInteger(Data,2,ParseOffset,&ParseOffset);
+                ReturnValue += ShiftJSConvert(NextCharacter);
+            }
         }
 
         return(ReturnValue);
@@ -238,13 +265,21 @@ namespace MBSlippi
 			return(ReturnValue);
 		}
 	};
+    enum class PlayerType
+    {
+        Human = 0,
+        CPU =1,
+        Demo = 2,
+        Empty = 3
+    };
     struct GamePlayerInfo
     {
         ExternalCharacterID Character;
-
+        PlayerType Type;
         void Parse(const char* Data,size_t DataSize)
         {
             Character = ExternalCharacterID(Data[0]);
+            Type = PlayerType(Data[1]);
         }
     };
 	struct GameInfoBlock

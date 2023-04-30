@@ -730,7 +730,6 @@ namespace MBSlippi
         }
         else if(PredicateToEvaluate.Data.IsEmpty())
         {
-            //do nothjing   
         }
         else
         {
