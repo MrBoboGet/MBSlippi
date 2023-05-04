@@ -6,81 +6,90 @@
 #include <MBParsing/MBParsing.h>
 namespace MBSlippi
 {
-	enum class MBAttackID : uint8_t
-	{
-		None,
-		
-		SideB,
-		UpB,
-		DownB,
-		NeutralB,
+    enum class MBAttackID : uint8_t
+    {
+        None,
+        
+        SideB,
+        UpB,
+        DownB,
+        NeutralB,
 
-		Fair,
-		Dair,
-		Nair,
-		Bair,
-		Uair,
-		
-		DownTilt,
-		UpTilt,
-		ForwardTilt,
-		Jab,
-		
-		ForwardSmash,
-		DownSmash,
-		UpSmash,
+        Fair,
+        Dair,
+        Nair,
+        Bair,
+        Uair,
+        
+        DownTilt,
+        UpTilt,
+        ForwardTilt,
+        Jab,
+        
+        ForwardSmash,
+        DownSmash,
+        UpSmash,
 
-		DashAttack,
+        DashAttack,
+        //
+        Grab,
+        UpThrow,
+        DownThrow,
+        BackThrow,
+        ForwardThrow,
 
         Null
-	};
-	//Mutually exclusive
-	//OBS! only add stats to the bottom
-	enum class MBActionState : uint16_t
-	{
-		None,
-		HitStun,
-		ShieldStun,
-		Shielding,
-		Running,
-		Walking,
-		Falling,
-		Tumbling,
-		Dashing,
-		Attacking,
+    };
+    //Mutually exclusive
+    //OBS! only add stats to the bottom
+    enum class MBActionState : uint16_t
+    {
+        None,
+        HitStun,
+        ShieldStun,
+        Shielding,
+        Running,
+        Walking,
+        Falling,
+        Tumbling,
+        Dashing,
+        Attacking,
+        //
+        Grabbed,
+        Dead,
         Null
-	};
-	
+    };
+    
     enum class MBCharacter
     {
             
-        Mario	    , 
-        Fox	        , 
+        Mario        , 
+        Fox            , 
         Captain     , 
         Donkey      , 
-        Kirby	    , 
-        Bowser	    , 
-        Link	    , 
-        Sheik	    , 
-        Ness	    , 
-        Peach	    , 
-        Popo	    , 
-        Nana	    , 
-        Pikachu	    , 
-        Samus	    , 
-        Yoshi	    , 
-        Jigglypuff	, 
-        Mewtwo	    , 
-        Luigi	    , 
-        Marth	    , 
-        Zelda	    , 
+        Kirby        , 
+        Bowser        , 
+        Link        , 
+        Sheik        , 
+        Ness        , 
+        Peach        , 
+        Popo        , 
+        Nana        , 
+        Pikachu        , 
+        Samus        , 
+        Yoshi        , 
+        Jigglypuff    , 
+        Mewtwo        , 
+        Luigi        , 
+        Marth        , 
+        Zelda        , 
         YoungLink   , 
         DrMario     , 
-        Falco	    , 
-        Pichu	    , 
+        Falco        , 
+        Pichu        , 
         MrGameAndWatch , 
-        Ganondorf	, 
-        Roy	        , 
+        Ganondorf    , 
+        Roy            , 
         Null
     };
 
@@ -96,20 +105,22 @@ namespace MBSlippi
             Airborne = false;
         }
     };
-	MBAttackID StateToMBAttackID(Event_PostFrameUpdate const& AssociatedState);
-	MBActionState StateToMBActionState(Event_PostFrameUpdate const& AssociatedState);
-	MBActionStateFlags FrameToMBActionStateFlags(Event_PostFrameUpdate const& AssociatedState);
-	//uint64_t StateToMBStateModifierMap(Event_PostFrameUpdate const& AssociatedState);
+    //MBActionStateFlags StringToStateFlags(std::string const& StringToConvert);
+    
+    MBAttackID StateToMBAttackID(Event_PostFrameUpdate const& AssociatedState);
+    MBActionState StateToMBActionState(Event_PostFrameUpdate const& AssociatedState);
+    MBActionStateFlags FrameToMBActionStateFlags(Event_PostFrameUpdate const& AssociatedState);
+    //uint64_t StateToMBStateModifierMap(Event_PostFrameUpdate const& AssociatedState);
 
     MBCharacter InternalCharacterIDToMBCharacter(InternalCharacterID IDToConvert);
     std::string MBCharacterToString(MBCharacter CharacterToConvert); 
 
 
-	std::string MBAttackIDToString(MBAttackID IDToConvert);
-	std::string MBActionStateToString(MBActionState StateToConvert);
+    std::string MBAttackIDToString(MBAttackID IDToConvert);
+    std::string MBActionStateToString(MBActionState StateToConvert);
 
-	MBAttackID StringToMBAttackID(std::string const& StringToConvert);
-	MBActionState StringToMBActionState(std::string const& StringToConvert);
+    MBAttackID StringToMBAttackID(std::string const& StringToConvert);
+    MBActionState StringToMBActionState(std::string const& StringToConvert);
     
     bool StateIsActionable(MBActionState StateToInspect);
     struct PlayerInfo
@@ -143,6 +154,12 @@ namespace MBSlippi
     {
         PlayerFrameInfo PlayerInfo[4];
         int FrameNumber = 0;
+        MBParsing::JSONObject ToJSON() const
+        {
+            MBParsing::JSONObject ReturnValue;
+            ReturnValue = std::vector<MBParsing::JSONObject> {PlayerInfo[0].ToJSON(),PlayerInfo[1].ToJSON(),PlayerInfo[2].ToJSON(),PlayerInfo[3].ToJSON()};
+            return(ReturnValue);
+        }
     };
     struct MeleeGameMetadata
     {
@@ -163,12 +180,12 @@ namespace MBSlippi
         std::string Character;
         //Color?
     };
-	struct SlippiGameInfo
-	{
-		std::string AbsolutePath;
-		uint64_t Date;
-		std::string Stage;
+    struct SlippiGameInfo
+    {
+        std::string AbsolutePath;
+        uint64_t Date;
+        std::string Stage;
         SlippiGamePlayerInfo PlayerInfo[4];
-		uint64_t FrameDuration = 0;
-	};
+        uint64_t FrameDuration = 0;
+    };
 }

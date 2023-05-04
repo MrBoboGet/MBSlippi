@@ -1,0 +1,6 @@
+{
+	"PacketName":"MBSlippi_MPV",
+    "PacketType":"MPVPlugin",
+	"Attributes":[],
+    "Dependancies":[]
+}

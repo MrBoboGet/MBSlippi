@@ -13,6 +13,19 @@
 namespace MBSlippi
 {
 
+    int h_ParseExpandInteger(std::string const& StringToParse)
+    {
+        int ReturnValue = 0;
+        try
+        {
+            ReturnValue = std::stoi(StringToParse);
+        }   
+        catch(std::exception const& e)
+        {
+            throw std::runtime_error("Error parsing integer: "+std::string(e.what()));
+        }
+        return(ReturnValue);
+    }
     template<typename LHSType,typename RHSType>
     bool h_Comp(LHSType const& lhs, std::string const& Operator,RHSType const& rhs)
     {
@@ -959,7 +972,7 @@ namespace MBSlippi
         GameIntervalls.reserve(GamesToInspect.size());
 
         std::vector<RecordingInfo> GamesToRecord;
-        for(auto const& Game : GamesToInspect)
+        for(auto& Game : GamesToInspect)
         {
             //assumes are sorted
             auto Intervalls = p_EvaluateGameIntervalls(SpecToEvaluate.SituationFilter.Component,GameIntervall(0,Game.Frames.size()-1),Game);
@@ -968,6 +981,7 @@ namespace MBSlippi
                 RecordingInfo NewRecording;
                 NewRecording.GamePath = Game.Metadata.GamePath;
                 NewRecording.IntervallsToRecord = std::move(Intervalls);
+                NewRecording.GameData = std::move(Game);
                 GamesToRecord.push_back(std::move(NewRecording));
             }
         }
@@ -1222,6 +1236,69 @@ namespace MBSlippi
                 });
         return(ReturnValue);
     }
+    std::vector<GameIntervall> SpecEvaluator::Until(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,GameIntervall IntervallToInspect)
+    {
+        std::vector<GameIntervall> ReturnValue;
+        if(ExtraArguments.KeyArguments.find("State") == ExtraArguments.KeyArguments.end() && 
+                ExtraArguments.KeyArguments.find("Flag") == ExtraArguments.KeyArguments.end())
+        {
+            throw std::runtime_error("Until requires requires either 'State' key argument or 'Flag' key argument");
+        }
+        int PlayerIndex = GetPlayerIndex(ExtraArguments);
+        MBActionState StateToCheck = MBActionState::None;
+        if(auto const& StateIt = ExtraArguments.KeyArguments.find("State"); StateIt != ExtraArguments.KeyArguments.end())
+        {
+            StateToCheck = StringToMBActionState(StateIt->second);
+        }
+        //only airborne as of now
+        bool CheckAirborne = false;
+        bool Airborne = false;
+        if(auto const& FlagIt = ExtraArguments.KeyArguments.find("Flag"); FlagIt != ExtraArguments.KeyArguments.end())
+        {
+            CheckAirborne = true;
+            if(FlagIt->second== "Airborne")
+            {
+                Airborne = true;
+            }
+            else if(FlagIt->second  == "NoAirborne")
+            {
+                Airborne = false;
+            }
+            else
+            {
+                throw std::runtime_error("Unknown state flag \""+FlagIt->second+"\"");   
+            }
+        }
+        int Skip = -1;
+        if(auto const& SkipIt = ExtraArguments.KeyArguments.find("Skip"); SkipIt != ExtraArguments.KeyArguments.end())
+        {
+            Skip = h_ParseExpandInteger(SkipIt->second);
+            if(Skip < 0)
+            {
+                throw std::runtime_error("Cannot skip by negative number");   
+            }
+        }
+        GameIntervall IntervallToInsert = IntervallToInspect;
+        for(int i = IntervallToInspect.FirstFrame + ( Skip != -1 ? Skip : 1); i < IntervallToInspect.LastFrame;i++)
+        {
+            bool IsEnd = true;
+            if(StateToCheck != MBActionState::None)
+            {
+                IsEnd = GameToInspect.Frames[i].PlayerInfo[PlayerIndex].ActionState == StateToCheck;
+            }
+            if(CheckAirborne)
+            {
+                IsEnd = IsEnd && GameToInspect.Frames[i].PlayerInfo[PlayerIndex].StateFlags.Airborne == Airborne;
+            }
+            if(IsEnd)
+            {
+                IntervallToInsert.LastFrame = i;
+                break;
+            }
+        }
+        ReturnValue = {IntervallToInsert};
+        return(ReturnValue);
+    }
     std::vector<GameIntervall> SpecEvaluator::ActionState(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,GameIntervall IntervallToInspect)
     {
         std::vector<GameIntervall> ReturnValue;
@@ -1233,19 +1310,6 @@ namespace MBSlippi
         MBActionState StateToCheck = StringToMBActionState(ExtraArguments.PositionalArguments[0]);
         ReturnValue = ExtractSequences(GameToInspect,IntervallToInspect,
                 [&](FrameInfo const& Frame){return(Frame.PlayerInfo[PlayerIndex].ActionState == StateToCheck);});
-        return(ReturnValue);
-    }
-    int h_ParseExpandInteger(std::string const& StringToParse)
-    {
-        int ReturnValue = 0;
-        try
-        {
-            ReturnValue = std::stoi(StringToParse);
-        }   
-        catch(std::exception const& e)
-        {
-            throw std::runtime_error("Error parsing expand integer: "+std::string(e.what()));
-        }
         return(ReturnValue);
     }
     std::vector<GameIntervall> SpecEvaluator::Expand(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,GameIntervall IntervallToInspect)
@@ -1263,12 +1327,27 @@ namespace MBSlippi
         {
             RightExpand = h_ParseExpandInteger(RightIt->second);
         }
-        else if(auto LeftIt = ExtraArguments.KeyArguments.find("Left"); LeftIt != ExtraArguments.KeyArguments.end())
+        if(auto LeftIt = ExtraArguments.KeyArguments.find("Left"); LeftIt != ExtraArguments.KeyArguments.end())
         {
             LeftExpand = -h_ParseExpandInteger(LeftIt->second);   
         }
-        IntervallToInspect.FirstFrame += LeftExpand;
-        IntervallToInspect.LastFrame += RightExpand;
+        //automatically inverted
+        if(LeftExpand == 1)
+        {
+            IntervallToInspect.FirstFrame = 0;
+        }
+        else
+        {
+            IntervallToInspect.FirstFrame += LeftExpand;
+        }
+        if(RightExpand == -1)
+        {
+            IntervallToInspect.LastFrame = GameToInspect.Frames.size();
+        }
+        else
+        {
+            IntervallToInspect.LastFrame += RightExpand;
+        }
         if(IntervallToInspect.FirstFrame < IntervallToInspect.LastFrame)
         {
             ReturnValue = {IntervallToInspect};

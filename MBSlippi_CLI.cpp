@@ -17,6 +17,7 @@
 #include "SlippiSpec.h"
 
 #include <MBSystem/MBSystem.h>
+#include <MBUtility/MBFunctional.h>
 namespace MBSlippi
 {
     void MQLServer::SendMessage(MBUtility::MBOctetOutputStream& OutStream,MBParsing::JSONObject const& ObjectToSend)
@@ -294,6 +295,29 @@ namespace MBSlippi
         std::string FFMPEGCommand = "ffmpeg -y -i " + DumpDirectory + "/Frames/framedump0.avi -i " + DumpDirectory + "/Audio/dspdump.wav -map 0:v:0 -map 1:a:0 " + OutputVideo+" > nul 2> nul";
         int FFMPEGResult = std::system(FFMPEGCommand.c_str());
         p_RestoreDolphinConfigs(DumpDirectory,OriginalIni,OriginalGFX);
+        //write the json info
+        std::filesystem::path JSONPath = OutPath;
+        JSONPath.replace_extension("json");
+        std::ofstream OutJSON(JSONPath);
+        MBParsing::JSONObject ObjectToWrite(MBParsing::JSONObjectType::Aggregate);
+        std::vector<MBParsing::JSONObject> Frames; 
+        std::vector<MBParsing::JSONObject> SituationBegin; 
+        int TotalFrameIndex = 0;
+        for(auto const& Recording : GamesToRecord)
+        {
+            for(auto const& Intervall : Recording.IntervallsToRecord)
+            {
+                for(int i = Intervall.FirstFrame; i < Intervall.LastFrame;i++)
+                {
+                    Frames.push_back(Recording.GameData.Frames[i].ToJSON());
+                }   
+                SituationBegin.push_back(TotalFrameIndex);
+                TotalFrameIndex += Intervall.LastFrame-Intervall.FirstFrame;
+            }
+        }
+        ObjectToWrite["frames"] = std::move(Frames);
+        ObjectToWrite["SituationBegin"] = std::move(SituationBegin);
+        OutJSON<<ObjectToWrite.ToString();
     }
     void MBSlippiCLIHandler::p_LoadGlobalConfig()
     {

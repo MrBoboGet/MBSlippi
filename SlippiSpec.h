@@ -23,6 +23,7 @@ namespace MBSlippi
     struct RecordingInfo
     {
         std::string GamePath;
+        MeleeGame GameData;
         std::vector<GameIntervall> IntervallsToRecord;
     };
     class MeleeGameDBAdapter
@@ -181,6 +182,7 @@ namespace MBSlippi
         static std::vector<GameIntervall> InShield(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,GameIntervall IntervallToInspect);
         static std::vector<GameIntervall> Expand(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,GameIntervall IntervallToInspect);
         static std::vector<GameIntervall> ActionState(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,GameIntervall IntervallToInspect);
+        static std::vector<GameIntervall> Until(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,GameIntervall IntervallToInspect);
         static std::vector<GameIntervall> SpecialState(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,GameIntervall IntervallToInspect);
         static std::vector<GameIntervall> HasProjectile(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,GameIntervall IntervallToInspect);
         static std::vector<GameIntervall> HitBy(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,GameIntervall IntervallToInspect);
@@ -197,6 +199,7 @@ namespace MBSlippi
             {"SpecialState",SpecialState},
             {"HasProjectile",HasProjectile},
             {"ActionState",ActionState},
+            {"Until",Until},
         };
 
         std::vector<SpecServer> m_SpecServers;
