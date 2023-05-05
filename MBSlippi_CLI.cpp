@@ -312,7 +312,8 @@ namespace MBSlippi
                     Frames.push_back(Recording.GameData.Frames[i].ToJSON());
                 }   
                 SituationBegin.push_back(TotalFrameIndex);
-                TotalFrameIndex += Intervall.LastFrame-Intervall.FirstFrame;
+                //-2 because empirical evidence
+                TotalFrameIndex += Intervall.LastFrame-Intervall.FirstFrame-2;
             }
         }
         ObjectToWrite["frames"] = std::move(Frames);

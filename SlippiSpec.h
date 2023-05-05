@@ -10,12 +10,13 @@ namespace MBSlippi
         int FirstFrame = 0;   
         int LastFrame = 0;
         GameIntervall() = default;
+        GameIntervall& operator=(GameIntervall const&) = default;
         GameIntervall(int NewFirstFrame,int NewLastFrame)
         {
             FirstFrame = NewFirstFrame;   
             LastFrame = NewLastFrame;   
         }
-        bool operator<(GameIntervall rhs) const
+        bool operator<(GameIntervall const& rhs) const
         {
             return(FirstFrame < rhs.FirstFrame);   
         }

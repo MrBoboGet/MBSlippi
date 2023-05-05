@@ -26,6 +26,19 @@ namespace MBSlippi
         }
         return(ReturnValue);
     }
+    float h_ParseFloat(std::string const& StringToParse)
+    {
+        float ReturnValue = 0;
+        try
+        {
+            ReturnValue = std::stof(StringToParse);
+        }   
+        catch(std::exception const& e)
+        {
+            throw std::runtime_error("Error parsing float: "+std::string(e.what()));
+        }
+        return(ReturnValue);
+    }
     template<typename LHSType,typename RHSType>
     bool h_Comp(LHSType const& lhs, std::string const& Operator,RHSType const& rhs)
     {
@@ -905,6 +918,7 @@ namespace MBSlippi
             {
                 assert(false && "No server or builtin filter found, evaluating spec that shouldn't have been verified");
             }
+            std::sort(ReturnValue.begin(),ReturnValue.end());
         }
         else if(FilterToUse.Data.IsType<Filter_Component_Variable>())
         {
@@ -953,6 +967,27 @@ namespace MBSlippi
         }
         return(ReturnValue);
     }
+    std::vector<GameIntervall> h_NormalizeIntervalls(std::vector<GameIntervall> const& IntervallsToNormalize)
+    {
+        std::vector<GameIntervall> ReturnValue;
+        if (IntervallsToNormalize.size() == 0)
+        {
+            return(ReturnValue);
+        }
+        ReturnValue.push_back(IntervallsToNormalize.front());
+        for (size_t i = 1; i < IntervallsToNormalize.size(); i++)
+        {
+            if (IntervallsToNormalize[i].FirstFrame <= ReturnValue.back().LastFrame)
+            {
+                ReturnValue.back().LastFrame = IntervallsToNormalize[i].LastFrame;
+            }
+            else
+            {
+                ReturnValue.push_back(IntervallsToNormalize[i]);
+            }
+        }
+        return(ReturnValue);
+    }
     void SpecEvaluator::EvaluateSelection(Selection& SpecToEvaluate,std::vector<MBLSP::Diagnostic>& OutDiagnostics)
     {       
         if(m_DBAdapter == nullptr)
@@ -976,6 +1011,7 @@ namespace MBSlippi
         {
             //assumes are sorted
             auto Intervalls = p_EvaluateGameIntervalls(SpecToEvaluate.SituationFilter.Component,GameIntervall(0,Game.Frames.size()-1),Game);
+            Intervalls = h_NormalizeIntervalls(Intervalls);
             if(Intervalls.size() != 0)
             {
                 RecordingInfo NewRecording;
@@ -1137,10 +1173,18 @@ namespace MBSlippi
     {
         std::vector<GameIntervall> ReturnValue;
         float PercentThreshold = 40;
-        float PunisherIndex = 0;
-        float PunisheeIndex = 1;
+        int PunisherIndex = GetPlayerIndex(ExtraArguments);
+        int PunisheeIndex = PunisherIndex == 1 ? 0 : 1;
         float ExtractCount = 10;
-        std::vector<i_PunishInfo> Punishes = h_ExtractPunishes2(GameToInspect,PunisherIndex,PunisheeIndex,20);
+        if(auto const& PercentIt = ExtraArguments.KeyArguments.find("Percent"); PercentIt != ExtraArguments.KeyArguments.end())
+        {
+            PercentThreshold = h_ParseFloat(PercentIt->second);
+        }
+        if(auto const& CountIt = ExtraArguments.KeyArguments.find("Count"); CountIt != ExtraArguments.KeyArguments.end())
+        {
+            ExtractCount = h_ParseExpandInteger(CountIt->second);
+        }
+        std::vector<i_PunishInfo> Punishes = h_ExtractPunishes2(GameToInspect,PunisherIndex,PunisheeIndex,PercentThreshold);
         std::sort(Punishes.begin(),Punishes.end(),
                 [](i_PunishInfo const& lhs,i_PunishInfo const& rhs){return(lhs.TotalRecievedPercent >= rhs.TotalRecievedPercent);});
         if(Punishes.size() > ExtractCount)
