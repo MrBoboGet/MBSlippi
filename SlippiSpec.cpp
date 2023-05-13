@@ -5,7 +5,7 @@
 #include <MBUtility/Merge.h>
 #include <assert.h>
 #include <sstream>
-
+#include <iomanip>
 
 #include "SlippiGQPStructs.h"
 
@@ -74,7 +74,7 @@ namespace MBSlippi
 
         return(ReturnValue);
     }
-    uint64_t h_GetPosixTime(std::string const& DateToVerify)
+    uint64_t h_GetPosixTime(std::string const& DateToVerify,int& ComponentCount)
     {
         uint64_t ReturnValue = 0;
 		std::tm StoredTime{};
@@ -83,14 +83,17 @@ namespace MBSlippi
         if(DashCount == 0)
         {
             Stream >> std::get_time(&StoredTime, "%Y");
+            ComponentCount = 1;
         }
         else if(DashCount == 1)
         {
             Stream >> std::get_time(&StoredTime, "%Y-%m");
+            ComponentCount = 2;
         }
         else if(DashCount == 2)
         {
             Stream >> std::get_time(&StoredTime, "%Y-%m-%d");
+            ComponentCount = 2;
         }
         else
         {
@@ -267,7 +270,7 @@ namespace MBSlippi
                     }
                     else
                     {
-                        PredicateToVerify.DateValue = h_GetPosixTime(PredicateToVerify.Value);
+                        PredicateToVerify.DateValue = h_GetPosixTime(PredicateToVerify.Value,PredicateToVerify.ComponentCount);
                     }
                     return;
                 }
@@ -422,7 +425,20 @@ namespace MBSlippi
         else if(FilterToVerify.Data.IsType<Filter_Component_Function>())
         {
             auto const& FilterValue = FilterToVerify.Data.GetType<Filter_Component_Function>();
-            if(m_BuiltinFilters.find(FilterValue.FilterName) == m_BuiltinFilters.end() &&
+            if(m_TopContext.GlobalScope.HasVariable(FilterValue.FilterName))
+            {
+                auto const& Variable = m_TopContext.GlobalScope.GetVariable(FilterValue.FilterName);   
+                if(!std::holds_alternative<Filter_Component>(Variable.Data))
+                {
+                    MBLSP::Diagnostic NewDiagnostic;
+                    NewDiagnostic.message = "Variable isn't of type Filter";
+                    NewDiagnostic.range.start.line = FilterValue.NamePosition.Line;
+                    NewDiagnostic.range.start.character = FilterValue.NamePosition.ByteOffset;
+                    NewDiagnostic.range.end = NewDiagnostic.range.start + FilterValue.FilterName.size();
+                    OutDiagnostics.emplace_back(std::move(NewDiagnostic));
+                }
+            }
+            else if(m_BuiltinFilters.find(FilterValue.FilterName) == m_BuiltinFilters.end() &&
                     m_FilterToServer.find(FilterValue.FilterName) == m_FilterToServer.end())
             {
                 MBLSP::Diagnostic NewDiagnostic;
@@ -614,6 +630,7 @@ namespace MBSlippi
     bool SpecEvaluator::p_EvaluateGameSelection(SlippiGameInfo const& GameInfo,char InAssignment[4],GameInfoPredicate const& PredicateToEvaluate)
     {
         bool ReturnValue = true;
+        int TermOffset = 0;
         if(PredicateToEvaluate.Data.IsType<GameInfoPredicate_Direct>())
         {
             auto const& DirectData = PredicateToEvaluate.Data.GetType<GameInfoPredicate_Direct>();
@@ -653,7 +670,16 @@ namespace MBSlippi
                 }
                 else if(DirectData.Attribute[0].Name == "Date")
                 {
-                    ReturnValue = h_Comp(GameInfo.Date,DirectData.Comparison,DirectData.DateValue);
+                    if(DirectData.Comparison == "=" || DirectData.Comparison == "!=")
+                    {
+                        uint64_t LHS = (GameInfo.Date/DirectData.ComponentCount)*DirectData.ComponentCount;
+                        uint64_t RHS = (DirectData.DateValue/DirectData.ComponentCount)*DirectData.ComponentCount;
+                        ReturnValue = h_Comp(LHS,DirectData.Comparison,RHS);
+                    }
+                    else
+                    {
+                        ReturnValue = h_Comp(GameInfo.Date,DirectData.Comparison,DirectData.DateValue);
+                    }
                     //ReturnValue = h_Comp(GameInfo.Date,PredicateToEvaluate.Operator,
                 }
             }
@@ -689,14 +715,25 @@ namespace MBSlippi
         }
         else if(PredicateToEvaluate.Data.IsEmpty())
         {
-            //do nothing   
+            //Slightly hacky, but to support negation with this SLL'(k) parsing scheme,
+            //so is parenthesis encoded as being the first element of the extra terms, leaving the
+            //"current term" empty
+            ReturnValue = !p_EvaluateGameSelection(GameInfo,InAssignment,PredicateToEvaluate.ExtraTerms[0]);
+            TermOffset = 1;
         }
         else
         {
             assert(false && "p_EvaluateGameSelection doesn't cover all cases for GameInfoPredicate.Data");
         }
-        for(auto const& ExtraTerm : PredicateToEvaluate.ExtraTerms)
+        //see above
+        if(PredicateToEvaluate.Negated && PredicateToEvaluate.Data.IsEmpty())
         {
+            ReturnValue = !ReturnValue;
+        }
+        //for(auto const& ExtraTerm : PredicateToEvaluate.ExtraTerms)
+        for(int i = TermOffset; i < PredicateToEvaluate.ExtraTerms.size();i++)
+        {
+            auto const& ExtraTerm = PredicateToEvaluate.ExtraTerms[i];
             if(ExtraTerm.Operator == "||")
             {
                 if(!ReturnValue)
@@ -897,22 +934,66 @@ namespace MBSlippi
         }
         return(ReturnValue);
     }
+    std::vector<GameIntervall> h_GetNegatedIntervalls(std::vector<GameIntervall> const& InputIntervalls,
+            std::vector<GameIntervall> const& NegatedIntervalls)
+    {
+        std::vector<GameIntervall>  ReturnValue;
+
+        return(ReturnValue);
+    }
+    void h_NormalizeIntervalls(std::vector<GameIntervall>& IntervallsToNormalize)
+    {
+        std::vector<GameIntervall> Result;
+        if (IntervallsToNormalize.size() == 0)
+        {
+            return;
+        }
+        Result.push_back(IntervallsToNormalize.front());
+        for (size_t i = 1; i < IntervallsToNormalize.size(); i++)
+        {
+            if (IntervallsToNormalize[i].FirstFrame <= Result.back().LastFrame)
+            {
+                Result.back().LastFrame = IntervallsToNormalize[i].LastFrame;
+            }
+            else
+            {
+                Result.push_back(IntervallsToNormalize[i]);
+            }
+        }
+        IntervallsToNormalize = std::move(Result);
+    }
     std::vector<GameIntervall> SpecEvaluator::p_EvaluateGameIntervalls(Filter_Component const& FilterToUse,
-            GameIntervall CurrentIntervall,MeleeGame const& GameToFilter)
+            std::vector<GameIntervall> const& InputIntervalls,MeleeGame const& GameToFilter)
     {
         std::vector<GameIntervall> ReturnValue;
 
 
         if(FilterToUse.Data.IsType<Filter_Component_Function>())
         {
+            //temporery until filters are properly vectorized
             auto const& FunctionData = FilterToUse.Data.GetType<Filter_Component_Function>();
             if(auto BuiltinFilter = m_BuiltinFilters.find(FunctionData.FilterName); BuiltinFilter != m_BuiltinFilters.end())
             {
-                ReturnValue = BuiltinFilter->second(GameToFilter,FilterToUse.ArgumentList,CurrentIntervall);
+                for(auto const& Intervall : InputIntervalls)
+                {
+                    auto NewIntervalls = BuiltinFilter->second(GameToFilter,FilterToUse.ArgumentList,Intervall);
+                    ReturnValue.insert(ReturnValue.end(),NewIntervalls.begin(),NewIntervalls.end());
+                }
             }
             else if(auto ServerIndex = m_FilterToServer.find(FunctionData.FilterName); ServerIndex != m_FilterToServer.end())
             {
-                ReturnValue = m_SpecServers[ServerIndex->second].ExecuteFilter(FunctionData.FilterName,GameToFilter,CurrentIntervall);
+                for(auto const& Intervall : InputIntervalls)
+                {
+                    auto NewIntervalls = m_SpecServers[ServerIndex->second].ExecuteFilter(FunctionData.FilterName,GameToFilter,Intervall);
+                    ReturnValue.insert(ReturnValue.end(),NewIntervalls.begin(),NewIntervalls.end());
+                }
+            }
+            else if(m_TopContext.GlobalScope.HasVariable(FunctionData.FilterName))
+            {
+                Filter_Component const& DerferencedFilter = std::get<Filter_Component>(
+                        m_TopContext.GlobalScope.GetVariable(FunctionData.FilterName).Data);
+                auto NewIntervalls = p_EvaluateGameIntervalls(DerferencedFilter,InputIntervalls,GameToFilter);
+                ReturnValue.insert(ReturnValue.end(),NewIntervalls.begin(),NewIntervalls.end());
             }
             else
             {
@@ -925,12 +1006,12 @@ namespace MBSlippi
             auto const& VariableData = FilterToUse.Data.GetType<Filter_Component_Variable>();
             Filter_Component const& DerferencedFilter = std::get<Filter_Component>(
                 m_TopContext.GlobalScope.GetVariable(VariableData.VariableName).Data);
-            ReturnValue = p_EvaluateGameIntervalls(DerferencedFilter,CurrentIntervall,GameToFilter);
+            ReturnValue = p_EvaluateGameIntervalls(DerferencedFilter,InputIntervalls,GameToFilter);
         }
+        //special case becuase the filter is always present, but doesn't neccesarially contain anything
         else if(FilterToUse.Data.IsEmpty() && FilterToUse.ExtraTerms.size() == 0)
         {
-            ReturnValue.push_back(CurrentIntervall);
-            return(ReturnValue);
+            return(InputIntervalls);
         }
         else
         {
@@ -940,7 +1021,7 @@ namespace MBSlippi
         {
             if(ExtraFilter.Operator == "&")
             {
-                std::vector<GameIntervall> NewSituations = p_EvaluateGameIntervalls(ExtraFilter,CurrentIntervall,GameToFilter); 
+                std::vector<GameIntervall> NewSituations = p_EvaluateGameIntervalls(ExtraFilter,InputIntervalls,GameToFilter); 
                 std::vector<GameIntervall> NewReturnValue;
                 NewReturnValue.resize(NewSituations.size()+ReturnValue.size());
                 std::merge(NewSituations.begin(),NewSituations.end(),ReturnValue.begin(),ReturnValue.end(),NewReturnValue.begin());
@@ -948,44 +1029,33 @@ namespace MBSlippi
             }       
             else if(ExtraFilter.Operator == "|")
             {
-                std::vector<std::vector<GameIntervall>> NewIntervalls;
-                for(auto const& Intervall : ReturnValue)
-                {
-                    NewIntervalls.push_back(p_EvaluateGameIntervalls(ExtraFilter,Intervall,GameToFilter));
-                } 
-                ReturnValue = MBUtility::Merge<GameIntervall>(NewIntervalls.begin(),NewIntervalls.end());
+                std::vector<GameIntervall> NewIntervalls;
+                NewIntervalls = p_EvaluateGameIntervalls(ExtraFilter,ReturnValue,GameToFilter);
+                std::vector<GameIntervall> Result;
+                std::merge(ReturnValue.begin(),ReturnValue.end(),NewIntervalls.begin(),NewIntervalls.end(),
+                        std::back_inserter(Result));
+                std::swap(ReturnValue,Result);
             }
             else if(ExtraFilter.Operator == "")
             {
-                ReturnValue = p_EvaluateGameIntervalls(ExtraFilter,CurrentIntervall,GameToFilter);
+                assert(FilterToUse.Data.IsEmpty() && "Empty operator in extra term only valid if the filter is parenthesised filter");
+                ReturnValue = p_EvaluateGameIntervalls(ExtraFilter,InputIntervalls,GameToFilter);
+                //See comment in p_EvaluateGameSelection evaluation
+                if(FilterToUse.Negated)
+                {
+                    ReturnValue = h_GetNegatedIntervalls(InputIntervalls,ReturnValue);
+                }
             }
             else
             {
                 assert(false && "Only | and & are valid operators for filters");   
             }
-
         }
-        return(ReturnValue);
-    }
-    std::vector<GameIntervall> h_NormalizeIntervalls(std::vector<GameIntervall> const& IntervallsToNormalize)
-    {
-        std::vector<GameIntervall> ReturnValue;
-        if (IntervallsToNormalize.size() == 0)
+        if(FilterToUse.Negated && !FilterToUse.Data.IsEmpty())
         {
-            return(ReturnValue);
+            ReturnValue = h_GetNegatedIntervalls(InputIntervalls,ReturnValue);
         }
-        ReturnValue.push_back(IntervallsToNormalize.front());
-        for (size_t i = 1; i < IntervallsToNormalize.size(); i++)
-        {
-            if (IntervallsToNormalize[i].FirstFrame <= ReturnValue.back().LastFrame)
-            {
-                ReturnValue.back().LastFrame = IntervallsToNormalize[i].LastFrame;
-            }
-            else
-            {
-                ReturnValue.push_back(IntervallsToNormalize[i]);
-            }
-        }
+        h_NormalizeIntervalls(ReturnValue);
         return(ReturnValue);
     }
     void SpecEvaluator::EvaluateSelection(Selection& SpecToEvaluate,std::vector<MBLSP::Diagnostic>& OutDiagnostics)

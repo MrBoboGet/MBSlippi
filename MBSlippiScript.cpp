@@ -7,6 +7,7 @@
 
 #include <MrBoboDatabase/MrBoboDatabase.h>
 
+#include <iomanip>
 #include <chrono>
 #include <sstream>
 namespace MBSlippi

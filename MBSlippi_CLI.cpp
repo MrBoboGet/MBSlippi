@@ -12,6 +12,8 @@
 #include <exception>
 #include <filesystem>
 #include <sstream>
+#include <iomanip>
+
 
 #include "SlippiSpecParser.h"
 #include "SlippiSpec.h"

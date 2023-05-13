@@ -1,3 +1,11 @@
+Excludes:
 /.vs/
 /.git/
 /out/
+/.*.mp4
+/.*.slp
+/.*.rar
+/.*.wav
+/.*.avi
+/.*.exe
+/.*.mem

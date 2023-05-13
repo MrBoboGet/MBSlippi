@@ -26,6 +26,7 @@ term idf = "[[:alpha:]_]+[[:alnum:]_]*";
 term semi = ";";
 term leq = "<=";
 term less = "<";
+term bang = "!";
 term geq = ">=";
 term great = ">";
 term neq = "!=";
@@ -119,12 +120,14 @@ struct GameInfoPredicate_Direct : GameInfoPredicate_Data
     string Value;
     string Comparison;
     {uint64_t} DateValue;
+    int ComponentCount = 0;
 }
 
 struct GameInfoPredicate
 {
     GameInfoPredicate_Data Data;
     string Operator;
+    bool Negated = false;
     List<GameInfoPredicate> ExtraTerms;
 }
 struct GameInfoPredicate_OperatorList
@@ -187,6 +190,7 @@ struct Filter_Component_Function : Filter_Component_Data
 struct Filter_Component
 {
     Filter_Component_Data Data;
+    bool Negated = false;
     Filter_ArgList ArgumentList;
     string Operator;
     List<Filter_Component> ExtraTerms;
@@ -240,9 +244,15 @@ def Filter_Arg=Filter_Arg;
 def Filter_Arg_Named=Filter_Arg_Named;
 def Filter_Arg_Positional=Filter_Arg_Positional;
 def Filter_ArgList = ArgList;
+
 def Operator=Operator;
+def Comparator=Operator;
+def Combinator=Operator;
 
 Operator = Op=less|Op=pipe|Op=AND|Op=OR|Op=add|Op=great | Op=eq | Op=leq | Op=geq | Op=neq;
+Comparator = Op=less|Op=add|Op=great | Op=eq | Op=leq | Op=geq | Op=neq;
+Combinator = Op=pipe | Op=AND | Op = OR;
+
 def Filter_Arg_Extra = Filter_Arg;
 Filter_Arg_Extra = comma this=Filter_Arg;
 Filter_Arg = this=Filter_Arg_Named | this=Filter_Arg_Positional;
@@ -257,7 +267,6 @@ def Filter_Component_Or=Filter_Component;
 def Filter_Component_And=Filter_Component;
 def Filter_OperatorList=Filter_OperatorList;
 def Filter_Component_Function=Filter_Component_Function;
-def Filter_Component_Variable=Filter_Component_Variable;
 def Filter_Component_Data=Filter_Component_Data;
 
 
@@ -266,12 +275,14 @@ Filter_Component_Or = Operator=pipe this=Filter_Component;
 Filter_OperatorList = Components=Filter_Component_And+ | Components=Filter_Component_Or+;
 
 Filter_Component_Function = NamePosition = TOKEN.Position FilterName=idf;
-Filter_Component_Variable = VariablePosition = TOKEN.Position VariableName=variable;
-Filter_Component_Data = this=Filter_Component_Function | this=Filter_Component_Variable;
+Filter_Component_Data = this=Filter_Component_Function;
 
 Filter_Component_Base = Data=Filter_Component_Data ArgumentList.Arguments=Filter_ArgList.Args?;
 
-Filter_Component = lpar ExtraTerms=Filter_Component rpar ExtraTerms=Filter_OperatorList.Components?| this=Filter_Component_Base ExtraTerms=Filter_OperatorList.Components?;
+Filter_Component = 
+    lpar ExtraTerms=Filter_Component rpar ExtraTerms=Filter_OperatorList.Components? | 
+    this=Filter_Component_Base ExtraTerms=Filter_OperatorList.Components? | 
+    bang this=Filter_Component {ReturnValue.Negated=true;};
 
 Filter= FilterPosition = TOKEN.Position FILTER Component=Filter_Component;
 
@@ -295,15 +306,20 @@ GameInfoPredicate_And = Operator=AND this=GameInfoPredicate;
 GameInfoPredicate_OperatorList= Terms=GameInfoPredicate_Or+ | Terms=GameInfoPredicate_And+;
 
 
-GameInfoPredicate_Variable = VariablePosition = TOKEN.Position VariableName=variable;
-GameInfoPredicate_Direct = Attribute=Attribute_List.Attributes Comparison=Operator.Op ValuePosition = TOKEN.Position Value=string;
+GameInfoPredicate_Variable = VariablePosition = TOKEN.Position VariableName=idf;
+GameInfoPredicate_Direct = Attribute=Attribute_List.Attributes Comparison=Comparator.Op ValuePosition = TOKEN.Position Value=string;
 GameInfoPredicate_Data = this=GameInfoPredicate_Variable | this=GameInfoPredicate_Direct;
 
 GameInfoPredicate_Base = Data=GameInfoPredicate_Data;
 
 
-GameInfoPredicate = lpar ExtraTerms=GameInfoPredicate rpar ExtraTerms=GameInfoPredicate_OperatorList.Terms? |
-    this=GameInfoPredicate_Base ExtraTerms=GameInfoPredicate_OperatorList.Terms?; 
+GameInfoPredicate = 
+    lpar ExtraTerms=GameInfoPredicate rpar ExtraTerms=GameInfoPredicate_OperatorList.Terms? |
+    this=GameInfoPredicate_Base ExtraTerms=GameInfoPredicate_OperatorList.Terms? |
+    bang this=GameInfoPredicate {ReturnValue.Negated=true;};
+
+
+
 GameSelection = Assignment=PlayerAssignment? SelectPosition = TOKEN.Position SELECT GameCondition=GameInfoPredicate;
 
 PlayerAssignment = WithPosition = TOKEN.Position WITH PlayerPosition = TOKEN.Position AffectedPlayer=idf PlayerCondition=GameInfoPredicate;

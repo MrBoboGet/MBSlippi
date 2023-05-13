@@ -1084,7 +1084,7 @@ namespace MBSlippi
         Dummy                 =     0x000, 
         TEST                  =     0x001,
         FountainOfDreams      =     0x002,
-        PokémonStadium        =     0x003,
+        PokemonStadium        =     0x003,
         PrincessPeachsCastle  =     0x004,
         KongoJungle           =     0x005,
         Brinstar              =     0x006,
@@ -1137,7 +1137,7 @@ namespace MBSlippi
         {
             return("YS");
         }
-        else if (IDToConvert == StageID::PokémonStadium)
+        else if (IDToConvert == StageID::PokemonStadium)
         {
             return("PS");
         }

@@ -218,7 +218,7 @@ namespace MBSlippi
         MBLSP::Initialize_Response ReturnValue;
         ReturnValue.result = MBLSP::Initialize_Result();
         ReturnValue.result->capabilities.textDocumentSync = MBLSP::TextDocumentSyncOptions();
-        ReturnValue.result->capabilities.declarationProvider = true;
+        //ReturnValue.result->capabilities.declarationProvider = true;
         ReturnValue.result->capabilities.semanticTokensProvider = MBLSP::SemanticTokensOptions();
         MBLSP::SemanticTokensLegend Legend;
         Legend.tokenTypes = MBLSP::GetTokenLegend();

@@ -229,7 +229,8 @@ namespace MBSlippi
         void p_ApplyAssignment(MeleeGame& GameToModify,char InAssignments[4]);
 
         std::vector<MeleeGame> p_RetrieveSpecGames(GameSelection const& GameSelection);
-        std::vector<GameIntervall> p_EvaluateGameIntervalls(Filter_Component const& FilterToUse,GameIntervall CurrentIntervall,MeleeGame const& GameToFilter);
+        std::vector<GameIntervall> p_EvaluateGameIntervalls(Filter_Component const& FilterToUse,
+                std::vector<GameIntervall> const& InputIntervalls,MeleeGame const& GameToFilter);
 
         void p_InitializeServers();
     public:
