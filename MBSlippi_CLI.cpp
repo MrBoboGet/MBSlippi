@@ -160,9 +160,18 @@ namespace MBSlippi
             {
                 QueryString += "WHERE "+WhereCondition;   
             }
+            QueryString += " ORDER BY GameID ASC;";
             MBError QueryError = true;
             std::vector<MBDB::MBDB_RowData> Result = Database.GetAllRows(QueryString,&QueryError);
             ReturnValue.reserve(ReturnValue.size() + Result.size());
+            auto PlayerQuery = Database.GetSQLStatement("SELECT * FROM PLAYERS ORDER BY GameID ASC,Port ASC;");
+            auto PlayerRows = Database.GetAllRows(PlayerQuery,&QueryError); 
+            if(PlayerRows.size() != Result.size()*4)
+            {
+                throw std::runtime_error("Error in retrieving games from database at '"+
+                        MBUnicode::PathToUTF8(Path)+"': Player rows not 4 times the game rows");
+            }
+            int PlayerRowIndex = 0;
             for(MBDB::MBDB_RowData const& Row : Result)
             {
                 SlippiGameInfo NewGameInfo;
@@ -173,20 +182,19 @@ namespace MBSlippi
                 NewGameInfo.FrameDuration = Row.GetColumnData<MBDB::IntType>(4);
 
 
-                auto PlayerQuery = Database.GetSQLStatement("SELECT * FROM PLAYERS WHERE GameID = ?");
-                PlayerQuery.BindInt(GameID,1);
-                auto Rows = Database.GetAllRows(PlayerQuery,&QueryError);
-                for(auto const& Row : Rows)
+                for(int i = PlayerRowIndex; i < PlayerRowIndex+4;i++)
                 {
-                    int Index = Row.GetColumnData<MBDB::IntType>(1);
+                    auto const& PlayerRow = PlayerRows[i];
+                    int Index = PlayerRow.GetColumnData<MBDB::IntType>(1);
                     if(Index < 0 || Index > 3)
                     {
                         throw std::runtime_error("Error retrieving specgames: player port above 3 or below 0 in database index");
                     }
-                    NewGameInfo.PlayerInfo[Index].Code = Row.GetColumnData<std::string>(2);
-                    NewGameInfo.PlayerInfo[Index].Tag = Row.GetColumnData<std::string>(3);
-                    NewGameInfo.PlayerInfo[Index].Character = Row.GetColumnData<std::string>(4);
+                    NewGameInfo.PlayerInfo[Index].Code = PlayerRow.GetColumnData<std::string>(2);
+                    NewGameInfo.PlayerInfo[Index].Tag = PlayerRow.GetColumnData<std::string>(3);
+                    NewGameInfo.PlayerInfo[Index].Character = PlayerRow.GetColumnData<std::string>(4);
                 }
+                PlayerRowIndex += 4;
                 ReturnValue.push_back(NewGameInfo);
             }
         }

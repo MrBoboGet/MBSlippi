@@ -20,6 +20,10 @@ namespace MBSlippi
         {
             return(FirstFrame < rhs.FirstFrame);   
         }
+        bool In(GameIntervall const& OtherIntervall) const
+        {
+            return(FirstFrame <= OtherIntervall.LastFrame && LastFrame >= OtherIntervall.FirstFrame);
+        }
     };
     struct RecordingInfo
     {
@@ -196,7 +200,7 @@ namespace MBSlippi
             {"InShield",InShield},
             {"Expand",Expand},
             {"HitBy",HitBy},
-            {"HasHitBy",HitBy},
+            {"HasHitBy",HasHitBy},
             {"SpecialState",SpecialState},
             {"HasProjectile",HasProjectile},
             {"ActionState",ActionState},

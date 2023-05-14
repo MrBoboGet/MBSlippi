@@ -65,7 +65,7 @@ namespace MBSlippi
         }
         else if(Operator == ">")
         {
-            ReturnValue = lhs >= rhs;   
+            ReturnValue = lhs > rhs;   
         }
         else
         {
@@ -934,11 +934,73 @@ namespace MBSlippi
         }
         return(ReturnValue);
     }
-    std::vector<GameIntervall> h_GetNegatedIntervalls(std::vector<GameIntervall> const& InputIntervalls,
+    GameIntervall h_GetNegatedIntervall(GameIntervall InputIntevall,GameIntervall NegatedIntervall,std::vector<GameIntervall>& TotalIntervalls)
+    {
+        GameIntervall ReturnValue = InputIntevall;
+        if(InputIntevall.FirstFrame < NegatedIntervall.FirstFrame && InputIntevall.LastFrame > NegatedIntervall.FirstFrame)
+        {
+            GameIntervall IntervallToInsert = InputIntevall;
+            IntervallToInsert.LastFrame = NegatedIntervall.FirstFrame;
+            TotalIntervalls.push_back(IntervallToInsert);
+            ReturnValue.FirstFrame = NegatedIntervall.LastFrame;
+            ReturnValue.LastFrame = IntervallToInsert.LastFrame;
+        }
+        else
+        {
+            if(InputIntevall.FirstFrame < NegatedIntervall.FirstFrame)
+            {
+                ReturnValue.LastFrame = NegatedIntervall.FirstFrame;
+            }
+            else
+            {
+                ReturnValue.FirstFrame = NegatedIntervall.LastFrame;   
+            }
+        }
+        if(ReturnValue.FirstFrame > ReturnValue.LastFrame)
+        {
+            ReturnValue.FirstFrame = ReturnValue.LastFrame;
+        }
+        return(ReturnValue);
+    }
+    //does a copy, maybe a bit to expensive
+    std::vector<GameIntervall> h_GetNegatedIntervalls(std::vector<GameIntervall> InputIntervalls,
             std::vector<GameIntervall> const& NegatedIntervalls)
     {
         std::vector<GameIntervall>  ReturnValue;
-
+        size_t InputIndex = 0;
+        size_t NegatedIndex = 0;
+        int InputFrame = 0;
+        int OutputFrame = 0;
+        while(InputIndex < InputIntervalls.size() && NegatedIndex < NegatedIntervalls.size())
+        {
+            auto& InputIntervall = InputIntervalls[InputIndex];
+            auto const& NegatedIntervall = NegatedIntervalls[NegatedIndex];
+            if(InputIntervall.In(NegatedIntervall))
+            {
+                InputIntervall = h_GetNegatedIntervall(InputIntervall,NegatedIntervall,ReturnValue);
+                NegatedIndex++;
+            }
+            else
+            {
+               if(InputIntervall < NegatedIntervall)
+               {
+                    ReturnValue.push_back(InputIntervall);
+                    InputIndex++;
+               }    
+               else
+               {
+                   NegatedIndex++;
+               }
+            }
+        }
+        while(InputIndex < InputIntervalls.size())
+        {
+            if(InputIntervalls[InputIndex].FirstFrame != InputIntervalls[InputIndex].LastFrame)
+            {
+                ReturnValue.push_back(InputIntervalls[InputIndex]);
+            }
+            InputIndex++;
+        }
         return(ReturnValue);
     }
     void h_NormalizeIntervalls(std::vector<GameIntervall>& IntervallsToNormalize)
@@ -1080,8 +1142,8 @@ namespace MBSlippi
         for(auto& Game : GamesToInspect)
         {
             //assumes are sorted
-            auto Intervalls = p_EvaluateGameIntervalls(SpecToEvaluate.SituationFilter.Component,GameIntervall(0,Game.Frames.size()-1),Game);
-            Intervalls = h_NormalizeIntervalls(Intervalls);
+            auto Intervalls = p_EvaluateGameIntervalls(SpecToEvaluate.SituationFilter.Component,{GameIntervall(0,Game.Frames.size()-1)},Game);
+            h_NormalizeIntervalls(Intervalls);
             if(Intervalls.size() != 0)
             {
                 RecordingInfo NewRecording;
