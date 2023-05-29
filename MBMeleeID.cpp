@@ -348,6 +348,39 @@ namespace MBSlippi
         {
             ReturnValue = MBAttackID::DownSmash;
         }
+        //TODO take the effort to see of this can be optimized with an intervall
+        else if(
+                AssociatedState.ActionStateID == ActionState::LightThrowF ||
+                AssociatedState.ActionStateID == ActionState::LightThrowB ||
+                AssociatedState.ActionStateID == ActionState::LightThrowHi ||
+                AssociatedState.ActionStateID == ActionState::LightThrowLw ||
+                AssociatedState.ActionStateID == ActionState::LightThrowDash ||
+                AssociatedState.ActionStateID == ActionState::LightThrowDrop ||
+                AssociatedState.ActionStateID == ActionState::LightThrowAirF ||
+                AssociatedState.ActionStateID == ActionState::LightThrowAirB ||
+                AssociatedState.ActionStateID == ActionState::LightThrowAirHi ||
+                AssociatedState.ActionStateID == ActionState::LightThrowAirLw ||
+                AssociatedState.ActionStateID == ActionState::HeavyThrowF ||
+                AssociatedState.ActionStateID == ActionState::HeavyThrowB ||
+                AssociatedState.ActionStateID == ActionState::HeavyThrowHi ||
+                AssociatedState.ActionStateID == ActionState::HeavyThrowLw ||
+                AssociatedState.ActionStateID == ActionState::LightThrowF4 ||
+                AssociatedState.ActionStateID == ActionState::LightThrowB4 ||
+                AssociatedState.ActionStateID == ActionState::LightThrowHi4 ||
+                AssociatedState.ActionStateID == ActionState::LightThrowLw4 ||
+                AssociatedState.ActionStateID == ActionState::LightThrowAirF4 ||
+                AssociatedState.ActionStateID == ActionState::LightThrowAirB4 ||
+                AssociatedState.ActionStateID == ActionState::LightThrowAirHi4 ||
+                AssociatedState.ActionStateID == ActionState::LightThrowAirLw4 ||
+                AssociatedState.ActionStateID == ActionState::HeavyThrowF4 ||
+                AssociatedState.ActionStateID == ActionState::HeavyThrowB4 ||
+                AssociatedState.ActionStateID == ActionState::HeavyThrowHi4 ||
+                AssociatedState.ActionStateID == ActionState::HeavyThrowLw4
+               )
+
+        {
+            ReturnValue = MBAttackID::ItemThrow;
+        }
         else
         {
             ReturnValue = __InternalCharacterIDAttackIDFunctionMap[uint16_t(AssociatedState.InternalCharID)](AssociatedState);
@@ -396,6 +429,10 @@ namespace MBSlippi
         else if (AssociatedState.ActionStateID == ActionState::DamageFall)
         {
             ReturnValue = MBActionState::Tumbling;
+        }
+        else if(AssociatedState.ActionStateID == ActionState::CliffCatch || AssociatedState.ActionStateID == ActionState::CliffWait)
+        {
+            ReturnValue = MBActionState::Ledge;
         }
         else if(
             AssociatedState.ActionStateID == ActionState::DeadDown ||
@@ -467,6 +504,7 @@ namespace MBSlippi
         "DownThrow",
         "BackThrow",
         "ForwardThrow",
+        "ItemThrow",
     };
     std::string MBAttackIDToString(MBAttackID IDToConvert)
     {
@@ -492,6 +530,7 @@ namespace MBSlippi
         "Attacking", 
         "Grabbed",
         "Dead",
+        "Ledge",
     };
     std::string MBActionStateToString(MBActionState StateToConvert)
     { 
@@ -602,6 +641,8 @@ namespace MBSlippi
         ReturnValue.StateFlags = FrameToMBActionStateFlags(EventToParse);
         ReturnValue.ActiveAttack = StateToMBAttackID(EventToParse);
         ReturnValue.Percent = EventToParse.Percent;
+        ReturnValue.PlayerPosition.x = EventToParse.XPosition;
+        ReturnValue.PlayerPosition.x = EventToParse.YPosition;
         //if (ReturnValue.ActionState == MBActionState::Null)
         //{
         //    int Hej = 2;

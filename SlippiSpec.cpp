@@ -10,6 +10,7 @@
 #include "SlippiGQPStructs.h"
 
 #include <MBLSP/SemanticTokens.h>
+#include <cmath>
 namespace MBSlippi
 {
 
@@ -74,11 +75,12 @@ namespace MBSlippi
 
         return(ReturnValue);
     }
-    uint64_t h_GetPosixTime(std::string const& DateToVerify,int& ComponentCount)
+    void h_GetPosixTime(std::string const& DateToVerify,GameInfoPredicate_Direct& ObjectToModify)
     {
         uint64_t ReturnValue = 0;
 		std::tm StoredTime{};
 		std::istringstream Stream(DateToVerify);
+        int ComponentCount = 0;
         int DashCount = std::count(DateToVerify.begin(),DateToVerify.end(),'-');
         if(DashCount == 0)
         {
@@ -93,7 +95,7 @@ namespace MBSlippi
         else if(DashCount == 2)
         {
             Stream >> std::get_time(&StoredTime, "%Y-%m-%d");
-            ComponentCount = 2;
+            ComponentCount = 3;
         }
         else
         {
@@ -101,7 +103,20 @@ namespace MBSlippi
         }
         StoredTime.tm_isdst = -1;
         ReturnValue = uint64_t(std::mktime(&StoredTime));
-        return(ReturnValue);       
+        ObjectToModify.DateLowerBound = ReturnValue;
+        ObjectToModify.DateHigherBound = ReturnValue;
+        if(ComponentCount == 3)
+        {
+            ObjectToModify.DateHigherBound += 24*3600;
+        }
+        else if(ComponentCount == 2)
+        {
+            ObjectToModify.DateHigherBound += 24*3600*31;
+        }
+        else if(ComponentCount == 1)
+        {
+            ObjectToModify.DateHigherBound += 24*3600*365;
+        }
     }
     bool h_IsValidDate(std::string const& DateToVerify)
     {
@@ -270,7 +285,7 @@ namespace MBSlippi
                     }
                     else
                     {
-                        PredicateToVerify.DateValue = h_GetPosixTime(PredicateToVerify.Value,PredicateToVerify.ComponentCount);
+                        h_GetPosixTime(PredicateToVerify.Value,PredicateToVerify);
                     }
                     return;
                 }
@@ -672,13 +687,24 @@ namespace MBSlippi
                 {
                     if(DirectData.Comparison == "=" || DirectData.Comparison == "!=")
                     {
-                        uint64_t LHS = (GameInfo.Date/DirectData.ComponentCount)*DirectData.ComponentCount;
-                        uint64_t RHS = (DirectData.DateValue/DirectData.ComponentCount)*DirectData.ComponentCount;
-                        ReturnValue = h_Comp(LHS,DirectData.Comparison,RHS);
+                        ReturnValue = GameInfo.Date >= DirectData.DateLowerBound && GameInfo.Date <= DirectData.DateHigherBound;
+                        if(DirectData.Comparison == "!=")
+                        {
+                            ReturnValue = !ReturnValue;   
+                        }
                     }
                     else
                     {
-                        ReturnValue = h_Comp(GameInfo.Date,DirectData.Comparison,DirectData.DateValue);
+                        bool IsGreater = DirectData.Comparison.find('>') != DirectData.Comparison.npos;
+                        bool IsEqual = DirectData.Comparison.find('=') != DirectData.Comparison.npos;
+                        if( (IsGreater && !IsEqual) || (!IsGreater && IsEqual))
+                        {
+                            ReturnValue = h_Comp(GameInfo.Date,DirectData.Comparison,DirectData.DateHigherBound);
+                        }
+                        else
+                        {
+                            ReturnValue = h_Comp(GameInfo.Date,DirectData.Comparison,DirectData.DateLowerBound);
+                        }
                     }
                     //ReturnValue = h_Comp(GameInfo.Date,PredicateToEvaluate.Operator,
                 }
@@ -937,13 +963,13 @@ namespace MBSlippi
     GameIntervall h_GetNegatedIntervall(GameIntervall InputIntevall,GameIntervall NegatedIntervall,std::vector<GameIntervall>& TotalIntervalls)
     {
         GameIntervall ReturnValue = InputIntevall;
-        if(InputIntevall.FirstFrame < NegatedIntervall.FirstFrame && InputIntevall.LastFrame > NegatedIntervall.FirstFrame)
+        if(InputIntevall.FirstFrame < NegatedIntervall.FirstFrame && InputIntevall.LastFrame > NegatedIntervall.LastFrame)
         {
             GameIntervall IntervallToInsert = InputIntevall;
             IntervallToInsert.LastFrame = NegatedIntervall.FirstFrame;
             TotalIntervalls.push_back(IntervallToInsert);
             ReturnValue.FirstFrame = NegatedIntervall.LastFrame;
-            ReturnValue.LastFrame = IntervallToInsert.LastFrame;
+            ReturnValue.LastFrame = InputIntevall.LastFrame;
         }
         else
         {
@@ -1093,10 +1119,7 @@ namespace MBSlippi
             {
                 std::vector<GameIntervall> NewIntervalls;
                 NewIntervalls = p_EvaluateGameIntervalls(ExtraFilter,ReturnValue,GameToFilter);
-                std::vector<GameIntervall> Result;
-                std::merge(ReturnValue.begin(),ReturnValue.end(),NewIntervalls.begin(),NewIntervalls.end(),
-                        std::back_inserter(Result));
-                std::swap(ReturnValue,Result);
+                std::swap(ReturnValue,NewIntervalls);
             }
             else if(ExtraFilter.Operator == "")
             {

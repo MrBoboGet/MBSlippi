@@ -192,6 +192,7 @@ namespace MBSlippi
         static std::vector<GameIntervall> HasProjectile(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,GameIntervall IntervallToInspect);
         static std::vector<GameIntervall> HitBy(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,GameIntervall IntervallToInspect);
         static std::vector<GameIntervall> HasHitBy(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,GameIntervall IntervallToInspect);
+        static std::vector<GameIntervall> Offstage(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,GameIntervall IntervallToInspect);
         std::unordered_map<std::string,BuiltinFilterType> m_BuiltinFilters = 
         {
             {"Punishes",BiggestPunishes},

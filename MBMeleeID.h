@@ -4,6 +4,8 @@
 #include <MBUtility/MBInterfaces.h>
 #include "MeleeID.h"
 #include <MBParsing/MBParsing.h>
+
+#include <cmath>
 namespace MBSlippi
 {
     enum class MBAttackID : uint8_t
@@ -37,6 +39,7 @@ namespace MBSlippi
         DownThrow,
         BackThrow,
         ForwardThrow,
+        ItemThrow,
 
         Null
     };
@@ -57,6 +60,7 @@ namespace MBSlippi
         //
         Grabbed,
         Dead,
+        Ledge,
         Null
     };
     
@@ -129,6 +133,17 @@ namespace MBSlippi
         std::string Code;
         MBCharacter Character = MBCharacter::Null;
     };
+
+    struct Position
+    {
+        float x = 0;
+        float y = 0;
+
+        float Distance(Position OtherPos)
+        {
+            return(std::hypot(OtherPos.x-x,OtherPos.y-y));
+        }
+    };
     struct PlayerFrameInfo
     {
         MBActionState ActionState = MBActionState::None;
@@ -136,6 +151,7 @@ namespace MBSlippi
         MBAttackID ActiveAttack = MBAttackID::None;
         int ActionableFrames = 0;
         float Percent = 0;
+        Position PlayerPosition;
 
         MBParsing::JSONObject ToJSON() const
         {
@@ -147,6 +163,8 @@ namespace MBSlippi
             ReturnValue["airborne"] = StateFlags.Airborne;
             ReturnValue["actionableFrames"] = ActionableFrames;
             ReturnValue["percent"] = Percent;
+            ReturnValue["x"] = PlayerPosition.x;
+            ReturnValue["y"] = PlayerPosition.y;
             return(ReturnValue);
         }
     };

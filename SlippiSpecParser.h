@@ -18,37 +18,10 @@ class Statement : public MBCC::PolyBase<Statement_Base>
     using Base::Base;
     
 };
-class Filter_Arg_Base :  public MBCC::AST_Base
+class Operator :  public MBCC::AST_Base
 {
     public:
-    std::unique_ptr<AST_Base> Copy() const override{return(MBCC::CopyAST(*this));}
-    
-};
-class Filter_Arg : public MBCC::PolyBase<Filter_Arg_Base>
-{
-    public:
-    typedef MBCC::PolyBase<Filter_Arg_Base> Base;
-    using Base::Base;
-    
-};
-class GameInfoPredicate_Data_Base :  public MBCC::AST_Base
-{
-    public:
-    std::unique_ptr<AST_Base> Copy() const override{return(MBCC::CopyAST(*this));}
-    
-};
-class GameInfoPredicate_Data : public MBCC::PolyBase<GameInfoPredicate_Data_Base>
-{
-    public:
-    typedef MBCC::PolyBase<GameInfoPredicate_Data_Base> Base;
-    using Base::Base;
-    
-};
-class AttributeComponent :  public MBCC::AST_Base
-{
-    public:
-    MBCC::TokenPosition NamePosition;
-    std::string Name;
+    std::string Op;
     std::unique_ptr<AST_Base> Copy() const override{return(MBCC::CopyAST(*this));}
     
 };
@@ -65,13 +38,6 @@ class Filter_Component_Data : public MBCC::PolyBase<Filter_Component_Data_Base>
     using Base::Base;
     
 };
-class Operator :  public MBCC::AST_Base
-{
-    public:
-    std::string Op;
-    std::unique_ptr<AST_Base> Copy() const override{return(MBCC::CopyAST(*this));}
-    
-};
 class Result_Base :  public MBCC::AST_Base
 {
     public:
@@ -85,74 +51,38 @@ class Result : public MBCC::PolyBase<Result_Base>
     using Base::Base;
     
 };
-class Filter_Component_Function : public Filter_Component_Data_Base
-{
-    public:
-    MBCC::TokenPosition NamePosition;
-    std::string FilterName;
-    std::unique_ptr<AST_Base> Copy() const override{return(MBCC::CopyAST(*this));}
-    
-};
-class Filter_Component_Variable : public Filter_Component_Data_Base
-{
-    public:
-    MBCC::TokenPosition VariablePosition;
-    std::string VariableName;
-    std::unique_ptr<AST_Base> Copy() const override{return(MBCC::CopyAST(*this));}
-    
-};
-class Result_Record : public Result_Base
-{
-    public:
-    MBCC::TokenPosition RecordPosition;
-    MBCC::TokenPosition FilePosition;
-    std::string OutFile;
-    std::unique_ptr<AST_Base> Copy() const override{return(MBCC::CopyAST(*this));}
-    
-};
-class Result_Print : public Result_Base
-{
-    public:
-    MBCC::TokenPosition PrintPosition;
-    std::unique_ptr<AST_Base> Copy() const override{return(MBCC::CopyAST(*this));}
-    
-};
-class Result_Tabulate : public Result_Base
-{
-    public:
-    std::unique_ptr<AST_Base> Copy() const override{return(MBCC::CopyAST(*this));}
-    
-};
-class AttributeList :  public MBCC::AST_Base
-{
-    public:
-    std::vector<AttributeComponent> Attributes;
-    std::unique_ptr<AST_Base> Copy() const override{return(MBCC::CopyAST(*this));}
-    
-};
-class ArgList :  public MBCC::AST_Base
-{
-    public:
-    std::vector<Filter_Arg> Args;
-    std::unique_ptr<AST_Base> Copy() const override{return(MBCC::CopyAST(*this));}
-    
-};
-class Filter_Arg_Named : public Filter_Arg_Base
+class AttributeComponent :  public MBCC::AST_Base
 {
     public:
     MBCC::TokenPosition NamePosition;
     std::string Name;
-    MBCC::TokenPosition ValuePosition;
-    std::string Value;
     std::unique_ptr<AST_Base> Copy() const override{return(MBCC::CopyAST(*this));}
     
 };
-class Filter_Arg_Positional : public Filter_Arg_Base
+class GameInfoPredicate_Data_Base :  public MBCC::AST_Base
 {
     public:
-    MBCC::TokenPosition ValuePosition;
-    std::string Value;
     std::unique_ptr<AST_Base> Copy() const override{return(MBCC::CopyAST(*this));}
+    
+};
+class GameInfoPredicate_Data : public MBCC::PolyBase<GameInfoPredicate_Data_Base>
+{
+    public:
+    typedef MBCC::PolyBase<GameInfoPredicate_Data_Base> Base;
+    using Base::Base;
+    
+};
+class Filter_Arg_Base :  public MBCC::AST_Base
+{
+    public:
+    std::unique_ptr<AST_Base> Copy() const override{return(MBCC::CopyAST(*this));}
+    
+};
+class Filter_Arg : public MBCC::PolyBase<Filter_Arg_Base>
+{
+    public:
+    typedef MBCC::PolyBase<Filter_Arg_Base> Base;
+    using Base::Base;
     
 };
 class VariableDeclaration_Base : public Statement_Base
@@ -174,10 +104,69 @@ class VariableDeclaration : public MBCC::PolyBase<VariableDeclaration_Base>
     }
     
 };
-class Filter_ArgList :  public MBCC::AST_Base
+class Filter_Component_Variable : public Filter_Component_Data_Base
 {
     public:
-    std::vector<Filter_Arg> Arguments;
+    MBCC::TokenPosition VariablePosition;
+    std::string VariableName;
+    std::unique_ptr<AST_Base> Copy() const override{return(MBCC::CopyAST(*this));}
+    
+};
+class Filter_Component_Function : public Filter_Component_Data_Base
+{
+    public:
+    MBCC::TokenPosition NamePosition;
+    std::string FilterName;
+    std::unique_ptr<AST_Base> Copy() const override{return(MBCC::CopyAST(*this));}
+    
+};
+class Result_Record : public Result_Base
+{
+    public:
+    MBCC::TokenPosition RecordPosition;
+    MBCC::TokenPosition FilePosition;
+    std::string OutFile;
+    std::unique_ptr<AST_Base> Copy() const override{return(MBCC::CopyAST(*this));}
+    
+};
+class Result_Print : public Result_Base
+{
+    public:
+    MBCC::TokenPosition PrintPosition;
+    std::unique_ptr<AST_Base> Copy() const override{return(MBCC::CopyAST(*this));}
+    
+};
+class Module :  public MBCC::AST_Base
+{
+    public:
+    std::vector<Statement> Statements;
+    std::unique_ptr<AST_Base> Copy() const override{return(MBCC::CopyAST(*this));}
+    
+};
+class Result_Tabulate : public Result_Base
+{
+    public:
+    std::unique_ptr<AST_Base> Copy() const override{return(MBCC::CopyAST(*this));}
+    
+};
+class GameInfoPredicate_Variable : public GameInfoPredicate_Data_Base
+{
+    public:
+    MBCC::TokenPosition VariablePosition;
+    std::string VariableName;
+    std::unique_ptr<AST_Base> Copy() const override{return(MBCC::CopyAST(*this));}
+    
+};
+class GameInfoPredicate_Direct : public GameInfoPredicate_Data_Base
+{
+    public:
+    std::vector<AttributeComponent> Attribute;
+    MBCC::TokenPosition ValuePosition;
+    std::string Value;
+    std::string Comparison;
+    uint64_t DateLowerBound;
+    uint64_t DateHigherBound;
+    int ComponentCount =  0;
     std::unique_ptr<AST_Base> Copy() const override{return(MBCC::CopyAST(*this));}
     
 };
@@ -191,40 +180,42 @@ class GameInfoPredicate :  public MBCC::AST_Base
     std::unique_ptr<AST_Base> Copy() const override{return(MBCC::CopyAST(*this));}
     
 };
-class GameInfoPredicate_Direct : public GameInfoPredicate_Data_Base
+class Filter_ArgList :  public MBCC::AST_Base
 {
     public:
-    std::vector<AttributeComponent> Attribute;
+    std::vector<Filter_Arg> Arguments;
+    std::unique_ptr<AST_Base> Copy() const override{return(MBCC::CopyAST(*this));}
+    
+};
+class Filter_Arg_Positional : public Filter_Arg_Base
+{
+    public:
     MBCC::TokenPosition ValuePosition;
     std::string Value;
-    std::string Comparison;
-    uint64_t DateValue;
-    int ComponentCount =  0;
     std::unique_ptr<AST_Base> Copy() const override{return(MBCC::CopyAST(*this));}
     
 };
-class GameInfoPredicate_Variable : public GameInfoPredicate_Data_Base
+class Filter_Arg_Named : public Filter_Arg_Base
 {
     public:
-    MBCC::TokenPosition VariablePosition;
-    std::string VariableName;
+    MBCC::TokenPosition NamePosition;
+    std::string Name;
+    MBCC::TokenPosition ValuePosition;
+    std::string Value;
     std::unique_ptr<AST_Base> Copy() const override{return(MBCC::CopyAST(*this));}
     
 };
-class Module :  public MBCC::AST_Base
+class ArgList :  public MBCC::AST_Base
 {
     public:
-    std::vector<Statement> Statements;
+    std::vector<Filter_Arg> Args;
     std::unique_ptr<AST_Base> Copy() const override{return(MBCC::CopyAST(*this));}
     
 };
-class PlayerAssignment :  public MBCC::AST_Base
+class AttributeList :  public MBCC::AST_Base
 {
     public:
-    MBCC::TokenPosition WithPosition;
-    MBCC::TokenPosition PlayerPosition;
-    std::string AffectedPlayer;
-    GameInfoPredicate PlayerCondition;
+    std::vector<AttributeComponent> Attributes;
     std::unique_ptr<AST_Base> Copy() const override{return(MBCC::CopyAST(*this));}
     
 };
@@ -244,6 +235,31 @@ class VariableDeclaration_GameInfoPredicate : public VariableDeclaration_Base
     std::unique_ptr<AST_Base> Copy() const override{return(MBCC::CopyAST(*this));}
     
 };
+class GameInfoPredicate_Conjunction :  public MBCC::AST_Base
+{
+    public:
+    std::string Conjunction;
+    GameInfoPredicate RHS;
+    std::unique_ptr<AST_Base> Copy() const override{return(MBCC::CopyAST(*this));}
+    
+};
+class PlayerAssignment :  public MBCC::AST_Base
+{
+    public:
+    MBCC::TokenPosition WithPosition;
+    MBCC::TokenPosition PlayerPosition;
+    std::string AffectedPlayer;
+    GameInfoPredicate PlayerCondition;
+    std::unique_ptr<AST_Base> Copy() const override{return(MBCC::CopyAST(*this));}
+    
+};
+class GameInfoPredicate_OperatorList :  public MBCC::AST_Base
+{
+    public:
+    std::vector<GameInfoPredicate> Terms;
+    std::unique_ptr<AST_Base> Copy() const override{return(MBCC::CopyAST(*this));}
+    
+};
 class Filter_Component :  public MBCC::AST_Base
 {
     public:
@@ -255,18 +271,11 @@ class Filter_Component :  public MBCC::AST_Base
     std::unique_ptr<AST_Base> Copy() const override{return(MBCC::CopyAST(*this));}
     
 };
-class GameInfoPredicate_Conjunction :  public MBCC::AST_Base
+class VariableDeclaration_Filter : public VariableDeclaration_Base
 {
     public:
-    std::string Conjunction;
-    GameInfoPredicate RHS;
-    std::unique_ptr<AST_Base> Copy() const override{return(MBCC::CopyAST(*this));}
-    
-};
-class GameInfoPredicate_OperatorList :  public MBCC::AST_Base
-{
-    public:
-    std::vector<GameInfoPredicate> Terms;
+    MBCC::TokenPosition FilterPosition;
+    Filter_Component Component;
     std::unique_ptr<AST_Base> Copy() const override{return(MBCC::CopyAST(*this));}
     
 };
@@ -287,14 +296,6 @@ class Filter_OperatorList :  public MBCC::AST_Base
     
 };
 class Filter :  public MBCC::AST_Base
-{
-    public:
-    MBCC::TokenPosition FilterPosition;
-    Filter_Component Component;
-    std::unique_ptr<AST_Base> Copy() const override{return(MBCC::CopyAST(*this));}
-    
-};
-class VariableDeclaration_Filter : public VariableDeclaration_Base
 {
     public:
     MBCC::TokenPosition FilterPosition;

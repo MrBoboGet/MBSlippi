@@ -119,7 +119,8 @@ struct GameInfoPredicate_Direct : GameInfoPredicate_Data
     tokenPos ValuePosition;
     string Value;
     string Comparison;
-    {uint64_t} DateValue;
+    {uint64_t} DateLowerBound;
+    {uint64_t} DateHigherBound;
     int ComponentCount = 0;
 }
 

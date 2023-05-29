@@ -28,7 +28,7 @@ int main(int argc, const char** argv)
 	//const char* NewArgv[]= {"MBSlippi", "update-index" };
 	//argc = sizeof(NewArgv) / sizeof(const char*);
 
-	//const char* NewArgv[] = { "MBSlippi", "execute","KAESAnalysis.mbs"};
+	//const char* NewArgv[] = { "MBSlippi", "execute","TestEqual.slpspec"};
 	//argc = sizeof(NewArgv) / sizeof(const char*);
 	//argv = NewArgv;
     return(HandlerToUse.Run(argc, argv));
