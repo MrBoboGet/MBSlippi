@@ -1133,7 +1133,7 @@ namespace MBSlippi
         {
             return("FOD");
         }
-        else if (IDToConvert == StageID::YoshisIsland)
+        else if (IDToConvert == StageID::YoshisStory)
         {
             return("YS");
         }
@@ -1142,6 +1142,34 @@ namespace MBSlippi
             return("PS");
         }
         return("");
+    }
+    inline StageID StringToStageID(std::string const& StringToConvert)
+    {
+        if (StringToConvert == "BF")
+        {
+            return(StageID::Battlefield);
+        }
+        else if (StringToConvert == "DL")
+        {
+            return(StageID::DreamLandN64);
+        }
+        else if (StringToConvert == "FD")
+        {
+            return(StageID::FinalDestination);
+        }
+        else if (StringToConvert == "FOD")
+        {
+            return(StageID::FountainOfDreams);
+        }
+        else if (StringToConvert == "YS")
+        {
+            return(StageID::YoshisStory);
+        }
+        else if (StringToConvert == "PS")
+        {
+            return(StageID::PokemonStadium);
+        }
+        throw std::runtime_error("Invalid stage ID string: \""+StringToConvert+"\"");
     }
 
     static const char* __InternalCharacterStringMap[33] =

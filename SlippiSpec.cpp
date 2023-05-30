@@ -1,5 +1,6 @@
 #include "SlippiSpec.h"
 #include "MBMeleeID.h"
+#include "MeleeID.h"
 #include "SlippiSpecParser.h"
 #include <memory>
 #include <MBUtility/Merge.h>
@@ -1599,10 +1600,84 @@ namespace MBSlippi
         }
         return(ReturnValue);
     }
-    std::vector<GameIntervall> SpecEvaluator::SpecialState(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,GameIntervall IntervallToInspect)
+   
+    struct i_StageBoundaryInfo
+    {
+        float OffstageLeft = 0;
+        float OffstageRight = 0;
+    };
+    std::pair<StageID,i_StageBoundaryInfo> i_StageBoundaries[] = { 
+        {StageID::Battlefield,{-75,75}},
+        {StageID::DreamLandN64,{-80,80}},
+        {StageID::YoshisIsland,{-60,60}},
+        {StageID::FountainOfDreams,{-70,70}},
+        {StageID::FinalDestination,{-90,90}},
+        {StageID::PokemonStadium,{-90,90}},
+    };
+    i_StageBoundaryInfo const& i_GetStageBoundaryInfo(StageID IDToSearch)
+    {
+        for(auto const& Info : i_StageBoundaries)
+        {
+            if(Info.first == IDToSearch)
+            {
+                return(Info.second);   
+            }
+        }
+        throw std::runtime_error("Error finding boundary info for stage with name \""+StageIDToString(IDToSearch)+"\"");
+    };
+    std::vector<GameIntervall> SpecEvaluator::Offstage(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,GameIntervall IntervallToInspect)
     {
         std::vector<GameIntervall> ReturnValue;
-        ReturnValue = {IntervallToInspect};
+        int PlayerIndex = GetPlayerIndex(ExtraArguments);
+        i_StageBoundaryInfo const& StageInfo = i_GetStageBoundaryInfo(GameToInspect.Stage);
+        ReturnValue = ExtractSequences(GameToInspect,IntervallToInspect,[&](FrameInfo const& Frame)
+                {
+                    return(Frame.PlayerInfo[PlayerIndex].PlayerPosition.x < StageInfo.OffstageLeft || Frame.PlayerInfo[PlayerIndex].PlayerPosition.x > StageInfo.OffstageRight);
+                });
+        return(ReturnValue);
+    }
+    std::vector<GameIntervall> SpecEvaluator::PlayerFlags(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,GameIntervall IntervallToInspect)
+    {
+        std::vector<GameIntervall> ReturnValue;
+        //ReturnValue = {IntervallToInspect};
+        int PlayerIndex = GetPlayerIndex(ExtraArguments);
+        MBActionStateFlags FlagsToCompare;
+        for(auto const& Argument : ExtraArguments.PositionalArguments)
+        {
+            if(Argument == "Airborne")
+            {
+                FlagsToCompare.Airborne = true;
+            }
+            else if(Argument == "Hitlag")
+            {
+                FlagsToCompare.InHitlag = true;
+            }
+            else if(Argument == "FastFall")
+            {
+                FlagsToCompare.FastFalling = true;   
+            }
+            else
+            {
+                throw std::runtime_error("Unrecognized player flag: \""+Argument+"\"");   
+            }
+        }
+        ReturnValue = ExtractSequences(GameToInspect,IntervallToInspect,[&](FrameInfo const& Frame)
+                {
+                    bool ReturnValue = true;
+                    if(FlagsToCompare.Airborne)
+                    {
+                        ReturnValue = ReturnValue && Frame.PlayerInfo[PlayerIndex].StateFlags.Airborne;
+                    } 
+                    if(FlagsToCompare.FastFalling)
+                    {
+                        ReturnValue = ReturnValue && Frame.PlayerInfo[PlayerIndex].StateFlags.FastFalling;
+                    }
+                    if(FlagsToCompare.InHitlag)
+                    {
+                        ReturnValue = ReturnValue && Frame.PlayerInfo[PlayerIndex].StateFlags.InHitlag;
+                    }
+                    return(ReturnValue);
+                });
         return(ReturnValue);
     }
     std::vector<GameIntervall> SpecEvaluator::HasProjectile(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,GameIntervall IntervallToInspect)

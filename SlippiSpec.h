@@ -188,7 +188,7 @@ namespace MBSlippi
         static std::vector<GameIntervall> Expand(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,GameIntervall IntervallToInspect);
         static std::vector<GameIntervall> ActionState(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,GameIntervall IntervallToInspect);
         static std::vector<GameIntervall> Until(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,GameIntervall IntervallToInspect);
-        static std::vector<GameIntervall> SpecialState(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,GameIntervall IntervallToInspect);
+        static std::vector<GameIntervall> PlayerFlags(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,GameIntervall IntervallToInspect);
         static std::vector<GameIntervall> HasProjectile(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,GameIntervall IntervallToInspect);
         static std::vector<GameIntervall> HitBy(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,GameIntervall IntervallToInspect);
         static std::vector<GameIntervall> HasHitBy(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,GameIntervall IntervallToInspect);
@@ -202,10 +202,11 @@ namespace MBSlippi
             {"Expand",Expand},
             {"HitBy",HitBy},
             {"HasHitBy",HasHitBy},
-            {"SpecialState",SpecialState},
+            {"PlayerFlags",PlayerFlags},
             {"HasProjectile",HasProjectile},
             {"ActionState",ActionState},
             {"Until",Until},
+            {"Offstage",Offstage},
         };
 
         std::vector<SpecServer> m_SpecServers;

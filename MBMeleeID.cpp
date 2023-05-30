@@ -642,7 +642,7 @@ namespace MBSlippi
         ReturnValue.ActiveAttack = StateToMBAttackID(EventToParse);
         ReturnValue.Percent = EventToParse.Percent;
         ReturnValue.PlayerPosition.x = EventToParse.XPosition;
-        ReturnValue.PlayerPosition.x = EventToParse.YPosition;
+        ReturnValue.PlayerPosition.y = EventToParse.YPosition;
         //if (ReturnValue.ActionState == MBActionState::Null)
         //{
         //    int Hej = 2;
