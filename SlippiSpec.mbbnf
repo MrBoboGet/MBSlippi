@@ -266,19 +266,25 @@ Filter_ArgList = lpar this=Filter_ArgList_Arguments? rpar;
 
 def Filter_Component_Or=Filter_Component;
 def Filter_Component_And=Filter_Component;
+def Filter_Term=Filter_Component;
 def Filter_OperatorList=Filter_OperatorList;
 def Filter_Component_Function=Filter_Component_Function;
 def Filter_Component_Data=Filter_Component_Data;
 
 
-Filter_Component_And = Operator=add this=Filter_Component;
-Filter_Component_Or = Operator=pipe this=Filter_Component;
+Filter_Component_And = Operator=add this=Filter_Term;
+Filter_Component_Or = Operator=pipe this=Filter_Term;
 Filter_OperatorList = Components=Filter_Component_And+ | Components=Filter_Component_Or+;
 
 Filter_Component_Function = NamePosition = TOKEN.Position FilterName=idf;
 Filter_Component_Data = this=Filter_Component_Function;
 
 Filter_Component_Base = Data=Filter_Component_Data ArgumentList.Arguments=Filter_ArgList.Args?;
+
+
+Filter_Term =   lpar ExtraTerms=Filter_Component rpar |
+                this=Filter_Component_Base |
+                bang this=Filter_Term {ReturnValue.Negated=true;};
 
 Filter_Component = 
     lpar ExtraTerms=Filter_Component rpar ExtraTerms=Filter_OperatorList.Components? | 

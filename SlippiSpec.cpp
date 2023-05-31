@@ -1141,7 +1141,6 @@ namespace MBSlippi
         {
             ReturnValue = h_GetNegatedIntervalls(InputIntervalls,ReturnValue);
         }
-        h_NormalizeIntervalls(ReturnValue);
         return(ReturnValue);
     }
     void SpecEvaluator::EvaluateSelection(Selection& SpecToEvaluate,std::vector<MBLSP::Diagnostic>& OutDiagnostics)
