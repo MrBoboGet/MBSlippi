@@ -1635,6 +1635,56 @@ namespace MBSlippi
                 });
         return(ReturnValue);
     }
+    std::vector<GameIntervall> SpecEvaluator::Length(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,GameIntervall IntervallToInspect)
+    {
+        std::vector<GameIntervall> ReturnValue;
+        if(ExtraArguments.PositionalArguments.size() == 0)
+        {
+            throw std::runtime_error("Error in length filter: requires the minimum length of the intervall as the first positiional argument");
+        }
+        int Length = h_ParseExpandInteger(ExtraArguments.PositionalArguments[0]);
+        if(IntervallToInspect.LastFrame-IntervallToInspect.FirstFrame >= Length)
+        {
+            ReturnValue = {IntervallToInspect};
+        }
+        return(ReturnValue);
+    }
+    inline bool h_InIntervall(float xleft,float xright,float x)
+    {
+        return x <= xright && x >= xleft;
+    } 
+    std::vector<GameIntervall> SpecEvaluator::Cornered(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,GameIntervall IntervallToInspect)
+    {
+        std::vector<GameIntervall> ReturnValue;
+        int PlayerIndex = GetPlayerIndex(ExtraArguments);
+        int OpponentIndex = PlayerIndex == 0 ? 0 : 1;
+        i_StageBoundaryInfo const& StageInfo = i_GetStageBoundaryInfo(GameToInspect.Stage);
+        float XStageMargin = 200;
+        float XOffstageMargin = 200;
+        if(auto const& LeftMargin = ExtraArguments.KeyArguments.find("LeftMargin"); LeftMargin != ExtraArguments.KeyArguments.end())
+        {
+            XStageMargin = h_ParseFloat(LeftMargin->second);
+        }
+        if(auto const& RightMargin = ExtraArguments.KeyArguments.find("RightMargin"); RightMargin != ExtraArguments.KeyArguments.end())
+        {
+            XOffstageMargin = h_ParseFloat(RightMargin->second);
+        }
+        ReturnValue = ExtractSequences(GameToInspect,IntervallToInspect,[&](FrameInfo const& Frame)
+                {
+                    float InRightIntervall = h_InIntervall(StageInfo.OffstageRight-XStageMargin,StageInfo.OffstageRight+XOffstageMargin,Frame.PlayerInfo[PlayerIndex].PlayerPosition.x);
+                    if(InRightIntervall && Frame.PlayerInfo[PlayerIndex].PlayerPosition.x > Frame.PlayerInfo[OpponentIndex].PlayerPosition.x)
+                    {
+                        return(true);
+                    }
+                    float InLeftIntervall = h_InIntervall(StageInfo.OffstageLeft-XOffstageMargin,StageInfo.OffstageRight+XStageMargin,Frame.PlayerInfo[PlayerIndex].PlayerPosition.x);
+                    if(InLeftIntervall && Frame.PlayerInfo[PlayerIndex].PlayerPosition.x < Frame.PlayerInfo[OpponentIndex].PlayerPosition.x)
+                    {
+                        return(true);
+                    }
+                    return false;
+                });
+        return(ReturnValue);
+    }
     std::vector<GameIntervall> SpecEvaluator::PlayerFlags(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,GameIntervall IntervallToInspect)
     {
         std::vector<GameIntervall> ReturnValue;
