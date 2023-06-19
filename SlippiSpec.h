@@ -174,6 +174,11 @@ namespace MBSlippi
     {
         MQL_Scope GlobalScope;
     };
+    //TODO fix module functionality
+    struct MQL_Module
+    {
+
+    };
     class SpecEvaluator
     {
     private:
@@ -216,6 +221,10 @@ namespace MBSlippi
         std::vector<SpecServer> m_SpecServers;
         std::unordered_map<std::string,int> m_FilterToServer;
 
+
+        
+
+        
         MQL_Context m_TopContext;
  
         MeleeGameDBAdapter* m_DBAdapter = nullptr;
@@ -252,7 +261,7 @@ namespace MBSlippi
         bool VerifyStatement(Statement& SpecToVerify,std::vector<MBLSP::Diagnostic>& OutDiagnostics);
         bool VerifySelection(Selection& SpecToVerify,std::vector<MBLSP::Diagnostic>& OutDiagnostics);
         //special semantics, in that it modifies the scope, so that modules can be verified correct
-        //without needing to actually execute the actions
+        //without needing to actually execute the actions, relatively hacky
         bool VerifyModule(Module& SpecToVerify,std::vector<MBLSP::Diagnostic>& OutDiagnostics);
 
 

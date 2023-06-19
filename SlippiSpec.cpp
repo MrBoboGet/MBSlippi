@@ -1102,10 +1102,10 @@ namespace MBSlippi
         {
             return(InputIntervalls);
         }
-        else
-        {
-            assert(false && "p_EvaluateGameIntervalls doesn't cover all cases for FilterToUse.Data");   
-        }
+        //else if(FilterToUse.ExtraTerms.size() != 0)
+        //{
+        //    assert(false && "p_EvaluateGameIntervalls doesn't cover all cases for FilterToUse.Data");   
+        //}
         for(auto const& ExtraFilter : FilterToUse.ExtraTerms)
         {
             if(ExtraFilter.Operator == "&")
@@ -1657,26 +1657,46 @@ namespace MBSlippi
     {
         std::vector<GameIntervall> ReturnValue;
         int PlayerIndex = GetPlayerIndex(ExtraArguments);
-        int OpponentIndex = PlayerIndex == 0 ? 0 : 1;
+        int OpponentIndex = PlayerIndex == 0 ? 1 : 0;
+        float OpponentDistance = 8;
         i_StageBoundaryInfo const& StageInfo = i_GetStageBoundaryInfo(GameToInspect.Stage);
-        float XStageMargin = 200;
-        float XOffstageMargin = 200;
-        if(auto const& LeftMargin = ExtraArguments.KeyArguments.find("LeftMargin"); LeftMargin != ExtraArguments.KeyArguments.end())
+        float XStageMargin = 15;
+        float XOffstageMargin = 5;
+        if(auto const& Margin = ExtraArguments.KeyArguments.find("Margin"); Margin != ExtraArguments.KeyArguments.end())
         {
-            XStageMargin = h_ParseFloat(LeftMargin->second);
+            float MarginValue = h_ParseFloat(Margin->second); 
+            XStageMargin = MarginValue;
+            XOffstageMargin = MarginValue;
         }
-        if(auto const& RightMargin = ExtraArguments.KeyArguments.find("RightMargin"); RightMargin != ExtraArguments.KeyArguments.end())
+        else
         {
-            XOffstageMargin = h_ParseFloat(RightMargin->second);
+            if(auto const& LeftMargin = ExtraArguments.KeyArguments.find("StageMargin"); LeftMargin != ExtraArguments.KeyArguments.end())
+            {
+                XStageMargin = h_ParseFloat(LeftMargin->second);
+            }
+            if(auto const& RightMargin = ExtraArguments.KeyArguments.find("OffstageMargin"); RightMargin != ExtraArguments.KeyArguments.end())
+            {
+                XOffstageMargin = h_ParseFloat(RightMargin->second);
+            }
+        }
+        if(auto const& Distance = ExtraArguments.KeyArguments.find("Distance"); Distance != ExtraArguments.KeyArguments.end())
+        {
+            OpponentDistance = h_ParseFloat(Distance->second); 
         }
         ReturnValue = ExtractSequences(GameToInspect,IntervallToInspect,[&](FrameInfo const& Frame)
                 {
-                    float InRightIntervall = h_InIntervall(StageInfo.OffstageRight-XStageMargin,StageInfo.OffstageRight+XOffstageMargin,Frame.PlayerInfo[PlayerIndex].PlayerPosition.x);
+                    float CurrentDistance = std::hypot(Frame.PlayerInfo[PlayerIndex].PlayerPosition.x-Frame.PlayerInfo[OpponentIndex].PlayerPosition.x,
+                                Frame.PlayerInfo[PlayerIndex].PlayerPosition.y-Frame.PlayerInfo[OpponentIndex].PlayerPosition.y);
+                    if(CurrentDistance > OpponentDistance)
+                    {
+                        return false;
+                    }
+                    bool InRightIntervall = h_InIntervall(StageInfo.OffstageRight-XStageMargin,StageInfo.OffstageRight+XOffstageMargin,Frame.PlayerInfo[PlayerIndex].PlayerPosition.x);
                     if(InRightIntervall && Frame.PlayerInfo[PlayerIndex].PlayerPosition.x > Frame.PlayerInfo[OpponentIndex].PlayerPosition.x)
                     {
                         return(true);
                     }
-                    float InLeftIntervall = h_InIntervall(StageInfo.OffstageLeft-XOffstageMargin,StageInfo.OffstageRight+XStageMargin,Frame.PlayerInfo[PlayerIndex].PlayerPosition.x);
+                    bool InLeftIntervall = h_InIntervall(StageInfo.OffstageLeft-XOffstageMargin,StageInfo.OffstageLeft+XStageMargin,Frame.PlayerInfo[PlayerIndex].PlayerPosition.x);
                     if(InLeftIntervall && Frame.PlayerInfo[PlayerIndex].PlayerPosition.x < Frame.PlayerInfo[OpponentIndex].PlayerPosition.x)
                     {
                         return(true);

@@ -432,7 +432,66 @@ namespace MBSlippi
         }
         else if(AssociatedState.ActionStateID == ActionState::CliffCatch || AssociatedState.ActionStateID == ActionState::CliffWait)
         {
-            ReturnValue = MBActionState::Ledge;
+            ReturnValue = MBActionState::LedgeHang;
+        }
+        else if(
+                AssociatedState.ActionStateID == ActionState::CliffClimbSlow ||
+                AssociatedState.ActionStateID == ActionState::CliffClimbQuick)
+        {
+            ReturnValue = MBActionState::LedgeRegular;   
+        }
+        else if(
+                AssociatedState.ActionStateID == ActionState::CliffAttackSlow  ||
+                AssociatedState.ActionStateID == ActionState::CliffAttackQuick)
+        {
+            ReturnValue = MBActionState::LedgeAttack;   
+        }
+        else if(
+                AssociatedState.ActionStateID == ActionState::CliffEscapeSlow  ||
+                AssociatedState.ActionStateID == ActionState::CliffEscapeQuick)
+        {
+            ReturnValue = MBActionState::LedgeRoll;
+        }
+        else if(
+                AssociatedState.ActionStateID == ActionState::CliffJumpSlow1   ||
+                AssociatedState.ActionStateID == ActionState::CliffJumpSlow2   ||
+                AssociatedState.ActionStateID == ActionState::CliffJumpQuick1  ||
+                AssociatedState.ActionStateID == ActionState::CliffJumpQuick2
+                )
+        {
+            ReturnValue = MBActionState::LedgeJump;
+        }
+        else if(
+            AssociatedState.ActionStateID == ActionState::Escape
+            )
+        {
+            ReturnValue = MBActionState::SpotDodge;
+        }
+        else if(
+            AssociatedState.ActionStateID == ActionState::EscapeAir
+            )
+        {
+            ReturnValue = MBActionState::Airdodge;
+        }
+        else if(
+            AssociatedState.ActionStateID == ActionState::EscapeB || AssociatedState.ActionStateID == ActionState::EscapeF
+            )
+        {
+            ReturnValue = MBActionState::Roll;
+        }
+        else if(
+            AssociatedState.ActionStateID == ActionState::DownBoundD || AssociatedState.ActionStateID == ActionState::DownBoundU
+            )
+        {
+            ReturnValue = MBActionState::MissedTech;
+        }
+        else if(AssociatedState.ActionStateID == ActionState::Passive)
+        {
+            ReturnValue = MBActionState::TechInPlace;
+        }
+        else if(AssociatedState.ActionStateID == ActionState::PassiveStandF || AssociatedState.ActionStateID == ActionState::PassiveStandB)
+        {
+            ReturnValue = MBActionState::TechRoll;
         }
         else if(
             AssociatedState.ActionStateID == ActionState::DeadDown ||
@@ -530,7 +589,18 @@ namespace MBSlippi
         "Attacking", 
         "Grabbed",
         "Dead",
-        "Ledge",
+        //
+        "LedgeHang",
+        "LedgeAttack",
+        "LedgeRoll",
+        "LedgeJump",
+        "LedgeRegular",
+        "SpotDodge",
+        "Roll",
+        "MissedTech",
+        "TechInPlace",
+        "TechRoll",
+        "Airdodge",
     };
     std::string MBActionStateToString(MBActionState StateToConvert)
     { 

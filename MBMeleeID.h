@@ -43,6 +43,14 @@ namespace MBSlippi
 
         Null
     };
+
+
+    enum class MBMoveID
+    {
+        LRoll,
+        RRoll,
+        SpotDodge
+    };
     //Mutually exclusive
     //OBS! only add stats to the bottom
     enum class MBActionState : uint16_t
@@ -60,7 +68,18 @@ namespace MBSlippi
         //
         Grabbed,
         Dead,
-        Ledge,
+        //
+        LedgeHang,
+        LedgeAttack,
+        LedgeRoll,
+        LedgeJump,
+        LedgeRegular,
+        SpotDodge,
+        Roll,
+        MissedTech,
+        TechInPlace,
+        TechRoll,
+        Airdodge,
         Null
     };
     
