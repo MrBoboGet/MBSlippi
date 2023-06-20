@@ -70,6 +70,10 @@ struct VariableDeclaration_PlayerSelection : VariableDeclaration
     GameInfoPredicate Predicate;
 }
 
+struct FilterList
+{
+    List<Filter_Component> Components;
+}
 struct VariableDeclaration_GameInfoPredicate : VariableDeclaration
 {
     tokenPos GamePosition;
@@ -190,7 +194,8 @@ struct Filter_Component_Function : Filter_Component_Data
 
 struct Filter_Component
 {
-    Filter_Component_Data Data;
+    tokenPos NamePosition;
+    string FilterName; 
     bool Negated = false;
     Filter_ArgList ArgumentList;
     string Operator;
@@ -265,31 +270,23 @@ Filter_ArgList = lpar this=Filter_ArgList_Arguments? rpar;
 
 
 def Filter_Component_Or=Filter_Component;
-def Filter_Component_And=Filter_Component;
 def Filter_Term=Filter_Component;
-def Filter_OperatorList=Filter_OperatorList;
-def Filter_Component_Function=Filter_Component_Function;
-def Filter_Component_Data=Filter_Component_Data;
 
 
-Filter_Component_And = Operator=add this=Filter_Term;
 Filter_Component_Or = Operator=pipe this=Filter_Term;
-Filter_OperatorList = Components=Filter_Component_And+ | Components=Filter_Component_Or+;
+Filter_Component_Base = NamePosition=TOKEN.Position FilterName=idf ArgumentList.Arguments=Filter_ArgList.Args?;
 
-Filter_Component_Function = NamePosition = TOKEN.Position FilterName=idf;
-Filter_Component_Data = this=Filter_Component_Function;
-
-Filter_Component_Base = Data=Filter_Component_Data ArgumentList.Arguments=Filter_ArgList.Args?;
-
-
-Filter_Term =   lpar ExtraTerms=Filter_Component rpar |
+Filter_Term =   lpar this=Filter_Component rpar |
                 this=Filter_Component_Base |
                 bang this=Filter_Term {ReturnValue.Negated=true;};
 
-Filter_Component = 
-    lpar ExtraTerms=Filter_Component rpar ExtraTerms=Filter_OperatorList.Components? | 
-    this=Filter_Component_Base ExtraTerms=Filter_OperatorList.Components? | 
-    bang this=Filter_Component {ReturnValue.Negated=true;};
+def FilterOr = Filter_Component;
+def FilterAdd = Filter_Component;
+
+FilterOr = {ReturnValue.Operator="|";} ExtraTerms=Filter_Term  ExtraTerms=Filter_Component_Or*;
+FilterAdd = add this=FilterOr;
+
+Filter_Component = {ReturnValue.Operator="&";} ExtraTerms=FilterOr ExtraTerms=FilterAdd*;
 
 Filter= FilterPosition = TOKEN.Position FILTER Component=Filter_Component;
 

@@ -412,66 +412,31 @@ namespace MBSlippi
     }
     void SpecEvaluator::p_VerifyFilterComponent(Filter_Component const& FilterToVerify,std::vector<MBLSP::Diagnostic>& OutDiagnostics)
     {
-        if(FilterToVerify.Data.IsType<Filter_Component_Variable>())
+        if(FilterToVerify.FilterName != "")
         {
-            auto const& VariablePredicate = FilterToVerify.Data.GetType<Filter_Component_Variable>();
-            if(!m_TopContext.GlobalScope.HasVariable(VariablePredicate.VariableName))
+            if(m_TopContext.GlobalScope.HasVariable(FilterToVerify.FilterName))
             {
-                MBLSP::Diagnostic NewDiagnostic;
-                NewDiagnostic.message = "No variable named \"" + VariablePredicate.VariableName + "\" in global scope";
-                NewDiagnostic.range.start.line = VariablePredicate.VariablePosition.Line;
-                NewDiagnostic.range.start.character = VariablePredicate.VariablePosition.ByteOffset;
-                NewDiagnostic.range.end = NewDiagnostic.range.start + VariablePredicate.VariableName.size()+1;
-                OutDiagnostics.emplace_back(std::move(NewDiagnostic));
-            }
-            else
-            {
-                auto const& FilterVariable = m_TopContext.GlobalScope.GetVariable(VariablePredicate.VariableName);   
-                if(!std::holds_alternative<Filter_Component>(FilterVariable.Data))
-                {
-                    MBLSP::Diagnostic NewDiagnostic;
-                    NewDiagnostic.message = "Variable isn't of type Filter";
-                    NewDiagnostic.range.start.line = VariablePredicate.VariablePosition.Line;
-                    NewDiagnostic.range.start.character = VariablePredicate.VariablePosition.ByteOffset;
-                    NewDiagnostic.range.end = NewDiagnostic.range.start + VariablePredicate.VariableName.size()+1;
-                    OutDiagnostics.emplace_back(std::move(NewDiagnostic));
-                }
-            }
-        }
-        else if(FilterToVerify.Data.IsType<Filter_Component_Function>())
-        {
-            auto const& FilterValue = FilterToVerify.Data.GetType<Filter_Component_Function>();
-            if(m_TopContext.GlobalScope.HasVariable(FilterValue.FilterName))
-            {
-                auto const& Variable = m_TopContext.GlobalScope.GetVariable(FilterValue.FilterName);   
+                auto const& Variable = m_TopContext.GlobalScope.GetVariable(FilterToVerify.FilterName);   
                 if(!std::holds_alternative<Filter_Component>(Variable.Data))
                 {
                     MBLSP::Diagnostic NewDiagnostic;
                     NewDiagnostic.message = "Variable isn't of type Filter";
-                    NewDiagnostic.range.start.line = FilterValue.NamePosition.Line;
-                    NewDiagnostic.range.start.character = FilterValue.NamePosition.ByteOffset;
-                    NewDiagnostic.range.end = NewDiagnostic.range.start + FilterValue.FilterName.size();
+                    NewDiagnostic.range.start.line = FilterToVerify.NamePosition.Line;
+                    NewDiagnostic.range.start.character = FilterToVerify.NamePosition.ByteOffset;
+                    NewDiagnostic.range.end = NewDiagnostic.range.start + FilterToVerify.FilterName.size();
                     OutDiagnostics.emplace_back(std::move(NewDiagnostic));
                 }
             }
-            else if(m_BuiltinFilters.find(FilterValue.FilterName) == m_BuiltinFilters.end() &&
-                    m_FilterToServer.find(FilterValue.FilterName) == m_FilterToServer.end())
+            else if(m_BuiltinFilters.find(FilterToVerify.FilterName) == m_BuiltinFilters.end() &&
+                    m_FilterToServer.find(FilterToVerify.FilterName) == m_FilterToServer.end())
             {
                 MBLSP::Diagnostic NewDiagnostic;
-                NewDiagnostic.message = "Can't find filter with name \""+FilterValue.FilterName+"\"";
-                NewDiagnostic.range.start.line = FilterValue.NamePosition.Line;
-                NewDiagnostic.range.start.character = FilterValue.NamePosition.ByteOffset;
-                NewDiagnostic.range.end = NewDiagnostic.range.start + FilterValue.FilterName.size();
+                NewDiagnostic.message = "Can't find filter with name \""+FilterToVerify.FilterName+"\"";
+                NewDiagnostic.range.start.line = FilterToVerify.NamePosition.Line;
+                NewDiagnostic.range.start.character = FilterToVerify.NamePosition.ByteOffset;
+                NewDiagnostic.range.end = NewDiagnostic.range.start + FilterToVerify.FilterName.size();
                 OutDiagnostics.emplace_back(std::move(NewDiagnostic));
             }
-        }
-        else if(FilterToVerify.Data.IsEmpty())
-        {
-            //Do nothing
-        }
-        else
-        {
-            assert(false && "VerifyFilterComponent doesn't cover all cases");
         }
         for(auto const& Filter : FilterToVerify.ExtraTerms)
         {
@@ -1055,13 +1020,10 @@ namespace MBSlippi
             std::vector<GameIntervall> const& InputIntervalls,MeleeGame const& GameToFilter)
     {
         std::vector<GameIntervall> ReturnValue;
-
-
-        if(FilterToUse.Data.IsType<Filter_Component_Function>())
+        if(FilterToUse.FilterName != "")
         {
             //temporery until filters are properly vectorized
-            auto const& FunctionData = FilterToUse.Data.GetType<Filter_Component_Function>();
-            if(auto BuiltinFilter = m_BuiltinFilters.find(FunctionData.FilterName); BuiltinFilter != m_BuiltinFilters.end())
+            if(auto BuiltinFilter = m_BuiltinFilters.find(FilterToUse.FilterName); BuiltinFilter != m_BuiltinFilters.end())
             {
                 for(auto const& Intervall : InputIntervalls)
                 {
@@ -1069,46 +1031,44 @@ namespace MBSlippi
                     ReturnValue.insert(ReturnValue.end(),NewIntervalls.begin(),NewIntervalls.end());
                 }
             }
-            else if(auto ServerIndex = m_FilterToServer.find(FunctionData.FilterName); ServerIndex != m_FilterToServer.end())
+            else if(auto ServerIndex = m_FilterToServer.find(FilterToUse.FilterName); ServerIndex != m_FilterToServer.end())
             {
                 for(auto const& Intervall : InputIntervalls)
                 {
-                    auto NewIntervalls = m_SpecServers[ServerIndex->second].ExecuteFilter(FunctionData.FilterName,GameToFilter,Intervall);
+                    auto NewIntervalls = m_SpecServers[ServerIndex->second].ExecuteFilter(FilterToUse.FilterName,GameToFilter,Intervall);
                     ReturnValue.insert(ReturnValue.end(),NewIntervalls.begin(),NewIntervalls.end());
                 }
             }
-            else if(m_TopContext.GlobalScope.HasVariable(FunctionData.FilterName))
+            else if(m_TopContext.GlobalScope.HasVariable(FilterToUse.FilterName))
             {
                 Filter_Component const& DerferencedFilter = std::get<Filter_Component>(
-                        m_TopContext.GlobalScope.GetVariable(FunctionData.FilterName).Data);
+                        m_TopContext.GlobalScope.GetVariable(FilterToUse.FilterName).Data);
                 auto NewIntervalls = p_EvaluateGameIntervalls(DerferencedFilter,InputIntervalls,GameToFilter);
                 ReturnValue.insert(ReturnValue.end(),NewIntervalls.begin(),NewIntervalls.end());
             }
             else
             {
-                assert(false && "No server or builtin filter found, evaluating spec that shouldn't have been verified");
+                //must be a variable
+                Filter_Component const& DerferencedFilter = std::get<Filter_Component>(
+                    m_TopContext.GlobalScope.GetVariable(FilterToUse.FilterName).Data);
+                ReturnValue = p_EvaluateGameIntervalls(DerferencedFilter,InputIntervalls,GameToFilter);
+                //assert(false && "No server or builtin filter found, evaluating spec that shouldn't have been verified");
             }
             std::sort(ReturnValue.begin(),ReturnValue.end());
         }
-        else if(FilterToUse.Data.IsType<Filter_Component_Variable>())
+        else
         {
-            auto const& VariableData = FilterToUse.Data.GetType<Filter_Component_Variable>();
-            Filter_Component const& DerferencedFilter = std::get<Filter_Component>(
-                m_TopContext.GlobalScope.GetVariable(VariableData.VariableName).Data);
-            ReturnValue = p_EvaluateGameIntervalls(DerferencedFilter,InputIntervalls,GameToFilter);
+            ReturnValue =  InputIntervalls;
         }
         //special case becuase the filter is always present, but doesn't neccesarially contain anything
-        else if(FilterToUse.Data.IsEmpty() && FilterToUse.ExtraTerms.size() == 0)
+        if(FilterToUse.FilterName  == "" && FilterToUse.ExtraTerms.size() == 0)
         {
-            return(InputIntervalls);
+            return(ReturnValue);
         }
-        //else if(FilterToUse.ExtraTerms.size() != 0)
-        //{
-        //    assert(false && "p_EvaluateGameIntervalls doesn't cover all cases for FilterToUse.Data");   
-        //}
+        //only present if not term
         for(auto const& ExtraFilter : FilterToUse.ExtraTerms)
         {
-            if(ExtraFilter.Operator == "&")
+            if(FilterToUse.Operator == "&")
             {
                 std::vector<GameIntervall> NewSituations = p_EvaluateGameIntervalls(ExtraFilter,InputIntervalls,GameToFilter); 
                 std::vector<GameIntervall> NewReturnValue;
@@ -1116,28 +1076,18 @@ namespace MBSlippi
                 std::merge(NewSituations.begin(),NewSituations.end(),ReturnValue.begin(),ReturnValue.end(),NewReturnValue.begin());
                 ReturnValue = std::move(NewReturnValue);
             }       
-            else if(ExtraFilter.Operator == "|")
+            else if(FilterToUse.Operator == "|")
             {
                 std::vector<GameIntervall> NewIntervalls;
                 NewIntervalls = p_EvaluateGameIntervalls(ExtraFilter,ReturnValue,GameToFilter);
                 std::swap(ReturnValue,NewIntervalls);
             }
-            else if(ExtraFilter.Operator == "")
-            {
-                assert(FilterToUse.Data.IsEmpty() && "Empty operator in extra term only valid if the filter is parenthesised filter");
-                ReturnValue = p_EvaluateGameIntervalls(ExtraFilter,InputIntervalls,GameToFilter);
-                //See comment in p_EvaluateGameSelection evaluation
-                if(FilterToUse.Negated)
-                {
-                    ReturnValue = h_GetNegatedIntervalls(InputIntervalls,ReturnValue);
-                }
-            }
             else
             {
-                assert(false && "Only | and & are valid operators for filters");   
+                assert(false  && "Trying to evaluate filter with extra terms and no valid operator");
             }
         }
-        if(FilterToUse.Negated && !FilterToUse.Data.IsEmpty())
+        if(FilterToUse.Negated)
         {
             ReturnValue = h_GetNegatedIntervalls(InputIntervalls,ReturnValue);
         }

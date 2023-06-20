@@ -15,7 +15,7 @@ namespace MBSlippi
 
     void SlippiLSP::p_ExtractTokens(std::vector<MBLSP::SemanticToken>& OutTokens, Filter const& FilterToExamine)
     {
-        if(!FilterToExamine.Component.Data.IsEmpty())
+        if(FilterToExamine.Component.FilterName != "" || FilterToExamine.Component.ExtraTerms.size() != 0)
         {
             OutTokens.push_back(MBLSP::SemanticToken(MBLSP::TokenType::Keyword,
                         h_Convert(FilterToExamine.FilterPosition),6));
@@ -24,22 +24,15 @@ namespace MBSlippi
     }
     void SlippiLSP::p_ExtractTokens(std::vector<MBLSP::SemanticToken>& OutTokens,Filter_Component const& ComponentToExamine)
     {
-        if(ComponentToExamine.Data.IsType<Filter_Component_Function>())
+        if(ComponentToExamine.FilterName != "")
         {
-            auto const& FunctionData = ComponentToExamine.Data.GetType<Filter_Component_Function>();
             OutTokens.push_back(MBLSP::SemanticToken(MBLSP::TokenType::Function,
-                        h_Convert(FunctionData.NamePosition),FunctionData.FilterName.size()));
+                        h_Convert(ComponentToExamine.NamePosition),ComponentToExamine.FilterName.size()));
 
             if(ComponentToExamine.ArgumentList.Arguments.size() != 0)
             {
                 p_ExtractTokens(OutTokens,ComponentToExamine.ArgumentList);
             }
-        }
-        else if(ComponentToExamine.Data.IsType<Filter_Component_Variable>())
-        {
-            auto const& VariableData = ComponentToExamine.Data.GetType<Filter_Component_Variable>();
-            OutTokens.push_back(MBLSP::SemanticToken(
-                        MBLSP::TokenType::Keyword,h_Convert(VariableData.VariablePosition),VariableData.VariableName.size()+1));
         }
         for(auto const& SubComponent : ComponentToExamine.ExtraTerms)
         {
