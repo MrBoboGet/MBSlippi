@@ -708,7 +708,11 @@ namespace MBSlippi
         }
         else
         {
-            assert(false && "p_EvaluateGameSelection doesn't cover all cases for GameInfoPredicate.Data");
+            //assert(false && "p_EvaluateGameSelection doesn't cover all cases for GameInfoPredicate.Data");
+        }
+        if(PredicateToEvaluate.Operator == "||")
+        {
+            ReturnValue = false;
         }
         for(auto const& ExtraTerm : PredicateToEvaluate.ExtraTerms)
         {
@@ -773,27 +777,27 @@ namespace MBSlippi
         {
             //assert(false && "p_SatisfiesPlayerAssignment doesn't cover all cases for PredicateToEvaluate.Data");
         }
+        if(PredicateToEvaluate.Operator == "||")
+        {
+            ReturnValue = false;   
+        }
         for(auto const& ExtraTerm : PredicateToEvaluate.ExtraTerms)
         {
             //errenous until parsing is fixed
-            if(ExtraTerm.Operator == "||")
+            if(PredicateToEvaluate.Operator == "||")
             {
                 if(!ReturnValue)
                 {
                     ReturnValue = p_SatisfiesPlayerAssignment(PlayerInfo,ExtraTerm);
                 }
             }
-            else if(ExtraTerm.Operator == "&&")
+            else if(PredicateToEvaluate.Operator == "&&")
             {
                 if(!p_SatisfiesPlayerAssignment(PlayerInfo,ExtraTerm))
                 {
                     ReturnValue = false;   
                     break;
                 }
-            }
-            else if(ExtraTerm.Operator == "")
-            {
-                ReturnValue = p_SatisfiesPlayerAssignment(PlayerInfo,ExtraTerm);
             }
             else
             {
@@ -1006,7 +1010,7 @@ namespace MBSlippi
         if(FilterToUse.FilterName.Parts.size() != 0)
         {
             //temporery until filters are properly vectorized
-            if(FilterToUse.FilterName.Parts.size() == 0)
+            if(FilterToUse.FilterName.Parts.size() == 1)
             {
                 if(auto BuiltinFilter = m_BuiltinFilters.find(FilterToUse.FilterName.Parts[0].Value); BuiltinFilter != m_BuiltinFilters.end())
                 {
