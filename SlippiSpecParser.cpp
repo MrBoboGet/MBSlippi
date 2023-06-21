@@ -1,5 +1,5 @@
 #include "SlippiSpecParser.h"
-const bool LOOKTable[109][2][36] = {{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,true,false,true,true,true,false,false,true,false,true,true,true,true,false,false,},{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,},{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,},{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,},{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,},{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,},{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,},{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,},{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,},{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,true,false,true,true,true,false,false,true,false,false,false,false,true,false,false,},{false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},{false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,},{false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,},{false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,},{false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},{false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,},{false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,},{false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,true,true,false,false,false,},{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,},{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,},{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,},{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,},{false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,},{false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},},{{false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},{false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,true,false,false,false,false,false,false,true,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,},},{{false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},{false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,true,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,},},{{false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},{false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,true,},},{{false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},{false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,true,},},{{false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},{false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,true,false,false,false,false,false,false,true,},},{{false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},{false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,true,false,false,false,false,false,false,true,},},{{true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},{false,true,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},},{{true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},{false,true,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,},{true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,},{true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},{true,true,false,false,false,false,false,false,false,false,false,true,false,false,false,false,true,false,false,true,false,false,false,false,false,false,false,false,false,false,false,true,false,true,false,true,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},{true,true,false,false,false,false,false,false,false,false,false,true,false,false,false,false,true,false,false,true,false,false,false,false,false,false,false,false,false,false,false,true,false,true,false,true,},},{{true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,},{true,true,false,false,false,false,false,false,false,false,false,true,false,false,false,false,true,false,true,true,false,false,true,false,false,false,false,false,false,false,false,true,false,true,false,true,},},{{true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},{true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},{true,true,false,false,false,false,false,false,false,false,false,true,false,false,false,false,true,false,false,true,false,false,false,false,false,false,false,false,false,false,false,true,false,true,false,true,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,},{true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,},},{{true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,},{true,true,false,false,false,false,false,false,false,false,false,true,false,false,false,false,true,false,true,true,false,false,true,false,false,false,false,false,false,false,false,true,false,true,false,true,},},{{true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,},{true,true,false,false,false,false,false,false,false,false,false,true,false,false,false,false,true,false,true,true,false,false,true,false,false,false,false,false,false,false,false,true,false,true,false,true,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,},{true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,},{true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,},},{{true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,},{true,true,false,false,false,false,false,false,false,false,false,true,false,false,false,false,true,false,true,true,false,false,true,false,false,false,false,false,false,false,false,true,false,true,false,true,},},{{true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,},{true,true,false,false,false,false,false,false,false,false,false,true,false,false,false,false,true,false,true,true,false,false,true,false,false,false,false,false,false,false,false,true,false,true,false,true,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},{true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},{true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,true,false,true,true,true,false,false,true,true,false,false,false,true,false,true,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,true,false,true,true,true,false,false,true,true,false,false,false,true,false,true,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,},{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,},{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,true,false,true,true,true,false,false,true,true,false,false,false,true,false,true,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,true,false,true,true,true,false,false,true,true,false,false,false,true,false,true,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,},{true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,},{true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,},{true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,},{true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,true,false,false,false,},{true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,},{true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,},{true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},{false,true,false,false,false,false,false,false,false,false,true,true,false,false,false,true,true,false,false,true,false,false,false,false,false,false,false,false,false,false,true,false,true,false,false,true,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},{false,true,false,false,false,false,false,false,false,false,true,true,false,false,false,true,true,false,false,true,false,false,false,false,false,false,false,false,false,false,true,false,true,false,false,true,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,true,false,true,true,true,false,false,true,true,false,false,false,true,false,true,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,true,false,true,true,true,false,false,true,true,false,false,false,true,false,true,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},{false,true,false,false,false,false,false,false,false,false,true,true,false,false,false,true,true,false,false,true,true,true,false,true,true,true,false,false,true,true,true,false,true,true,false,true,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},{false,true,false,false,false,false,false,false,false,false,true,true,false,false,false,true,true,false,false,true,false,false,false,false,false,false,false,false,false,false,true,false,true,false,false,true,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,true,false,true,true,true,false,false,true,true,false,false,false,true,false,true,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},{false,true,false,false,false,false,false,false,false,false,true,true,false,false,false,true,true,false,false,true,true,true,false,true,true,true,false,false,true,true,true,false,true,true,false,true,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},{false,true,false,false,false,false,false,false,false,false,true,true,false,false,false,true,true,false,false,true,true,true,false,true,true,true,false,false,true,true,true,false,true,true,false,true,},},{{true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,},{true,true,false,false,false,false,false,false,false,false,true,true,false,false,false,true,true,false,true,true,true,true,true,true,true,true,false,false,true,true,true,false,true,true,false,true,},},{{true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},{true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},{false,true,false,false,false,false,false,false,false,false,true,true,false,false,false,true,true,false,false,true,true,true,false,true,true,true,false,false,true,true,true,false,true,true,false,true,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,},{true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,},},{{false,false,false,false,false,false,false,false,false,true,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},{true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,},},{{false,false,false,false,false,false,false,false,false,true,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},{true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,},},{{false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},},{{false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},},{{false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},{false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},},{{false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},{false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,},},{{false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},{false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,},},{{false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},{false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,},},{{false,false,false,false,false,false,false,false,false,true,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},{true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,},},{{false,false,false,false,false,false,false,false,false,true,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},{true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},},{{false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},},{{false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},},{{false,false,false,false,false,false,false,false,false,false,false,false,true,true,true,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},},{{false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},},{{false,false,false,false,false,false,false,false,false,true,true,false,true,true,true,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,},{true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,},},{{false,false,false,false,false,false,false,false,false,true,true,false,true,true,true,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,},{true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,},},{{false,false,false,false,false,false,false,false,false,true,true,false,true,true,true,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},{true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,},},{{false,false,false,false,false,false,false,false,false,false,false,false,true,true,true,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},},{{false,false,false,false,false,false,false,false,false,true,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},{true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,},},};
+const bool LOOKTable[105][2][36] = {{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,true,false,true,true,true,false,false,true,false,true,true,true,true,false,false,},{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,},{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,},{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,},{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,},{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,},{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,},{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,},{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,},{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,true,false,true,true,true,false,false,true,false,false,false,false,true,false,false,},{false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},{false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,},{false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,},{false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,},{false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},{false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,},{false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,},{false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,true,true,false,false,false,},{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,},{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,},{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,},{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,},{false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,},{false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},},{{false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},{false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,true,false,false,false,false,false,false,true,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,},},{{false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},{false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,true,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,},},{{false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},{false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,true,},},{{false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},{false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,true,},},{{false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},{false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,true,false,false,false,false,false,false,true,},},{{false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},{false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,true,false,false,false,false,false,false,true,},},{{true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},{false,true,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},},{{true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},{false,true,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,},{true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,},{true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},{true,true,false,false,false,false,false,false,false,false,true,true,false,false,false,true,true,false,false,true,true,true,false,true,true,true,false,false,true,true,true,true,true,true,false,true,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},{true,true,false,false,false,false,false,false,false,false,true,true,false,false,false,true,true,false,false,true,true,true,false,true,true,true,false,false,true,true,true,true,true,true,false,true,},},{{true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,},{true,true,false,false,false,false,false,false,false,false,true,true,false,false,false,true,true,false,true,true,true,true,true,true,true,true,false,false,true,true,true,true,true,true,false,true,},},{{true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},{true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},{true,true,false,false,false,false,false,false,false,false,true,true,false,false,false,true,true,false,false,true,true,true,false,true,true,true,false,false,true,true,true,true,true,true,false,true,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,},{true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,},},{{true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,},{true,true,false,false,false,false,false,false,false,false,true,true,false,false,false,true,true,false,true,true,true,true,true,true,true,true,false,false,true,true,true,true,true,true,false,true,},},{{true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,},{true,true,false,false,false,false,false,false,false,false,true,true,false,false,false,true,true,false,true,true,true,true,true,true,true,true,false,false,true,true,true,true,true,true,false,true,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,},{true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,},{true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,},},{{true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,},{true,true,false,false,false,false,false,false,false,false,true,true,false,false,false,true,true,false,true,true,true,true,true,true,true,true,false,false,true,true,true,true,true,true,false,true,},},{{true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,},{true,true,false,false,false,false,false,false,false,false,true,true,false,false,false,true,true,false,true,true,true,true,true,true,true,true,false,false,true,true,true,true,true,true,false,true,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},{true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},{true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,},{true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,},{true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,},{true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,},{true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,true,false,true,true,true,false,false,true,false,false,false,false,true,false,false,},{false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,true,false,true,true,true,false,false,true,false,false,false,false,true,false,false,},{false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},{true,true,false,false,false,false,false,false,false,false,true,true,false,false,false,true,true,false,false,true,true,true,false,true,true,true,false,false,true,true,true,true,true,true,false,true,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},{true,true,false,false,false,false,false,false,false,false,true,true,false,false,false,true,true,false,false,true,true,true,false,true,true,true,false,false,true,true,true,true,true,true,false,true,},},{{true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,},{true,true,false,false,false,false,false,false,false,false,true,true,false,false,false,true,true,false,true,true,true,true,true,true,true,true,false,false,true,true,true,true,true,true,false,true,},},{{true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,},{true,true,false,false,false,false,false,false,false,false,true,true,false,false,false,true,true,false,true,true,true,true,true,true,true,true,false,false,true,true,true,true,true,true,false,true,},},{{true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,},{true,true,false,false,false,false,false,false,false,false,true,true,false,false,false,true,true,false,true,true,true,true,true,true,true,true,false,false,true,true,true,true,true,true,false,true,},},{{true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},{true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,},{true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},{true,true,false,false,false,false,false,false,false,false,true,true,false,false,false,true,true,false,false,true,true,true,false,true,true,true,false,false,true,true,true,true,true,true,false,true,},},{{true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,},{true,true,false,false,false,false,false,false,false,false,true,true,false,false,false,true,true,false,true,true,true,true,true,true,true,true,false,false,true,true,true,true,true,true,false,true,},},{{true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,},{true,true,false,false,false,false,false,false,false,false,true,true,false,false,false,true,true,false,true,true,true,true,true,true,true,true,false,false,true,true,true,true,true,true,false,true,},},{{false,false,false,false,false,false,false,false,false,true,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},{true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,},},{{false,false,false,false,false,false,false,false,false,true,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},{true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,},},{{false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},},{{false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},},{{false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},{false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},},{{false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},{false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,},},{{false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},{false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,},},{{false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},{false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,},},{{false,false,false,false,false,false,false,false,false,true,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},{true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,},},{{false,false,false,false,false,false,false,false,false,true,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},{true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},},{{false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},},{{false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},},{{false,false,false,false,false,false,false,false,false,false,false,false,true,true,true,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},},{{false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},},{{false,false,false,false,false,false,false,false,false,true,true,false,true,true,true,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,},{true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,},},{{false,false,false,false,false,false,false,false,false,true,true,false,true,true,true,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,},{true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},{true,true,false,false,false,false,false,false,false,false,true,true,false,false,false,true,true,false,false,true,true,true,false,true,true,true,false,false,true,true,true,true,true,true,false,true,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},{true,true,false,false,false,false,false,false,false,false,true,true,false,false,false,true,true,false,false,true,true,true,false,true,true,true,false,false,true,true,true,true,true,true,false,true,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,},{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,},{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},{true,true,false,false,false,false,false,false,false,false,true,true,false,false,false,true,true,false,false,true,true,true,false,true,true,true,false,false,true,true,true,true,true,true,false,true,},},{{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},{true,true,false,false,false,false,false,false,false,false,true,true,false,false,false,true,true,false,false,true,true,true,false,true,true,true,false,false,true,true,true,true,true,true,false,true,},},{{false,false,false,false,false,false,false,false,false,true,true,false,true,true,true,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},{true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,},},{{false,false,false,false,false,false,false,false,false,false,false,false,true,true,true,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},{false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},},{{false,false,false,false,false,false,false,false,false,true,true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,},{true,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,false,false,false,true,false,false,false,false,false,false,false,false,false,false,false,false,false,},},};
 Operator ParseOperator(MBCC::Tokenizer& Tokenizer)
 {
     Operator ReturnValue;
@@ -527,12 +527,14 @@ Filter_Component ParseFilter_Component_Base_0(MBCC::Tokenizer& Tokenizer)
 {
     Filter_Component ReturnValue;
     ReturnValue.NamePosition = Tokenizer.Peek().Position;
-    if(Tokenizer.Peek().Type != 18)
+    if(LOOKTable[100][0][Tokenizer.Peek().Type]&& LOOKTable[100][1][Tokenizer.Peek(1).Type])
     {
-        throw MBCC::ParsingException(Tokenizer.Peek().Position,"Filter_Component_Base","idf");
+        ReturnValue.FilterName = ParseIdentifier(Tokenizer);
     }
-    ReturnValue.FilterName = Tokenizer.Peek().Value;
-    Tokenizer.ConsumeToken();
+    else
+    {
+         throw MBCC::ParsingException(Tokenizer.Peek().Position,"Filter_Component_Base","Identifier");
+    }
     if(LOOKTable[34][0][Tokenizer.Peek().Type]&& LOOKTable[34][1][Tokenizer.Peek(1).Type])
     {
         ReturnValue.ArgumentList.Arguments = ParseFilter_ArgList(Tokenizer).Args;
@@ -712,70 +714,6 @@ Filter ParseFilter_0(MBCC::Tokenizer& Tokenizer)
     }
     return(ReturnValue);
 }
-AttributeComponent ParseAttribute_Base(MBCC::Tokenizer& Tokenizer)
-{
-    AttributeComponent ReturnValue;
-    ReturnValue = ParseAttribute_Base_0(Tokenizer);
-    return(ReturnValue);
-}
-AttributeComponent ParseAttribute_Base_0(MBCC::Tokenizer& Tokenizer)
-{
-    AttributeComponent ReturnValue;
-    ReturnValue.NamePosition = Tokenizer.Peek().Position;
-    if(Tokenizer.Peek().Type != 18)
-    {
-        throw MBCC::ParsingException(Tokenizer.Peek().Position,"Attribute_Base","idf");
-    }
-    ReturnValue.Name = Tokenizer.Peek().Value;
-    Tokenizer.ConsumeToken();
-    return(ReturnValue);
-}
-AttributeComponent ParseAttribute_Extension(MBCC::Tokenizer& Tokenizer)
-{
-    AttributeComponent ReturnValue;
-    ReturnValue = ParseAttribute_Extension_0(Tokenizer);
-    return(ReturnValue);
-}
-AttributeComponent ParseAttribute_Extension_0(MBCC::Tokenizer& Tokenizer)
-{
-    AttributeComponent ReturnValue;
-    if(Tokenizer.Peek().Type != 29)
-    {
-        throw MBCC::ParsingException(Tokenizer.Peek().Position,"Attribute_Extension","dot");
-    }
-    Tokenizer.ConsumeToken();
-    ReturnValue.NamePosition = Tokenizer.Peek().Position;
-    if(Tokenizer.Peek().Type != 18)
-    {
-        throw MBCC::ParsingException(Tokenizer.Peek().Position,"Attribute_Extension","idf");
-    }
-    ReturnValue.Name = Tokenizer.Peek().Value;
-    Tokenizer.ConsumeToken();
-    return(ReturnValue);
-}
-AttributeList ParseAttribute_List(MBCC::Tokenizer& Tokenizer)
-{
-    AttributeList ReturnValue;
-    ReturnValue = ParseAttribute_List_0(Tokenizer);
-    return(ReturnValue);
-}
-AttributeList ParseAttribute_List_0(MBCC::Tokenizer& Tokenizer)
-{
-    AttributeList ReturnValue;
-    if(LOOKTable[52][0][Tokenizer.Peek().Type]&& LOOKTable[52][1][Tokenizer.Peek(1).Type])
-    {
-        ReturnValue.Attributes.push_back(ParseAttribute_Base(Tokenizer));
-    }
-    else
-    {
-         throw MBCC::ParsingException(Tokenizer.Peek().Position,"Attribute_List","Attribute_Base");
-    }
-    while(LOOKTable[54][0][Tokenizer.Peek().Type]&& LOOKTable[54][1][Tokenizer.Peek(1).Type])
-    {
-        ReturnValue.Attributes.push_back(ParseAttribute_Extension(Tokenizer));
-    }
-    return(ReturnValue);
-}
 GameInfoPredicate ParseGameInfoPredicate_Or(MBCC::Tokenizer& Tokenizer)
 {
     GameInfoPredicate ReturnValue;
@@ -792,13 +730,13 @@ GameInfoPredicate ParseGameInfoPredicate_Or_0(MBCC::Tokenizer& Tokenizer)
     }
     Operator = Tokenizer.Peek().Value;
     Tokenizer.ConsumeToken();
-    if(LOOKTable[74][0][Tokenizer.Peek().Type]&& LOOKTable[74][1][Tokenizer.Peek(1).Type])
+    if(LOOKTable[60][0][Tokenizer.Peek().Type]&& LOOKTable[60][1][Tokenizer.Peek(1).Type])
     {
-        ReturnValue = ParseGameInfoPredicate(Tokenizer);
+        ReturnValue = ParseGameInfoPredicateOr(Tokenizer);
     }
     else
     {
-         throw MBCC::ParsingException(Tokenizer.Peek().Position,"GameInfoPredicate_Or","GameInfoPredicate");
+         throw MBCC::ParsingException(Tokenizer.Peek().Position,"GameInfoPredicate_Or","GameInfoPredicateOr");
     }
     ReturnValue.Operator = std::move(Operator);
     return(ReturnValue);
@@ -819,7 +757,7 @@ GameInfoPredicate ParseGameInfoPredicate_And_0(MBCC::Tokenizer& Tokenizer)
     }
     Operator = Tokenizer.Peek().Value;
     Tokenizer.ConsumeToken();
-    if(LOOKTable[74][0][Tokenizer.Peek().Type]&& LOOKTable[74][1][Tokenizer.Peek(1).Type])
+    if(LOOKTable[66][0][Tokenizer.Peek().Type]&& LOOKTable[66][1][Tokenizer.Peek(1).Type])
     {
         ReturnValue = ParseGameInfoPredicate(Tokenizer);
     }
@@ -828,61 +766,6 @@ GameInfoPredicate ParseGameInfoPredicate_And_0(MBCC::Tokenizer& Tokenizer)
          throw MBCC::ParsingException(Tokenizer.Peek().Position,"GameInfoPredicate_And","GameInfoPredicate");
     }
     ReturnValue.Operator = std::move(Operator);
-    return(ReturnValue);
-}
-GameInfoPredicate_OperatorList ParseGameInfoPredicate_OperatorList(MBCC::Tokenizer& Tokenizer)
-{
-    GameInfoPredicate_OperatorList ReturnValue;
-    if (LOOKTable[63][0][Tokenizer.Peek().Type]&& LOOKTable[63][1][Tokenizer.Peek(1).Type])
-    {
-        ReturnValue = ParseGameInfoPredicate_OperatorList_0(Tokenizer);
-    }
-    else if (LOOKTable[64][0][Tokenizer.Peek().Type]&& LOOKTable[64][1][Tokenizer.Peek(1).Type])
-    {
-        ReturnValue = ParseGameInfoPredicate_OperatorList_1(Tokenizer);
-    }
-    else
-    {
-         throw MBCC::ParsingException(Tokenizer.Peek().Position,"GameInfoPredicate_OperatorList","GameInfoPredicate_OperatorList");
-    }
-    return(ReturnValue);
-}
-GameInfoPredicate_OperatorList ParseGameInfoPredicate_OperatorList_0(MBCC::Tokenizer& Tokenizer)
-{
-    GameInfoPredicate_OperatorList ReturnValue;
-    do
-    {
-        ReturnValue.Terms.push_back(ParseGameInfoPredicate_Or(Tokenizer));
-    }
-    while(LOOKTable[58][0][Tokenizer.Peek().Type]&& LOOKTable[58][1][Tokenizer.Peek(1).Type]);
-    return(ReturnValue);
-}
-GameInfoPredicate_OperatorList ParseGameInfoPredicate_OperatorList_1(MBCC::Tokenizer& Tokenizer)
-{
-    GameInfoPredicate_OperatorList ReturnValue;
-    do
-    {
-        ReturnValue.Terms.push_back(ParseGameInfoPredicate_And(Tokenizer));
-    }
-    while(LOOKTable[60][0][Tokenizer.Peek().Type]&& LOOKTable[60][1][Tokenizer.Peek(1).Type]);
-    return(ReturnValue);
-}
-GameInfoPredicate_Variable ParseGameInfoPredicate_Variable(MBCC::Tokenizer& Tokenizer)
-{
-    GameInfoPredicate_Variable ReturnValue;
-    ReturnValue = ParseGameInfoPredicate_Variable_0(Tokenizer);
-    return(ReturnValue);
-}
-GameInfoPredicate_Variable ParseGameInfoPredicate_Variable_0(MBCC::Tokenizer& Tokenizer)
-{
-    GameInfoPredicate_Variable ReturnValue;
-    ReturnValue.VariablePosition = Tokenizer.Peek().Position;
-    if(Tokenizer.Peek().Type != 18)
-    {
-        throw MBCC::ParsingException(Tokenizer.Peek().Position,"GameInfoPredicate_Variable","idf");
-    }
-    ReturnValue.VariableName = Tokenizer.Peek().Value;
-    Tokenizer.ConsumeToken();
     return(ReturnValue);
 }
 GameInfoPredicate_Direct ParseGameInfoPredicate_Direct(MBCC::Tokenizer& Tokenizer)
@@ -894,14 +777,6 @@ GameInfoPredicate_Direct ParseGameInfoPredicate_Direct(MBCC::Tokenizer& Tokenize
 GameInfoPredicate_Direct ParseGameInfoPredicate_Direct_0(MBCC::Tokenizer& Tokenizer)
 {
     GameInfoPredicate_Direct ReturnValue;
-    if(LOOKTable[56][0][Tokenizer.Peek().Type]&& LOOKTable[56][1][Tokenizer.Peek(1).Type])
-    {
-        ReturnValue.Attribute = ParseAttribute_List(Tokenizer).Attributes;
-    }
-    else
-    {
-         throw MBCC::ParsingException(Tokenizer.Peek().Position,"GameInfoPredicate_Direct","Attribute_List");
-    }
     if(LOOKTable[11][0][Tokenizer.Peek().Type]&& LOOKTable[11][1][Tokenizer.Peek(1).Type])
     {
         ReturnValue.Comparison = ParseComparator(Tokenizer).Op;
@@ -919,49 +794,6 @@ GameInfoPredicate_Direct ParseGameInfoPredicate_Direct_0(MBCC::Tokenizer& Tokeni
     Tokenizer.ConsumeToken();
     return(ReturnValue);
 }
-GameInfoPredicate_Data ParseGameInfoPredicate_Data(MBCC::Tokenizer& Tokenizer)
-{
-    GameInfoPredicate_Data ReturnValue;
-    if (LOOKTable[70][0][Tokenizer.Peek().Type]&& LOOKTable[70][1][Tokenizer.Peek(1).Type])
-    {
-        ReturnValue = ParseGameInfoPredicate_Data_0(Tokenizer);
-    }
-    else if (LOOKTable[71][0][Tokenizer.Peek().Type]&& LOOKTable[71][1][Tokenizer.Peek(1).Type])
-    {
-        ReturnValue = ParseGameInfoPredicate_Data_1(Tokenizer);
-    }
-    else
-    {
-         throw MBCC::ParsingException(Tokenizer.Peek().Position,"GameInfoPredicate_Data","GameInfoPredicate_Data");
-    }
-    return(ReturnValue);
-}
-GameInfoPredicate_Data ParseGameInfoPredicate_Data_0(MBCC::Tokenizer& Tokenizer)
-{
-    GameInfoPredicate_Data ReturnValue;
-    if(LOOKTable[65][0][Tokenizer.Peek().Type]&& LOOKTable[65][1][Tokenizer.Peek(1).Type])
-    {
-        ReturnValue = ParseGameInfoPredicate_Variable(Tokenizer);
-    }
-    else
-    {
-         throw MBCC::ParsingException(Tokenizer.Peek().Position,"GameInfoPredicate_Data","GameInfoPredicate_Variable");
-    }
-    return(ReturnValue);
-}
-GameInfoPredicate_Data ParseGameInfoPredicate_Data_1(MBCC::Tokenizer& Tokenizer)
-{
-    GameInfoPredicate_Data ReturnValue;
-    if(LOOKTable[67][0][Tokenizer.Peek().Type]&& LOOKTable[67][1][Tokenizer.Peek(1).Type])
-    {
-        ReturnValue = ParseGameInfoPredicate_Direct(Tokenizer);
-    }
-    else
-    {
-         throw MBCC::ParsingException(Tokenizer.Peek().Position,"GameInfoPredicate_Data","GameInfoPredicate_Direct");
-    }
-    return(ReturnValue);
-}
 GameInfoPredicate ParseGameInfoPredicate_Base(MBCC::Tokenizer& Tokenizer)
 {
     GameInfoPredicate ReturnValue;
@@ -971,100 +803,142 @@ GameInfoPredicate ParseGameInfoPredicate_Base(MBCC::Tokenizer& Tokenizer)
 GameInfoPredicate ParseGameInfoPredicate_Base_0(MBCC::Tokenizer& Tokenizer)
 {
     GameInfoPredicate ReturnValue;
-    if(LOOKTable[69][0][Tokenizer.Peek().Type]&& LOOKTable[69][1][Tokenizer.Peek(1).Type])
+    if(LOOKTable[100][0][Tokenizer.Peek().Type]&& LOOKTable[100][1][Tokenizer.Peek(1).Type])
     {
-        ReturnValue.Data = ParseGameInfoPredicate_Data(Tokenizer);
+        ReturnValue.Attribute = ParseIdentifier(Tokenizer);
     }
     else
     {
-         throw MBCC::ParsingException(Tokenizer.Peek().Position,"GameInfoPredicate_Base","GameInfoPredicate_Data");
+         throw MBCC::ParsingException(Tokenizer.Peek().Position,"GameInfoPredicate_Base","Identifier");
+    }
+    if(LOOKTable[56][0][Tokenizer.Peek().Type]&& LOOKTable[56][1][Tokenizer.Peek(1).Type])
+    {
+        ReturnValue.Data = ParseGameInfoPredicate_Direct(Tokenizer);
+    }
+    return(ReturnValue);
+}
+GameInfoPredicate ParseGameInfoPredicateOr(MBCC::Tokenizer& Tokenizer)
+{
+    GameInfoPredicate ReturnValue;
+    ReturnValue = ParseGameInfoPredicateOr_0(Tokenizer);
+    return(ReturnValue);
+}
+GameInfoPredicate ParseGameInfoPredicateOr_0(MBCC::Tokenizer& Tokenizer)
+{
+    GameInfoPredicate ReturnValue;
+    if(LOOKTable[62][0][Tokenizer.Peek().Type]&& LOOKTable[62][1][Tokenizer.Peek(1).Type])
+    {
+        ReturnValue.ExtraTerms.push_back(ParseGameInfoPredicate_Term(Tokenizer));
+    }
+    else
+    {
+         throw MBCC::ParsingException(Tokenizer.Peek().Position,"GameInfoPredicateOr","GameInfoPredicate_Term");
+    }
+    while(LOOKTable[52][0][Tokenizer.Peek().Type]&& LOOKTable[52][1][Tokenizer.Peek(1).Type])
+    {
+        ReturnValue.ExtraTerms.push_back(ParseGameInfoPredicate_Or(Tokenizer));
+    }
+    ReturnValue.Operator="||";
+    return(ReturnValue);
+}
+GameInfoPredicate ParseGameInfoPredicate_Term(MBCC::Tokenizer& Tokenizer)
+{
+    GameInfoPredicate ReturnValue;
+    if (LOOKTable[63][0][Tokenizer.Peek().Type]&& LOOKTable[63][1][Tokenizer.Peek(1).Type])
+    {
+        ReturnValue = ParseGameInfoPredicate_Term_0(Tokenizer);
+    }
+    else if (LOOKTable[64][0][Tokenizer.Peek().Type]&& LOOKTable[64][1][Tokenizer.Peek(1).Type])
+    {
+        ReturnValue = ParseGameInfoPredicate_Term_1(Tokenizer);
+    }
+    else if (LOOKTable[65][0][Tokenizer.Peek().Type]&& LOOKTable[65][1][Tokenizer.Peek(1).Type])
+    {
+        ReturnValue = ParseGameInfoPredicate_Term_2(Tokenizer);
+    }
+    else
+    {
+         throw MBCC::ParsingException(Tokenizer.Peek().Position,"GameInfoPredicate_Term","GameInfoPredicate_Term");
+    }
+    return(ReturnValue);
+}
+GameInfoPredicate ParseGameInfoPredicate_Term_0(MBCC::Tokenizer& Tokenizer)
+{
+    GameInfoPredicate ReturnValue;
+    if(Tokenizer.Peek().Type != 0)
+    {
+        throw MBCC::ParsingException(Tokenizer.Peek().Position,"GameInfoPredicate_Term","lpar");
+    }
+    Tokenizer.ConsumeToken();
+    if(LOOKTable[66][0][Tokenizer.Peek().Type]&& LOOKTable[66][1][Tokenizer.Peek(1).Type])
+    {
+        ReturnValue = ParseGameInfoPredicate(Tokenizer);
+    }
+    else
+    {
+         throw MBCC::ParsingException(Tokenizer.Peek().Position,"GameInfoPredicate_Term","GameInfoPredicate");
+    }
+    if(Tokenizer.Peek().Type != 1)
+    {
+        throw MBCC::ParsingException(Tokenizer.Peek().Position,"GameInfoPredicate_Term","rpar");
+    }
+    Tokenizer.ConsumeToken();
+    return(ReturnValue);
+}
+GameInfoPredicate ParseGameInfoPredicate_Term_1(MBCC::Tokenizer& Tokenizer)
+{
+    GameInfoPredicate ReturnValue;
+    if(Tokenizer.Peek().Type != 22)
+    {
+        throw MBCC::ParsingException(Tokenizer.Peek().Position,"GameInfoPredicate_Term","bang");
+    }
+    Tokenizer.ConsumeToken();
+    if(LOOKTable[62][0][Tokenizer.Peek().Type]&& LOOKTable[62][1][Tokenizer.Peek(1).Type])
+    {
+        ReturnValue = ParseGameInfoPredicate_Term(Tokenizer);
+    }
+    else
+    {
+         throw MBCC::ParsingException(Tokenizer.Peek().Position,"GameInfoPredicate_Term","GameInfoPredicate_Term");
+    }
+    ReturnValue.Negated=true;
+    return(ReturnValue);
+}
+GameInfoPredicate ParseGameInfoPredicate_Term_2(MBCC::Tokenizer& Tokenizer)
+{
+    GameInfoPredicate ReturnValue;
+    if(LOOKTable[58][0][Tokenizer.Peek().Type]&& LOOKTable[58][1][Tokenizer.Peek(1).Type])
+    {
+        ReturnValue = ParseGameInfoPredicate_Base(Tokenizer);
+    }
+    else
+    {
+         throw MBCC::ParsingException(Tokenizer.Peek().Position,"GameInfoPredicate_Term","GameInfoPredicate_Base");
     }
     return(ReturnValue);
 }
 GameInfoPredicate ParseGameInfoPredicate(MBCC::Tokenizer& Tokenizer)
 {
     GameInfoPredicate ReturnValue;
-    if (LOOKTable[75][0][Tokenizer.Peek().Type]&& LOOKTable[75][1][Tokenizer.Peek(1).Type])
-    {
-        ReturnValue = ParseGameInfoPredicate_0(Tokenizer);
-    }
-    else if (LOOKTable[76][0][Tokenizer.Peek().Type]&& LOOKTable[76][1][Tokenizer.Peek(1).Type])
-    {
-        ReturnValue = ParseGameInfoPredicate_1(Tokenizer);
-    }
-    else if (LOOKTable[77][0][Tokenizer.Peek().Type]&& LOOKTable[77][1][Tokenizer.Peek(1).Type])
-    {
-        ReturnValue = ParseGameInfoPredicate_2(Tokenizer);
-    }
-    else
-    {
-         throw MBCC::ParsingException(Tokenizer.Peek().Position,"GameInfoPredicate","GameInfoPredicate");
-    }
+    ReturnValue = ParseGameInfoPredicate_0(Tokenizer);
     return(ReturnValue);
 }
 GameInfoPredicate ParseGameInfoPredicate_0(MBCC::Tokenizer& Tokenizer)
 {
     GameInfoPredicate ReturnValue;
-    if(Tokenizer.Peek().Type != 0)
+    if(LOOKTable[60][0][Tokenizer.Peek().Type]&& LOOKTable[60][1][Tokenizer.Peek(1).Type])
     {
-        throw MBCC::ParsingException(Tokenizer.Peek().Position,"GameInfoPredicate","lpar");
-    }
-    Tokenizer.ConsumeToken();
-    if(LOOKTable[74][0][Tokenizer.Peek().Type]&& LOOKTable[74][1][Tokenizer.Peek(1).Type])
-    {
-        ReturnValue.ExtraTerms.push_back(ParseGameInfoPredicate(Tokenizer));
+        ReturnValue.ExtraTerms.push_back(ParseGameInfoPredicateOr(Tokenizer));
     }
     else
     {
-         throw MBCC::ParsingException(Tokenizer.Peek().Position,"GameInfoPredicate","GameInfoPredicate");
+         throw MBCC::ParsingException(Tokenizer.Peek().Position,"GameInfoPredicate","GameInfoPredicateOr");
     }
-    if(Tokenizer.Peek().Type != 1)
+    while(LOOKTable[54][0][Tokenizer.Peek().Type]&& LOOKTable[54][1][Tokenizer.Peek(1).Type])
     {
-        throw MBCC::ParsingException(Tokenizer.Peek().Position,"GameInfoPredicate","rpar");
+        ReturnValue.ExtraTerms.push_back(ParseGameInfoPredicate_And(Tokenizer));
     }
-    Tokenizer.ConsumeToken();
-    if(LOOKTable[62][0][Tokenizer.Peek().Type]&& LOOKTable[62][1][Tokenizer.Peek(1).Type])
-    {
-        ReturnValue.ExtraTerms = ParseGameInfoPredicate_OperatorList(Tokenizer).Terms;
-    }
-    return(ReturnValue);
-}
-GameInfoPredicate ParseGameInfoPredicate_1(MBCC::Tokenizer& Tokenizer)
-{
-    GameInfoPredicate ReturnValue;
-    if(LOOKTable[72][0][Tokenizer.Peek().Type]&& LOOKTable[72][1][Tokenizer.Peek(1).Type])
-    {
-        ReturnValue = ParseGameInfoPredicate_Base(Tokenizer);
-    }
-    else
-    {
-         throw MBCC::ParsingException(Tokenizer.Peek().Position,"GameInfoPredicate","GameInfoPredicate_Base");
-    }
-    std::vector<GameInfoPredicate> ExtraTerms;
-    if(LOOKTable[62][0][Tokenizer.Peek().Type]&& LOOKTable[62][1][Tokenizer.Peek(1).Type])
-    {
-        ExtraTerms = ParseGameInfoPredicate_OperatorList(Tokenizer).Terms;
-    }
-    ReturnValue.ExtraTerms = std::move(ExtraTerms);
-    return(ReturnValue);
-}
-GameInfoPredicate ParseGameInfoPredicate_2(MBCC::Tokenizer& Tokenizer)
-{
-    GameInfoPredicate ReturnValue;
-    if(Tokenizer.Peek().Type != 22)
-    {
-        throw MBCC::ParsingException(Tokenizer.Peek().Position,"GameInfoPredicate","bang");
-    }
-    Tokenizer.ConsumeToken();
-    if(LOOKTable[74][0][Tokenizer.Peek().Type]&& LOOKTable[74][1][Tokenizer.Peek(1).Type])
-    {
-        ReturnValue = ParseGameInfoPredicate(Tokenizer);
-    }
-    else
-    {
-         throw MBCC::ParsingException(Tokenizer.Peek().Position,"GameInfoPredicate","GameInfoPredicate");
-    }
-    ReturnValue.Negated=true;
+    ReturnValue.Operator="&&";
     return(ReturnValue);
 }
 GameSelection ParseGameSelection(MBCC::Tokenizer& Tokenizer)
@@ -1076,7 +950,7 @@ GameSelection ParseGameSelection(MBCC::Tokenizer& Tokenizer)
 GameSelection ParseGameSelection_0(MBCC::Tokenizer& Tokenizer)
 {
     GameSelection ReturnValue;
-    if(LOOKTable[80][0][Tokenizer.Peek().Type]&& LOOKTable[80][1][Tokenizer.Peek(1).Type])
+    if(LOOKTable[70][0][Tokenizer.Peek().Type]&& LOOKTable[70][1][Tokenizer.Peek(1).Type])
     {
         ReturnValue.Assignment = ParsePlayerAssignment(Tokenizer);
     }
@@ -1086,7 +960,7 @@ GameSelection ParseGameSelection_0(MBCC::Tokenizer& Tokenizer)
         throw MBCC::ParsingException(Tokenizer.Peek().Position,"GameSelection","SELECT");
     }
     Tokenizer.ConsumeToken();
-    if(LOOKTable[74][0][Tokenizer.Peek().Type]&& LOOKTable[74][1][Tokenizer.Peek(1).Type])
+    if(LOOKTable[66][0][Tokenizer.Peek().Type]&& LOOKTable[66][1][Tokenizer.Peek(1).Type])
     {
         ReturnValue.GameCondition = ParseGameInfoPredicate(Tokenizer);
     }
@@ -1118,7 +992,7 @@ PlayerAssignment ParsePlayerAssignment_0(MBCC::Tokenizer& Tokenizer)
     }
     ReturnValue.AffectedPlayer = Tokenizer.Peek().Value;
     Tokenizer.ConsumeToken();
-    if(LOOKTable[74][0][Tokenizer.Peek().Type]&& LOOKTable[74][1][Tokenizer.Peek(1).Type])
+    if(LOOKTable[66][0][Tokenizer.Peek().Type]&& LOOKTable[66][1][Tokenizer.Peek(1).Type])
     {
         ReturnValue.PlayerCondition = ParseGameInfoPredicate(Tokenizer);
     }
@@ -1172,11 +1046,11 @@ Result_Print ParseResult_Print_0(MBCC::Tokenizer& Tokenizer)
 Result ParseResult(MBCC::Tokenizer& Tokenizer)
 {
     Result ReturnValue;
-    if (LOOKTable[87][0][Tokenizer.Peek().Type]&& LOOKTable[87][1][Tokenizer.Peek(1).Type])
+    if (LOOKTable[77][0][Tokenizer.Peek().Type]&& LOOKTable[77][1][Tokenizer.Peek(1).Type])
     {
         ReturnValue = ParseResult_0(Tokenizer);
     }
-    else if (LOOKTable[88][0][Tokenizer.Peek().Type]&& LOOKTable[88][1][Tokenizer.Peek(1).Type])
+    else if (LOOKTable[78][0][Tokenizer.Peek().Type]&& LOOKTable[78][1][Tokenizer.Peek(1).Type])
     {
         ReturnValue = ParseResult_1(Tokenizer);
     }
@@ -1189,7 +1063,7 @@ Result ParseResult(MBCC::Tokenizer& Tokenizer)
 Result ParseResult_0(MBCC::Tokenizer& Tokenizer)
 {
     Result ReturnValue;
-    if(LOOKTable[82][0][Tokenizer.Peek().Type]&& LOOKTable[82][1][Tokenizer.Peek(1).Type])
+    if(LOOKTable[72][0][Tokenizer.Peek().Type]&& LOOKTable[72][1][Tokenizer.Peek(1).Type])
     {
         ReturnValue = ParseResult_Record(Tokenizer);
     }
@@ -1202,7 +1076,7 @@ Result ParseResult_0(MBCC::Tokenizer& Tokenizer)
 Result ParseResult_1(MBCC::Tokenizer& Tokenizer)
 {
     Result ReturnValue;
-    if(LOOKTable[84][0][Tokenizer.Peek().Type]&& LOOKTable[84][1][Tokenizer.Peek(1).Type])
+    if(LOOKTable[74][0][Tokenizer.Peek().Type]&& LOOKTable[74][1][Tokenizer.Peek(1).Type])
     {
         ReturnValue = ParseResult_Print(Tokenizer);
     }
@@ -1221,7 +1095,7 @@ Selection ParseSelection(MBCC::Tokenizer& Tokenizer)
 Selection ParseSelection_0(MBCC::Tokenizer& Tokenizer)
 {
     Selection ReturnValue;
-    if(LOOKTable[78][0][Tokenizer.Peek().Type]&& LOOKTable[78][1][Tokenizer.Peek(1).Type])
+    if(LOOKTable[68][0][Tokenizer.Peek().Type]&& LOOKTable[68][1][Tokenizer.Peek(1).Type])
     {
         ReturnValue.Games = ParseGameSelection(Tokenizer);
     }
@@ -1233,7 +1107,7 @@ Selection ParseSelection_0(MBCC::Tokenizer& Tokenizer)
     {
         ReturnValue.SituationFilter = ParseFilter(Tokenizer);
     }
-    if(LOOKTable[86][0][Tokenizer.Peek().Type]&& LOOKTable[86][1][Tokenizer.Peek(1).Type])
+    if(LOOKTable[76][0][Tokenizer.Peek().Type]&& LOOKTable[76][1][Tokenizer.Peek(1).Type])
     {
         ReturnValue.Output = ParseResult(Tokenizer);
     }
@@ -1317,7 +1191,7 @@ VariableDeclaration_GameList ParseVariableDeclaration_GameList_0(MBCC::Tokenizer
         throw MBCC::ParsingException(Tokenizer.Peek().Position,"VariableDeclaration_GameList","eq");
     }
     Tokenizer.ConsumeToken();
-    if(LOOKTable[78][0][Tokenizer.Peek().Type]&& LOOKTable[78][1][Tokenizer.Peek(1).Type])
+    if(LOOKTable[68][0][Tokenizer.Peek().Type]&& LOOKTable[68][1][Tokenizer.Peek(1).Type])
     {
         ReturnValue.Selection = ParseGameSelection(Tokenizer);
     }
@@ -1359,7 +1233,7 @@ VariableDeclaration_PlayerSelection ParseVariableDeclaration_PlayerSelection_0(M
         throw MBCC::ParsingException(Tokenizer.Peek().Position,"VariableDeclaration_PlayerSelection","eq");
     }
     Tokenizer.ConsumeToken();
-    if(LOOKTable[74][0][Tokenizer.Peek().Type]&& LOOKTable[74][1][Tokenizer.Peek(1).Type])
+    if(LOOKTable[66][0][Tokenizer.Peek().Type]&& LOOKTable[66][1][Tokenizer.Peek(1).Type])
     {
         ReturnValue.Predicate = ParseGameInfoPredicate(Tokenizer);
     }
@@ -1401,7 +1275,7 @@ VariableDeclaration_GameInfoPredicate ParseVariableDeclaration_GameInfoPredicate
         throw MBCC::ParsingException(Tokenizer.Peek().Position,"VariableDeclaration_GameInfoPredicate","eq");
     }
     Tokenizer.ConsumeToken();
-    if(LOOKTable[74][0][Tokenizer.Peek().Type]&& LOOKTable[74][1][Tokenizer.Peek(1).Type])
+    if(LOOKTable[66][0][Tokenizer.Peek().Type]&& LOOKTable[66][1][Tokenizer.Peek(1).Type])
     {
         ReturnValue.Predicate = ParseGameInfoPredicate(Tokenizer);
     }
@@ -1419,19 +1293,19 @@ VariableDeclaration_GameInfoPredicate ParseVariableDeclaration_GameInfoPredicate
 VariableDeclaration ParseVariableDeclaration(MBCC::Tokenizer& Tokenizer)
 {
     VariableDeclaration ReturnValue;
-    if (LOOKTable[100][0][Tokenizer.Peek().Type]&& LOOKTable[100][1][Tokenizer.Peek(1).Type])
+    if (LOOKTable[90][0][Tokenizer.Peek().Type]&& LOOKTable[90][1][Tokenizer.Peek(1).Type])
     {
         ReturnValue = ParseVariableDeclaration_0(Tokenizer);
     }
-    else if (LOOKTable[101][0][Tokenizer.Peek().Type]&& LOOKTable[101][1][Tokenizer.Peek(1).Type])
+    else if (LOOKTable[91][0][Tokenizer.Peek().Type]&& LOOKTable[91][1][Tokenizer.Peek(1).Type])
     {
         ReturnValue = ParseVariableDeclaration_1(Tokenizer);
     }
-    else if (LOOKTable[102][0][Tokenizer.Peek().Type]&& LOOKTable[102][1][Tokenizer.Peek(1).Type])
+    else if (LOOKTable[92][0][Tokenizer.Peek().Type]&& LOOKTable[92][1][Tokenizer.Peek(1).Type])
     {
         ReturnValue = ParseVariableDeclaration_2(Tokenizer);
     }
-    else if (LOOKTable[103][0][Tokenizer.Peek().Type]&& LOOKTable[103][1][Tokenizer.Peek(1).Type])
+    else if (LOOKTable[93][0][Tokenizer.Peek().Type]&& LOOKTable[93][1][Tokenizer.Peek(1).Type])
     {
         ReturnValue = ParseVariableDeclaration_3(Tokenizer);
     }
@@ -1444,7 +1318,7 @@ VariableDeclaration ParseVariableDeclaration(MBCC::Tokenizer& Tokenizer)
 VariableDeclaration ParseVariableDeclaration_0(MBCC::Tokenizer& Tokenizer)
 {
     VariableDeclaration ReturnValue;
-    if(LOOKTable[91][0][Tokenizer.Peek().Type]&& LOOKTable[91][1][Tokenizer.Peek(1).Type])
+    if(LOOKTable[81][0][Tokenizer.Peek().Type]&& LOOKTable[81][1][Tokenizer.Peek(1).Type])
     {
         ReturnValue = ParseVariableDeclaration_Filter(Tokenizer);
     }
@@ -1457,7 +1331,7 @@ VariableDeclaration ParseVariableDeclaration_0(MBCC::Tokenizer& Tokenizer)
 VariableDeclaration ParseVariableDeclaration_1(MBCC::Tokenizer& Tokenizer)
 {
     VariableDeclaration ReturnValue;
-    if(LOOKTable[93][0][Tokenizer.Peek().Type]&& LOOKTable[93][1][Tokenizer.Peek(1).Type])
+    if(LOOKTable[83][0][Tokenizer.Peek().Type]&& LOOKTable[83][1][Tokenizer.Peek(1).Type])
     {
         ReturnValue = ParseVariableDeclaration_GameList(Tokenizer);
     }
@@ -1470,7 +1344,7 @@ VariableDeclaration ParseVariableDeclaration_1(MBCC::Tokenizer& Tokenizer)
 VariableDeclaration ParseVariableDeclaration_2(MBCC::Tokenizer& Tokenizer)
 {
     VariableDeclaration ReturnValue;
-    if(LOOKTable[97][0][Tokenizer.Peek().Type]&& LOOKTable[97][1][Tokenizer.Peek(1).Type])
+    if(LOOKTable[87][0][Tokenizer.Peek().Type]&& LOOKTable[87][1][Tokenizer.Peek(1).Type])
     {
         ReturnValue = ParseVariableDeclaration_GameInfoPredicate(Tokenizer);
     }
@@ -1483,7 +1357,7 @@ VariableDeclaration ParseVariableDeclaration_2(MBCC::Tokenizer& Tokenizer)
 VariableDeclaration ParseVariableDeclaration_3(MBCC::Tokenizer& Tokenizer)
 {
     VariableDeclaration ReturnValue;
-    if(LOOKTable[95][0][Tokenizer.Peek().Type]&& LOOKTable[95][1][Tokenizer.Peek(1).Type])
+    if(LOOKTable[85][0][Tokenizer.Peek().Type]&& LOOKTable[85][1][Tokenizer.Peek(1).Type])
     {
         ReturnValue = ParseVariableDeclaration_PlayerSelection(Tokenizer);
     }
@@ -1502,20 +1376,85 @@ Module ParseModule(MBCC::Tokenizer& Tokenizer)
 Module ParseModule_0(MBCC::Tokenizer& Tokenizer)
 {
     Module ReturnValue;
-    while(LOOKTable[106][0][Tokenizer.Peek().Type]&& LOOKTable[106][1][Tokenizer.Peek(1).Type])
+    while(LOOKTable[102][0][Tokenizer.Peek().Type]&& LOOKTable[102][1][Tokenizer.Peek(1).Type])
     {
         ReturnValue.Statements.push_back(ParseStatement(Tokenizer));
+    }
+    return(ReturnValue);
+}
+Token ParseIdentifierPart(MBCC::Tokenizer& Tokenizer)
+{
+    Token ReturnValue;
+    ReturnValue = ParseIdentifierPart_0(Tokenizer);
+    return(ReturnValue);
+}
+Token ParseIdentifierPart_0(MBCC::Tokenizer& Tokenizer)
+{
+    Token ReturnValue;
+    ReturnValue.Position = Tokenizer.Peek().Position;
+    if(Tokenizer.Peek().Type != 18)
+    {
+        throw MBCC::ParsingException(Tokenizer.Peek().Position,"IdentifierPart","idf");
+    }
+    ReturnValue.Value = Tokenizer.Peek().Value;
+    Tokenizer.ConsumeToken();
+    return(ReturnValue);
+}
+Token ParseIdentifierPart_Rest(MBCC::Tokenizer& Tokenizer)
+{
+    Token ReturnValue;
+    ReturnValue = ParseIdentifierPart_Rest_0(Tokenizer);
+    return(ReturnValue);
+}
+Token ParseIdentifierPart_Rest_0(MBCC::Tokenizer& Tokenizer)
+{
+    Token ReturnValue;
+    if(Tokenizer.Peek().Type != 29)
+    {
+        throw MBCC::ParsingException(Tokenizer.Peek().Position,"IdentifierPart_Rest","dot");
+    }
+    Tokenizer.ConsumeToken();
+    if(LOOKTable[96][0][Tokenizer.Peek().Type]&& LOOKTable[96][1][Tokenizer.Peek(1).Type])
+    {
+        ReturnValue = ParseIdentifierPart(Tokenizer);
+    }
+    else
+    {
+         throw MBCC::ParsingException(Tokenizer.Peek().Position,"IdentifierPart_Rest","IdentifierPart");
+    }
+    return(ReturnValue);
+}
+Identifier ParseIdentifier(MBCC::Tokenizer& Tokenizer)
+{
+    Identifier ReturnValue;
+    ReturnValue = ParseIdentifier_0(Tokenizer);
+    return(ReturnValue);
+}
+Identifier ParseIdentifier_0(MBCC::Tokenizer& Tokenizer)
+{
+    Identifier ReturnValue;
+    if(LOOKTable[96][0][Tokenizer.Peek().Type]&& LOOKTable[96][1][Tokenizer.Peek(1).Type])
+    {
+        ReturnValue.Parts.push_back(ParseIdentifierPart(Tokenizer));
+    }
+    else
+    {
+         throw MBCC::ParsingException(Tokenizer.Peek().Position,"Identifier","IdentifierPart");
+    }
+    while(LOOKTable[98][0][Tokenizer.Peek().Type]&& LOOKTable[98][1][Tokenizer.Peek(1).Type])
+    {
+        ReturnValue.Parts.push_back(ParseIdentifierPart_Rest(Tokenizer));
     }
     return(ReturnValue);
 }
 Statement ParseStatement(MBCC::Tokenizer& Tokenizer)
 {
     Statement ReturnValue;
-    if (LOOKTable[107][0][Tokenizer.Peek().Type]&& LOOKTable[107][1][Tokenizer.Peek(1).Type])
+    if (LOOKTable[103][0][Tokenizer.Peek().Type]&& LOOKTable[103][1][Tokenizer.Peek(1).Type])
     {
         ReturnValue = ParseStatement_0(Tokenizer);
     }
-    else if (LOOKTable[108][0][Tokenizer.Peek().Type]&& LOOKTable[108][1][Tokenizer.Peek(1).Type])
+    else if (LOOKTable[104][0][Tokenizer.Peek().Type]&& LOOKTable[104][1][Tokenizer.Peek(1).Type])
     {
         ReturnValue = ParseStatement_1(Tokenizer);
     }
@@ -1528,7 +1467,7 @@ Statement ParseStatement(MBCC::Tokenizer& Tokenizer)
 Statement ParseStatement_0(MBCC::Tokenizer& Tokenizer)
 {
     Statement ReturnValue;
-    if(LOOKTable[99][0][Tokenizer.Peek().Type]&& LOOKTable[99][1][Tokenizer.Peek(1).Type])
+    if(LOOKTable[89][0][Tokenizer.Peek().Type]&& LOOKTable[89][1][Tokenizer.Peek(1).Type])
     {
         ReturnValue = ParseVariableDeclaration(Tokenizer);
     }
@@ -1541,7 +1480,7 @@ Statement ParseStatement_0(MBCC::Tokenizer& Tokenizer)
 Statement ParseStatement_1(MBCC::Tokenizer& Tokenizer)
 {
     Statement ReturnValue;
-    if(LOOKTable[89][0][Tokenizer.Peek().Type]&& LOOKTable[89][1][Tokenizer.Peek(1).Type])
+    if(LOOKTable[79][0][Tokenizer.Peek().Type]&& LOOKTable[79][1][Tokenizer.Peek(1).Type])
     {
         ReturnValue = ParseSelection(Tokenizer);
     }

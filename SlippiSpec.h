@@ -5,6 +5,37 @@
 #include <MBSystem/BiDirectionalSubProcess.h>
 namespace MBSlippi
 {
+    inline std::string IdentifierToString(Identifier const& Idf)
+    {
+        std::string ReturnValue = "";   
+        if(Idf.Parts.size() == 0)
+        {
+            return(ReturnValue);   
+        }
+        ReturnValue = Idf.Parts[0].Value;
+        for(auto const& Part : Idf.Parts)
+        {
+            ReturnValue += '.';   
+            ReturnValue  += Part.Value;
+        }
+        return(ReturnValue);
+    }
+    inline int IdentifierLength(Identifier const& Idf)
+    {
+        //assumes that identifier is on a single line...
+        int ReturnValue = 0;
+        MBCC::TokenPosition StartPosition = Idf.Parts.front().Position;
+        MBCC::TokenPosition EndPosition = Idf.Parts.back().Position;
+        if(StartPosition.Line != EndPosition.Line)
+        {
+            return(Idf.Parts.front().Value.size());
+        }
+        else
+        {
+            ReturnValue = (EndPosition.ByteOffset-StartPosition.ByteOffset)+Idf.Parts.back().Value.size();
+        }
+        return(ReturnValue);
+    }
     struct GameIntervall
     {
         int FirstFrame = 0;   
@@ -134,6 +165,32 @@ namespace MBSlippi
     {
         MQL_Scope* m_ParentScope = nullptr;
         std::unordered_map<std::string,MQL_Variable> m_Variables;
+
+        MQL_Variable& p_GetVariable(std::string const& VariableName)
+        {
+            auto It = m_Variables.find(VariableName);
+            if(It == m_Variables.end())
+            {
+                if(m_ParentScope != nullptr)
+                {
+                    return(m_ParentScope->p_GetVariable(VariableName));
+                }
+                else
+                {
+                    throw std::runtime_error(VariableName + " doesn't exist in current scope");
+                }
+            }
+            return(It->second);
+        }
+        bool p_HasVariable(std::string const& VariableName)
+        {
+            bool ReturnValue = m_Variables.find(VariableName) != m_Variables.end();
+            if(!ReturnValue && m_ParentScope != nullptr)
+            {
+                ReturnValue = m_ParentScope->p_HasVariable(VariableName);
+            }
+            return(ReturnValue);
+        }
     public:
         void SetParentScope(MQL_Scope* Parent)
         {
@@ -144,30 +201,25 @@ namespace MBSlippi
         {
             m_Variables[Name] = std::move(Value);
         }
-        MQL_Variable& GetVariable(std::string const& VariableName)
+        MQL_Variable& GetVariable(Identifier const& Idf)
         {
-            auto It = m_Variables.find(VariableName);
-            if(It == m_Variables.end())
+            if(Idf.Parts.size() == 0)
             {
-                if(m_ParentScope != nullptr)
-                {
-                    return(m_ParentScope->GetVariable(VariableName));
-                }
-                else
-                {
-                    throw std::runtime_error(VariableName + " doesn't exist in current scope");
-                }
+                throw std::runtime_error("Cannot find empty variable in scope");   
             }
-            return(It->second);
+            return(p_GetVariable(Idf.Parts[0].Value));
         }
-        bool HasVariable(std::string const& VariableName)
+        bool HasVariable(std::string const& Idf)
         {
-            bool ReturnValue = m_Variables.find(VariableName) != m_Variables.end();
-            if(!ReturnValue && m_ParentScope != nullptr)
+            return(p_HasVariable(Idf));
+        }
+        bool HasVariable(Identifier const& Idf)
+        {
+            if(Idf.Parts.size() == 0)
             {
-                ReturnValue = m_ParentScope->HasVariable(VariableName);
+                throw std::runtime_error("Cannot find empty variable in scope");   
             }
-            return(ReturnValue);
+            return(p_HasVariable(Idf.Parts[0].Value));
         }
     };
     struct MQL_Context
@@ -234,7 +286,7 @@ namespace MBSlippi
         void p_VerifyFilterComponent(Filter_Component const& FilterToVerify,std::vector<MBLSP::Diagnostic>& OutDiagnostics);
         void p_VerifyFilter(Filter const& FilterToVerify,std::vector<MBLSP::Diagnostic>& OutDiagnostics);
 
-        void p_VerifyGameInfoPredicate_Direct(GameInfoPredicate_Direct& PredicateToVerify,
+        void p_VerifyGameInfoPredicate_Direct(Identifier const& Attribute,GameInfoPredicate_Direct& PredicateToVerify,
                 bool IsPlayerAssignment,std::vector<MBLSP::Diagnostic>& OutDiagnostics);
         void p_VerifyGameInfoPredicate(GameInfoPredicate& PredicateToVerify,bool IsPlayerAssignment,std::vector<MBLSP::Diagnostic>& OutDiagnostics);
         void p_VerifyPlayerAssignment(PlayerAssignment& AssignmentToVerify,std::vector<MBLSP::Diagnostic>& OutDiagnostics);

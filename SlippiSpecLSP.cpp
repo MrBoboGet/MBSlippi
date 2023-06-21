@@ -15,7 +15,7 @@ namespace MBSlippi
 
     void SlippiLSP::p_ExtractTokens(std::vector<MBLSP::SemanticToken>& OutTokens, Filter const& FilterToExamine)
     {
-        if(FilterToExamine.Component.FilterName != "" || FilterToExamine.Component.ExtraTerms.size() != 0)
+        if(FilterToExamine.Component.FilterName.Parts.size() != 0 || FilterToExamine.Component.ExtraTerms.size() != 0)
         {
             OutTokens.push_back(MBLSP::SemanticToken(MBLSP::TokenType::Keyword,
                         h_Convert(FilterToExamine.FilterPosition),6));
@@ -24,10 +24,10 @@ namespace MBSlippi
     }
     void SlippiLSP::p_ExtractTokens(std::vector<MBLSP::SemanticToken>& OutTokens,Filter_Component const& ComponentToExamine)
     {
-        if(ComponentToExamine.FilterName != "")
+        if(ComponentToExamine.FilterName.Parts.size() != 0)
         {
             OutTokens.push_back(MBLSP::SemanticToken(MBLSP::TokenType::Function,
-                        h_Convert(ComponentToExamine.NamePosition),ComponentToExamine.FilterName.size()));
+                        h_Convert(ComponentToExamine.NamePosition),IdentifierLength(ComponentToExamine.FilterName)));
 
             if(ComponentToExamine.ArgumentList.Arguments.size() != 0)
             {
@@ -65,18 +65,24 @@ namespace MBSlippi
         if(PredicateToExamine.Data.IsType<GameInfoPredicate_Direct>())
         {
             auto const& DirectData = PredicateToExamine.Data.GetType<GameInfoPredicate_Direct>();
-            for(auto const& Attribute : DirectData.Attribute)
+            for(auto const& Attribute : PredicateToExamine.Attribute.Parts)
             {
-                OutTokens.push_back(MBLSP::SemanticToken(MBLSP::TokenType::Property,h_Convert(Attribute.NamePosition),Attribute.Name.size()));
+                OutTokens.push_back(MBLSP::SemanticToken(MBLSP::TokenType::Property,h_Convert(Attribute.Position),Attribute.Value.size()));
             }
             OutTokens.push_back(MBLSP::SemanticToken(MBLSP::TokenType::String,h_Convert(DirectData.ValuePosition),DirectData.Value.size() + 2));
         }
-        else if(PredicateToExamine.Data.IsType<GameInfoPredicate_Variable>())
+        else if(PredicateToExamine.Data.IsEmpty())
         {
-            auto const& VariableData = PredicateToExamine.Data.GetType<GameInfoPredicate_Variable>();
-            OutTokens.push_back(MBLSP::SemanticToken(
-                        MBLSP::TokenType::Keyword,h_Convert(VariableData.VariablePosition),VariableData.VariableName.size()+1));
-               
+            for(int i = 0; i < PredicateToExamine.Attribute.Parts.size();i++)
+            {
+                auto const& Attribute = PredicateToExamine.Attribute.Parts[i];
+                MBLSP::TokenType NewTokenType = MBLSP::TokenType::Property;
+                if(i + 1 < PredicateToExamine.Attribute.Parts.size())
+                {
+                    NewTokenType = MBLSP::TokenType::Namespace;
+                }
+                OutTokens.push_back(MBLSP::SemanticToken(MBLSP::TokenType::Property,h_Convert(Attribute.Position),Attribute.Value.size()));
+            }
         }
         for(auto const& SubComponent : PredicateToExamine.ExtraTerms)
         {

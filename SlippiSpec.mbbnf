@@ -69,6 +69,10 @@ struct VariableDeclaration_PlayerSelection : VariableDeclaration
     tokenPos GamePosition;
     GameInfoPredicate Predicate;
 }
+struct Identifier
+{
+    List<Token> Parts;
+}
 
 struct FilterList
 {
@@ -89,8 +93,23 @@ struct Operator
 {
     string Op;
 }
+
+
+struct Token
+{
+    tokenPos Position;
+    string Value;
+}
+
+
+struct UsingDirective
+{
+    List<Token> GameSets;
+}
+
 struct GameSelection
 {
+    UsingDirective  Using;
     PlayerAssignment Assignment;
     tokenPos SelectPosition;
     GameInfoPredicate GameCondition;
@@ -112,14 +131,8 @@ struct GameInfoPredicate_Data
     
 }
 
-struct GameInfoPredicate_Variable : GameInfoPredicate_Data
-{
-    tokenPos VariablePosition;
-    string VariableName;
-}
 struct GameInfoPredicate_Direct : GameInfoPredicate_Data
 {
-    List<AttributeComponent> Attribute;
     tokenPos ValuePosition;
     string Value;
     string Comparison;
@@ -130,6 +143,7 @@ struct GameInfoPredicate_Direct : GameInfoPredicate_Data
 
 struct GameInfoPredicate
 {
+    Identifier Attribute;
     GameInfoPredicate_Data Data;
     string Operator;
     bool Negated = false;
@@ -195,7 +209,7 @@ struct Filter_Component_Function : Filter_Component_Data
 struct Filter_Component
 {
     tokenPos NamePosition;
-    string FilterName; 
+    Identifier FilterName; 
     bool Negated = false;
     Filter_ArgList ArgumentList;
     string Operator;
@@ -227,6 +241,19 @@ struct Result_Tabulate : Result
 {
         
 }
+
+struct  ImportBinding
+{
+    tokenPos AsPosition;
+    string ImportName;
+}
+struct Import : Statement
+{
+    tokenPos ImportPosition;
+    List<Token> ImportPath;
+    ImportBinding Binding;
+}
+
 struct Selection : Statement
 {
     GameSelection Games;
@@ -274,7 +301,7 @@ def Filter_Term=Filter_Component;
 
 
 Filter_Component_Or = Operator=pipe this=Filter_Term;
-Filter_Component_Base = NamePosition=TOKEN.Position FilterName=idf ArgumentList.Arguments=Filter_ArgList.Args?;
+Filter_Component_Base = NamePosition=TOKEN.Position FilterName=Identifier ArgumentList.Arguments=Filter_ArgList.Args?;
 
 Filter_Term =   lpar this=Filter_Component rpar |
                 this=Filter_Component_Base |
@@ -293,34 +320,24 @@ Filter= FilterPosition = TOKEN.Position FILTER Component=Filter_Component;
 
 def GameInfoPredicate_Or=GameInfoPredicate;
 def GameInfoPredicate_And=GameInfoPredicate;
-def GameInfoPredicate_OperatorList=GameInfoPredicate_OperatorList;
 def GameInfoPredicate_Direct=GameInfoPredicate_Direct;
-def GameInfoPredicate_Variable=GameInfoPredicate_Variable;
-def GameInfoPredicate_Data=GameInfoPredicate_Data;
-
-def Attribute_Extension = AttributeComponent;
-def Attribute_Base = AttributeComponent;
-def Attribute_List = AttributeList;
-Attribute_Base = NamePosition = TOKEN.Position Name=idf;
-Attribute_Extension = dot NamePosition = TOKEN.Position Name=idf;
-Attribute_List = Attributes=Attribute_Base Attributes=Attribute_Extension*;
-
-GameInfoPredicate_Or = Operator=OR this=GameInfoPredicate;
+GameInfoPredicate_Or =  Operator=OR this=GameInfoPredicateOr;
 GameInfoPredicate_And = Operator=AND this=GameInfoPredicate;
-GameInfoPredicate_OperatorList= Terms=GameInfoPredicate_Or+ | Terms=GameInfoPredicate_And+;
+
+GameInfoPredicate_Direct =  Comparison=Comparator.Op ValuePosition = TOKEN.Position Value=string;
+GameInfoPredicate_Base = Attribute=Identifier Data=GameInfoPredicate_Direct?;
 
 
-GameInfoPredicate_Variable = VariablePosition = TOKEN.Position VariableName=idf;
-GameInfoPredicate_Direct = Attribute=Attribute_List.Attributes Comparison=Comparator.Op ValuePosition = TOKEN.Position Value=string;
-GameInfoPredicate_Data = this=GameInfoPredicate_Variable | this=GameInfoPredicate_Direct;
+def GameInfoPredicateOr = GameInfoPredicate;
+GameInfoPredicateOr = {ReturnValue.Operator="||";} ExtraTerms=GameInfoPredicate_Term ExtraTerms=GameInfoPredicate_Or*;
 
-GameInfoPredicate_Base = Data=GameInfoPredicate_Data;
+def GameInfoPredicate_Term=GameInfoPredicate;
+GameInfoPredicate_Term = 
+    lpar this=GameInfoPredicate rpar |
+    bang this=GameInfoPredicate_Term {ReturnValue.Negated=true;} | 
+    this=GameInfoPredicate_Base;
 
-
-GameInfoPredicate = 
-    lpar ExtraTerms=GameInfoPredicate rpar ExtraTerms=GameInfoPredicate_OperatorList.Terms? |
-    this=GameInfoPredicate_Base ExtraTerms=GameInfoPredicate_OperatorList.Terms? |
-    bang this=GameInfoPredicate {ReturnValue.Negated=true;};
+GameInfoPredicate = {ReturnValue.Operator="&&";} ExtraTerms=GameInfoPredicateOr ExtraTerms=GameInfoPredicate_And*;
 
 
 
@@ -350,5 +367,12 @@ VariableDeclaration = this=VariableDeclaration_Filter | this=VariableDeclaration
     | this=VariableDeclaration_PlayerSelection;
 
 Module = Statements=Statement*;
+
+def Identifier=Identifier;
+def IdentifierPart = Token;
+def IdentifierPart_Rest = Token;
+IdentifierPart = Position=TOKEN.Position Value=idf;
+IdentifierPart_Rest = dot this=IdentifierPart;
+Identifier = Parts=IdentifierPart Parts=IdentifierPart_Rest*;
 
 Statement = this=VariableDeclaration | this=Selection;
