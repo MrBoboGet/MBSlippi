@@ -179,10 +179,10 @@ namespace MBSlippi
             ReturnValue.Tokens = p_ExtractTokens(ReturnValue.ParsedModule);
             ReturnValue.SemanticTokens = MBLSP::CalculateSemanticTokens(ReturnValue.Tokens);
             SpecEvaluator Evaluator;
-            Evaluator.VerifyModule(ReturnValue.ParsedModule,ReturnValue.Diagnostics);
+            MQL_Module TempModule;
+            Evaluator.VerifyModule(TempModule,ReturnValue.ParsedModule,ReturnValue.Diagnostics);
             if(!m_Tokenizer.IsEOF(m_Tokenizer.Peek()))
             {
-
                 ReturnValue.Diagnostics.push_back(MBLSP::Diagnostic());
                 ReturnValue.Diagnostics.back().range.start.line = m_Tokenizer.Peek().Position.Line;
                 ReturnValue.Diagnostics.back().range.start.character = m_Tokenizer.Peek().Position.ByteOffset;

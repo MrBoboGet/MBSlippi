@@ -93,14 +93,6 @@ class Result : public MBCC::PolyBase<Result_Base>
     using Base::Base;
     
 };
-class ImportBinding :  public MBCC::AST_Base
-{
-    public:
-    MBCC::TokenPosition AsPosition;
-    std::string ImportName;
-    std::unique_ptr<AST_Base> Copy() const override{return(MBCC::CopyAST(*this));}
-    
-};
 class VariableDeclaration_Base : public Statement_Base
 {
     public:
@@ -230,12 +222,11 @@ class Result_Tabulate : public Result_Base
     std::unique_ptr<AST_Base> Copy() const override{return(MBCC::CopyAST(*this));}
     
 };
-class Import : public Statement_Base
+class ImportBinding :  public MBCC::AST_Base
 {
     public:
-    MBCC::TokenPosition ImportPosition;
-    std::vector<Token> ImportPath;
-    ImportBinding Binding;
+    MBCC::TokenPosition AsPosition;
+    Token ImportName;
     std::unique_ptr<AST_Base> Copy() const override{return(MBCC::CopyAST(*this));}
     
 };
@@ -259,6 +250,15 @@ class Filter_Component :  public MBCC::AST_Base
     Filter_ArgList ArgumentList;
     std::string Operator;
     std::vector<Filter_Component> ExtraTerms;
+    std::unique_ptr<AST_Base> Copy() const override{return(MBCC::CopyAST(*this));}
+    
+};
+class Import : public Statement_Base
+{
+    public:
+    MBCC::TokenPosition ImportPosition;
+    Identifier ImportPath;
+    ImportBinding Binding;
     std::unique_ptr<AST_Base> Copy() const override{return(MBCC::CopyAST(*this));}
     
 };
@@ -540,11 +540,16 @@ Token ParseIdentifierPart_Rest(MBCC::Tokenizer& Tokenizer);
 Token ParseIdentifierPart_Rest_0(MBCC::Tokenizer& Tokenizer);
 Identifier ParseIdentifier(MBCC::Tokenizer& Tokenizer);
 Identifier ParseIdentifier_0(MBCC::Tokenizer& Tokenizer);
+ImportBinding ParseImportBinding(MBCC::Tokenizer& Tokenizer);
+ImportBinding ParseImportBinding_0(MBCC::Tokenizer& Tokenizer);
+Import ParseImport(MBCC::Tokenizer& Tokenizer);
+Import ParseImport_0(MBCC::Tokenizer& Tokenizer);
 Statement ParseStatement(MBCC::Tokenizer& Tokenizer);
 Statement ParseStatement_0(MBCC::Tokenizer& Tokenizer);
 Statement ParseStatement_1(MBCC::Tokenizer& Tokenizer);
+Statement ParseStatement_2(MBCC::Tokenizer& Tokenizer);
 inline MBCC::Tokenizer GetTokenizer()
 {
-    MBCC::Tokenizer ReturnValue("((( |\\t|\\n|\\r)*)|(#.*\\n))*",{"\\(","\\)","\\{","\\}","\\[","\\]","[[:digit:]]+","$\"((\\\\.|[^\"\\\\])*)\"","true|false","WITH","SELECT","RECORD","Games","GamePredicate","PlayerSelection","Filter","PRINT","$\\$([[:alnum:]_]+)","[[:alpha:]_]+[[:alnum:]_]*",";","<=","<","!",">=",">","!=",":",",","=","\\.","\\|\\|","\\|","&&","&","\\?",});
+    MBCC::Tokenizer ReturnValue("((( |\\t|\\n|\\r)*)|(#.*\\n))*",{"\\(","\\)","\\{","\\}","\\[","\\]","[[:digit:]]+","$\"((\\\\.|[^\"\\\\])*)\"","true|false","WITH","IMPORT","AS","SELECT","RECORD","Games","GamePredicate","PlayerSelection","Filter","PRINT","$\\$([[:alnum:]_]+)","[[:alpha:]_]+[[:alnum:]_]*",";","<=","<","!",">=",">","!=",":",",","=","\\.","\\|\\|","\\|","&&","&","\\?",});
     return(ReturnValue);
 }

@@ -53,7 +53,7 @@ namespace MBSlippi
                 std::vector<MBLSP::Diagnostic> Errors;
                 {
                     std::lock_guard<std::mutex> EvalLock(m_EvaluatorMutex);
-                    m_Evaluator->EvaluateStatement(StatementToExecute,Errors);
+                    //m_Evaluator->EvaluateStatement(StatementToExecute,Errors);
                 }
                 MBParsing::JSONObject Result(MBParsing::JSONObjectType::Aggregate);
                 Result["method"] = "execute/result";
@@ -114,7 +114,7 @@ namespace MBSlippi
                     std::vector<MBLSP::Diagnostic> Errors;
                     {
                         std::lock_guard<std::mutex> Lock(m_EvaluatorMutex);
-                        m_Evaluator->VerifyStatement(StatementsToExecute,Errors);
+                        //m_Evaluator->VerifyStatement(StatementsToExecute,Errors);
                     }
                     if(Errors.size() > 0)
                     {
@@ -601,25 +601,17 @@ namespace MBSlippi
         std::string SlippiScriptToExecute = Input.TopCommandArguments[0];
         Module ModuleToEvaluate;
         SpecEvaluator Evaluator;
-        auto Tokenizer = GetTokenizer();
         try
         {
             Evaluator.SetDBAdapter(this);
             Evaluator.SetRecorder(this);
-            Tokenizer.SetText(MBUtility::ReadWholeFile(SlippiScriptToExecute));
-            ModuleToEvaluate = ParseModule(Tokenizer);
-            std::vector<MBLSP::Diagnostic> Diagnostics;
             //DEBUG
-            std::vector<ServerInitilizationData> Servers;
-            //Servers.emplace_back();
-            //Servers.back().ExecutableName = "sbcl";
-            //Servers.back().ExecutableArguments = {"--noinform","--core","TestServerSBCL.mem"};
-            //Evaluator.InitializeServers(Servers);
-            Evaluator.EvaluateModule(ModuleToEvaluate,Diagnostics);
-            if(Diagnostics.size() > 0)
+            ModuleID ID = Evaluator.LoadModule(SlippiScriptToExecute);
+            MQL_Module& AssociatedModule = Evaluator.GetModule(ID);
+            if(AssociatedModule.LoadErrors.size() > 0)
             {
                 m_Terminal.PrintLine("Semantic error evaluating SlippiSpec:");
-                for(auto const& Diagnostic : Diagnostics)
+                for(auto const& Diagnostic : AssociatedModule.LoadErrors)
                 {
                     m_Terminal.PrintLine(Diagnostic.message);
                 }   

@@ -3,6 +3,7 @@
 #include <MBLSP/MBLSP.h>
 #include "MBMeleeID.h"
 #include <MBSystem/BiDirectionalSubProcess.h>
+#include <MBSystem/MBSystem.h>
 namespace MBSlippi
 {
     inline std::string IdentifierToString(Identifier const& Idf)
@@ -161,75 +162,49 @@ namespace MBSlippi
     public:
         std::variant<MQL_LazyGameList,MQL_Variable_GameInfoPredicate,Filter_Component>  Data;
     };
+    class MQL_Module;
     class MQL_Scope
     {
-        MQL_Scope* m_ParentScope = nullptr;
+        std::vector<std::shared_ptr<MQL_Module>> m_OverlayedModules;
+        std::map<std::string,std::shared_ptr<MQL_Module>> m_BoundModules;
+
         std::unordered_map<std::string,MQL_Variable> m_Variables;
 
-        MQL_Variable& p_GetVariable(std::string const& VariableName)
-        {
-            auto It = m_Variables.find(VariableName);
-            if(It == m_Variables.end())
-            {
-                if(m_ParentScope != nullptr)
-                {
-                    return(m_ParentScope->p_GetVariable(VariableName));
-                }
-                else
-                {
-                    throw std::runtime_error(VariableName + " doesn't exist in current scope");
-                }
-            }
-            return(It->second);
-        }
-        bool p_HasVariable(std::string const& VariableName)
-        {
-            bool ReturnValue = m_Variables.find(VariableName) != m_Variables.end();
-            if(!ReturnValue && m_ParentScope != nullptr)
-            {
-                ReturnValue = m_ParentScope->p_HasVariable(VariableName);
-            }
-            return(ReturnValue);
-        }
+        MQL_Variable* p_GetVariable(std::string const& VariableName);
+        MQL_Variable* p_GetVariable(Identifier const& Idf,int Offset);
+        bool p_HasVariable(std::string const& VariableName);
+        bool p_HasVariable(Identifier const& idf,int Offset);
     public:
-        void SetParentScope(MQL_Scope* Parent)
-        {
-            m_ParentScope = Parent;
-        }
+        void OverlayScope(std::shared_ptr<MQL_Module> ScopeToOverlay);
+        void BindScope(std::string ScopeName,std::shared_ptr<MQL_Module> ScopeToOverlay);
         //doesn't verify that the variable doesn't already exist
-        void AddVariable(std::string const& Name,MQL_Variable Value)
-        {
-            m_Variables[Name] = std::move(Value);
-        }
-        MQL_Variable& GetVariable(Identifier const& Idf)
-        {
-            if(Idf.Parts.size() == 0)
-            {
-                throw std::runtime_error("Cannot find empty variable in scope");   
-            }
-            return(p_GetVariable(Idf.Parts[0].Value));
-        }
-        bool HasVariable(std::string const& Idf)
-        {
-            return(p_HasVariable(Idf));
-        }
-        bool HasVariable(Identifier const& Idf)
-        {
-            if(Idf.Parts.size() == 0)
-            {
-                throw std::runtime_error("Cannot find empty variable in scope");   
-            }
-            return(p_HasVariable(Idf.Parts[0].Value));
-        }
+        void AddVariable(std::string const& Name,MQL_Variable Value);
+        MQL_Variable& GetVariable(Identifier const& Idf);
+        bool HasVariable(std::string const& Idf);
+        bool HasBinding(std::string const& Idf);
+        bool HasVariable(Identifier const& Idf);
     };
     struct MQL_Context
     {
         MQL_Scope GlobalScope;
     };
+    typedef int  ModuleID;
     //TODO fix module functionality
     struct MQL_Module
     {
+        ModuleID ID = -1;
+        std::filesystem::path ModulePath;
+        //std::vector<std::filesystem::path> 
+        MQL_Scope ModuleScope;
+        Module Contents;
+        std::vector<MBLSP::Diagnostic> LoadErrors;
 
+        void Reset()
+        {
+            ModuleScope = MQL_Scope();
+            Contents = Module();
+            LoadErrors.clear();
+        }
     };
     class SpecEvaluator
     {
@@ -273,53 +248,60 @@ namespace MBSlippi
         std::vector<SpecServer> m_SpecServers;
         std::unordered_map<std::string,int> m_FilterToServer;
 
-
+        ModuleID m_CurrentModuleID = 1;
+      
+        MBCC::Tokenizer m_Tokenizer = GetTokenizer();
         
-
+        std::unordered_map<ModuleID,std::shared_ptr<MQL_Module>> m_LoadedModules;
+        std::unordered_map<std::string,ModuleID> m_LoadedModulePaths;
+        std::vector<std::filesystem::path> m_ExtraModuleSearchPaths = {MBSystem::GetUserHomeDirectory()/".mbslippi/Libs"};
         
-        MQL_Context m_TopContext;
- 
         MeleeGameDBAdapter* m_DBAdapter = nullptr;
         MeleeGameRecorder* m_Recorder = nullptr;
 
         void p_VerifyAttribute(std::vector<std::string> const& Attribute,bool IsPlayerAssignment,std::vector<MBLSP::Diagnostic>& OutDiagnostics);
-        void p_VerifyFilterComponent(Filter_Component const& FilterToVerify,std::vector<MBLSP::Diagnostic>& OutDiagnostics);
-        void p_VerifyFilter(Filter const& FilterToVerify,std::vector<MBLSP::Diagnostic>& OutDiagnostics);
-
-        void p_VerifyGameInfoPredicate_Direct(Identifier const& Attribute,GameInfoPredicate_Direct& PredicateToVerify,
+        void p_VerifyFilterComponent(MQL_Module& AssociatedModule,Filter_Component const& FilterToVerify,std::vector<MBLSP::Diagnostic>& OutDiagnostics);
+        void p_VerifyFilter(MQL_Module& AssociatedModule,Filter const& FilterToVerify,std::vector<MBLSP::Diagnostic>& OutDiagnostics);
+        void p_VerifyGameInfoPredicate_Direct(MQL_Module& AssociatedModule,Identifier const& Attribute,GameInfoPredicate_Direct& PredicateToVerify,
                 bool IsPlayerAssignment,std::vector<MBLSP::Diagnostic>& OutDiagnostics);
-        void p_VerifyGameInfoPredicate(GameInfoPredicate& PredicateToVerify,bool IsPlayerAssignment,std::vector<MBLSP::Diagnostic>& OutDiagnostics);
-        void p_VerifyPlayerAssignment(PlayerAssignment& AssignmentToVerify,std::vector<MBLSP::Diagnostic>& OutDiagnostics);
-        void p_VerifyGameSelection(GameSelection& SelectionToVerify,std::vector<MBLSP::Diagnostic>& OutDiagnostics);
+        void p_VerifyGameInfoPredicate(MQL_Module& AssociatedModule,GameInfoPredicate& PredicateToVerify,bool IsPlayerAssignment,std::vector<MBLSP::Diagnostic>& OutDiagnostics);
+        void p_VerifyPlayerAssignment(MQL_Module& AssociatedModule,PlayerAssignment& AssignmentToVerify,std::vector<MBLSP::Diagnostic>& OutDiagnostics);
+        void p_VerifyGameSelection(MQL_Module& AssociatedModule,GameSelection& SelectionToVerify,std::vector<MBLSP::Diagnostic>& OutDiagnostics);
 
-        bool p_SatisfiesPlayerAssignment(SlippiGamePlayerInfo const& PlayerInfo,GameInfoPredicate const& PredicateToEvaluate);
-        bool p_EvaluateGameSelection(SlippiGameInfo const& GameInfo,char InAssignment[4],GameInfoPredicate const& PredicateToEvaluate);
-        //Retunrs wheter or not any player satisfies the condition
-        //bool p_IsPlayersSwapped(SlippiGameInfo const& GameInfo, GameInfoPredicate const& PredicateToEvaluate,bool& IsSwapped);
-        bool p_GetPlayerAssignments(SlippiGameInfo const& GameInfo,PlayerAssignment const& AssignemntToApply,char OutAssignemnts[4]);
+        bool p_SatisfiesPlayerAssignment(MQL_Module& AssociatedModule,SlippiGamePlayerInfo const& PlayerInfo,GameInfoPredicate const& PredicateToEvaluate);
+        bool p_EvaluateGameSelection(MQL_Module& AssociatedModule,SlippiGameInfo const& GameInfo,char InAssignment[4],GameInfoPredicate const& PredicateToEvaluate);
+        bool p_GetPlayerAssignments(MQL_Module& AssociatedModule,SlippiGameInfo const& GameInfo,PlayerAssignment const& AssignemntToApply,char OutAssignemnts[4]);
         void p_ApplyAssignment(MeleeGame& GameToModify,char InAssignments[4]);
 
-        std::vector<MeleeGame> p_RetrieveSpecGames(GameSelection const& GameSelection);
-        std::vector<GameIntervall> p_EvaluateGameIntervalls(Filter_Component const& FilterToUse,
+        std::vector<MeleeGame> p_RetrieveSpecGames(MQL_Module& AssociatedModule,GameSelection const& GameSelection);
+        std::vector<GameIntervall> p_EvaluateGameIntervalls(MQL_Module& AssociatedModule,Filter_Component const& FilterToUse,
                 std::vector<GameIntervall> const& InputIntervalls,MeleeGame const& GameToFilter);
 
         void p_InitializeServers();
+
+        bool p_EvaluateImport(MQL_Module& AssociatedModule,Import& ImportStatement,std::vector<MBLSP::Diagnostic>& OutDiagnostics);
     public:
         void SetDBAdapter(MeleeGameDBAdapter* NewAdapter);
         void SetRecorder(MeleeGameRecorder* NewRecorder);
         void InitializeServers(std::vector<ServerInitilizationData> const& ServersToInitialize);
 
-        bool VerifyVariableDeclaration(Statement& DeclarationToVerify,std::vector<MBLSP::Diagnostic>& OutDiagnostics,bool UpdateState=false);
-        bool VerifyStatement(Statement& SpecToVerify,std::vector<MBLSP::Diagnostic>& OutDiagnostics);
-        bool VerifySelection(Selection& SpecToVerify,std::vector<MBLSP::Diagnostic>& OutDiagnostics);
+        //Top function for external uses, handles parsing and makes sure that paths etc are correct
+        ModuleID LoadModule(std::filesystem::path const& ModulePath);
+        ModuleID LoadEmptyModule();
+        MQL_Module& GetModule(ModuleID ID);
+
+        //
+        bool VerifyVariableDeclaration(MQL_Module& AssociatedModule,Statement& DeclarationToVerify,std::vector<MBLSP::Diagnostic>& OutDiagnostics,bool UpdateState=false);
+        bool VerifyStatement(MQL_Module& AssociatedModule,Statement& SpecToVerify,std::vector<MBLSP::Diagnostic>& OutDiagnostics);
+        bool VerifySelection(MQL_Module& AssociatedModule,Selection& SpecToVerify,std::vector<MBLSP::Diagnostic>& OutDiagnostics);
+
         //special semantics, in that it modifies the scope, so that modules can be verified correct
         //without needing to actually execute the actions, relatively hacky
-        bool VerifyModule(Module& SpecToVerify,std::vector<MBLSP::Diagnostic>& OutDiagnostics);
-
-
-        void EvaluateStatement(Statement& SpecToEvaluate,std::vector<MBLSP::Diagnostic>& OutDiagnostics);
-        void EvaluateSelection(Selection& SpecToEvaluate,std::vector<MBLSP::Diagnostic>& OutDiagnostics);
-        void EvaluateVariableDeclaration(Statement& SpecToEvaluate,std::vector<MBLSP::Diagnostic>& OutDiagnostics);
-        void EvaluateModule(Module& SpecToEvaluate,std::vector<MBLSP::Diagnostic>& OutDiagnostics);
+        bool VerifyModule(MQL_Module& AssociatedModule,Module& SpecToVerify,std::vector<MBLSP::Diagnostic>& OutDiagnostics);
+        void EvaluateStatement(MQL_Module& AssociatedModule,Statement& SpecToEvaluate,std::vector<MBLSP::Diagnostic>& OutDiagnostics);
+        void EvaluateImport(MQL_Module& AssociatedModule,Import& ImportToEvaluate,std::vector<MBLSP::Diagnostic>& OutDiagnostics);
+        void EvaluateSelection(MQL_Module& AssociatedModule,Selection& SpecToEvaluate,std::vector<MBLSP::Diagnostic>& OutDiagnostics);
+        void EvaluateVariableDeclaration(MQL_Module& AssociatedModule,Statement& SpecToEvaluate,std::vector<MBLSP::Diagnostic>& OutDiagnostics);
+        void EvaluateModule(MQL_Module& AssociatedModule,Module& SpecToEvaluate,std::vector<MBLSP::Diagnostic>& OutDiagnostics);
     };
 }

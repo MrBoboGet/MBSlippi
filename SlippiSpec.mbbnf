@@ -11,6 +11,8 @@ term bool = "true|false";
 
 
 term WITH = "WITH";
+term IMPORT = "IMPORT";
+term AS = "AS";
 term SELECT = "SELECT";
 term RECORD = "RECORD";
 term GAMES = "Games";
@@ -245,12 +247,12 @@ struct Result_Tabulate : Result
 struct  ImportBinding
 {
     tokenPos AsPosition;
-    string ImportName;
+    Token ImportName;
 }
 struct Import : Statement
 {
     tokenPos ImportPosition;
-    List<Token> ImportPath;
+    Identifier ImportPath;
     ImportBinding Binding;
 }
 
@@ -375,4 +377,9 @@ IdentifierPart = Position=TOKEN.Position Value=idf;
 IdentifierPart_Rest = dot this=IdentifierPart;
 Identifier = Parts=IdentifierPart Parts=IdentifierPart_Rest*;
 
-Statement = this=VariableDeclaration | this=Selection;
+def Import=Import;
+def ImportBinding=ImportBinding;
+ImportBinding = AsPosition = TOKEN.Position AS ImportName=IdentifierPart;
+Import =  ImportPosition=TOKEN.Position IMPORT  ImportPath=Identifier Binding=ImportBinding? semi;
+
+Statement = this=VariableDeclaration | this=Selection | this=Import;

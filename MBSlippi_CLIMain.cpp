@@ -22,13 +22,14 @@ int main(int argc, const char** argv)
     //}
     //return 0;
     MBSlippi::MBSlippiCLIHandler HandlerToUse;
-	//std::filesystem::current_path(std::filesystem::current_path().parent_path().parent_path());
 	//MBSlippi::RunTests();
 	
 	//const char* NewArgv[]= {"MBSlippi", "update-index" };
 	//argc = sizeof(NewArgv) / sizeof(const char*);
 
-	//const char* NewArgv[] = { "MBSlippi", "execute","TestEqual.slpspec"};
+	//std::filesystem::current_path("C:\\Users\\emanu\\Desktop\\Program\\C++\\MBMelee\\Analysis\\Sharp\\2023-05-09");
+	//std::filesystem::current_path("../../");
+	//const char* NewArgv[] = { "MBSlippi", "execute","ModuleTest.slpspec"};
 	//argc = sizeof(NewArgv) / sizeof(const char*);
 	//argv = NewArgv;
     return(HandlerToUse.Run(argc, argv));
