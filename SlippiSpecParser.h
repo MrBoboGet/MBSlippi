@@ -18,6 +18,13 @@ class Statement : public MBCC::PolyBase<Statement_Base>
     using Base::Base;
     
 };
+class Operator :  public MBCC::AST_Base
+{
+    public:
+    std::string Op;
+    std::unique_ptr<AST_Base> Copy() const override{return(MBCC::CopyAST(*this));}
+    
+};
 class Filter_Arg_Base :  public MBCC::AST_Base
 {
     public:
@@ -28,6 +35,53 @@ class Filter_Arg : public MBCC::PolyBase<Filter_Arg_Base>
 {
     public:
     typedef MBCC::PolyBase<Filter_Arg_Base> Base;
+    using Base::Base;
+    
+};
+class Result_Base :  public MBCC::AST_Base
+{
+    public:
+    std::unique_ptr<AST_Base> Copy() const override{return(MBCC::CopyAST(*this));}
+    
+};
+class Result : public MBCC::PolyBase<Result_Base>
+{
+    public:
+    typedef MBCC::PolyBase<Result_Base> Base;
+    using Base::Base;
+    
+};
+class Filter_Component_Data_Base :  public MBCC::AST_Base
+{
+    public:
+    std::unique_ptr<AST_Base> Copy() const override{return(MBCC::CopyAST(*this));}
+    
+};
+class Filter_Component_Data : public MBCC::PolyBase<Filter_Component_Data_Base>
+{
+    public:
+    typedef MBCC::PolyBase<Filter_Component_Data_Base> Base;
+    using Base::Base;
+    
+};
+class Token :  public MBCC::AST_Base
+{
+    public:
+    MBCC::TokenPosition Position;
+    std::string Value;
+    std::unique_ptr<AST_Base> Copy() const override{return(MBCC::CopyAST(*this));}
+    
+};
+class Literal_Base :  public MBCC::AST_Base
+{
+    public:
+    std::unique_ptr<AST_Base> Copy() const override{return(MBCC::CopyAST(*this));}
+    
+};
+class Literal : public MBCC::PolyBase<Literal_Base>
+{
+    public:
+    typedef MBCC::PolyBase<Literal_Base> Base;
     using Base::Base;
     
 };
@@ -52,47 +106,6 @@ class GameInfoPredicate_Data : public MBCC::PolyBase<GameInfoPredicate_Data_Base
     using Base::Base;
     
 };
-class Operator :  public MBCC::AST_Base
-{
-    public:
-    std::string Op;
-    std::unique_ptr<AST_Base> Copy() const override{return(MBCC::CopyAST(*this));}
-    
-};
-class Token :  public MBCC::AST_Base
-{
-    public:
-    MBCC::TokenPosition Position;
-    std::string Value;
-    std::unique_ptr<AST_Base> Copy() const override{return(MBCC::CopyAST(*this));}
-    
-};
-class Filter_Component_Data_Base :  public MBCC::AST_Base
-{
-    public:
-    std::unique_ptr<AST_Base> Copy() const override{return(MBCC::CopyAST(*this));}
-    
-};
-class Filter_Component_Data : public MBCC::PolyBase<Filter_Component_Data_Base>
-{
-    public:
-    typedef MBCC::PolyBase<Filter_Component_Data_Base> Base;
-    using Base::Base;
-    
-};
-class Result_Base :  public MBCC::AST_Base
-{
-    public:
-    std::unique_ptr<AST_Base> Copy() const override{return(MBCC::CopyAST(*this));}
-    
-};
-class Result : public MBCC::PolyBase<Result_Base>
-{
-    public:
-    typedef MBCC::PolyBase<Result_Base> Base;
-    using Base::Base;
-    
-};
 class VariableDeclaration_Base : public Statement_Base
 {
     public:
@@ -110,71 +123,6 @@ class VariableDeclaration : public MBCC::PolyBase<VariableDeclaration_Base>
     {
         return(Statement(std::move(m_Data),m_TypeID));
     }
-    
-};
-class Identifier :  public MBCC::AST_Base
-{
-    public:
-    std::vector<Token> Parts;
-    std::unique_ptr<AST_Base> Copy() const override{return(MBCC::CopyAST(*this));}
-    
-};
-class GameInfoPredicate_Direct : public GameInfoPredicate_Data_Base
-{
-    public:
-    MBCC::TokenPosition ValuePosition;
-    std::string Value;
-    std::string Comparison;
-    uint64_t DateLowerBound;
-    uint64_t DateHigherBound;
-    int ComponentCount =  0;
-    std::unique_ptr<AST_Base> Copy() const override{return(MBCC::CopyAST(*this));}
-    
-};
-class Module :  public MBCC::AST_Base
-{
-    public:
-    std::vector<Statement> Statements;
-    std::unique_ptr<AST_Base> Copy() const override{return(MBCC::CopyAST(*this));}
-    
-};
-class UsingDirective :  public MBCC::AST_Base
-{
-    public:
-    std::vector<Token> GameSets;
-    std::unique_ptr<AST_Base> Copy() const override{return(MBCC::CopyAST(*this));}
-    
-};
-class Filter_ArgList :  public MBCC::AST_Base
-{
-    public:
-    std::vector<Filter_Arg> Arguments;
-    std::unique_ptr<AST_Base> Copy() const override{return(MBCC::CopyAST(*this));}
-    
-};
-class Filter_Arg_Positional : public Filter_Arg_Base
-{
-    public:
-    MBCC::TokenPosition ValuePosition;
-    std::string Value;
-    std::unique_ptr<AST_Base> Copy() const override{return(MBCC::CopyAST(*this));}
-    
-};
-class Filter_Arg_Named : public Filter_Arg_Base
-{
-    public:
-    MBCC::TokenPosition NamePosition;
-    std::string Name;
-    MBCC::TokenPosition ValuePosition;
-    std::string Value;
-    std::unique_ptr<AST_Base> Copy() const override{return(MBCC::CopyAST(*this));}
-    
-};
-class ArgList :  public MBCC::AST_Base
-{
-    public:
-    std::vector<Filter_Arg> Args;
-    std::unique_ptr<AST_Base> Copy() const override{return(MBCC::CopyAST(*this));}
     
 };
 class AttributeList :  public MBCC::AST_Base
@@ -216,6 +164,27 @@ class Result_Print : public Result_Base
     std::unique_ptr<AST_Base> Copy() const override{return(MBCC::CopyAST(*this));}
     
 };
+class Module :  public MBCC::AST_Base
+{
+    public:
+    std::vector<Statement> Statements;
+    std::unique_ptr<AST_Base> Copy() const override{return(MBCC::CopyAST(*this));}
+    
+};
+class Identifier :  public MBCC::AST_Base
+{
+    public:
+    std::vector<Token> Parts;
+    std::unique_ptr<AST_Base> Copy() const override{return(MBCC::CopyAST(*this));}
+    
+};
+class UsingDirective :  public MBCC::AST_Base
+{
+    public:
+    std::vector<Token> GameSets;
+    std::unique_ptr<AST_Base> Copy() const override{return(MBCC::CopyAST(*this));}
+    
+};
 class Result_Tabulate : public Result_Base
 {
     public:
@@ -227,6 +196,64 @@ class ImportBinding :  public MBCC::AST_Base
     public:
     MBCC::TokenPosition AsPosition;
     Token ImportName;
+    std::unique_ptr<AST_Base> Copy() const override{return(MBCC::CopyAST(*this));}
+    
+};
+class Filter_ArgList :  public MBCC::AST_Base
+{
+    public:
+    std::vector<Filter_Arg> Arguments;
+    std::unique_ptr<AST_Base> Copy() const override{return(MBCC::CopyAST(*this));}
+    
+};
+class GameInfoPredicate_Direct : public GameInfoPredicate_Data_Base
+{
+    public:
+    MBCC::TokenPosition ValuePosition;
+    std::string Value;
+    std::string Comparison;
+    uint64_t DateLowerBound;
+    uint64_t DateHigherBound;
+    int ComponentCount =  0;
+    std::unique_ptr<AST_Base> Copy() const override{return(MBCC::CopyAST(*this));}
+    
+};
+class Literal_String : public Literal_Base
+{
+    public:
+    MBCC::TokenPosition ValuePosition;
+    std::string Value;
+    std::unique_ptr<AST_Base> Copy() const override{return(MBCC::CopyAST(*this));}
+    
+};
+class Literal_Symbol : public Literal_Base
+{
+    public:
+    MBCC::TokenPosition ValuePosition;
+    std::string Value;
+    std::unique_ptr<AST_Base> Copy() const override{return(MBCC::CopyAST(*this));}
+    
+};
+class Filter_Arg_Positional : public Filter_Arg_Base
+{
+    public:
+    Literal Argument;
+    std::unique_ptr<AST_Base> Copy() const override{return(MBCC::CopyAST(*this));}
+    
+};
+class Filter_Arg_Named : public Filter_Arg_Base
+{
+    public:
+    MBCC::TokenPosition NamePosition;
+    std::string Name;
+    Literal Argument;
+    std::unique_ptr<AST_Base> Copy() const override{return(MBCC::CopyAST(*this));}
+    
+};
+class ArgList :  public MBCC::AST_Base
+{
+    public:
+    std::vector<Filter_Arg> Args;
     std::unique_ptr<AST_Base> Copy() const override{return(MBCC::CopyAST(*this));}
     
 };
@@ -267,21 +294,7 @@ class VariableDeclaration_Filter : public VariableDeclaration_Base
     public:
     MBCC::TokenPosition FilterPosition;
     Filter_Component Component;
-    std::unique_ptr<AST_Base> Copy() const override{return(MBCC::CopyAST(*this));}
-    
-};
-class Filter_OperatorList :  public MBCC::AST_Base
-{
-    public:
-    std::vector<Filter_Component> Components;
-    std::unique_ptr<AST_Base> Copy() const override{return(MBCC::CopyAST(*this));}
-    
-};
-class Filter :  public MBCC::AST_Base
-{
-    public:
-    MBCC::TokenPosition FilterPosition;
-    Filter_Component Component;
+    Filter_ArgList Arguments;
     std::unique_ptr<AST_Base> Copy() const override{return(MBCC::CopyAST(*this));}
     
 };
@@ -316,10 +329,11 @@ class GameInfoPredicate_Conjunction :  public MBCC::AST_Base
     std::unique_ptr<AST_Base> Copy() const override{return(MBCC::CopyAST(*this));}
     
 };
-class GameInfoPredicate_OperatorList :  public MBCC::AST_Base
+class Filter :  public MBCC::AST_Base
 {
     public:
-    std::vector<GameInfoPredicate> Terms;
+    MBCC::TokenPosition FilterPosition;
+    Filter_Component Component;
     std::unique_ptr<AST_Base> Copy() const override{return(MBCC::CopyAST(*this));}
     
 };
@@ -330,6 +344,20 @@ class PlayerAssignment :  public MBCC::AST_Base
     MBCC::TokenPosition PlayerPosition;
     std::string AffectedPlayer;
     GameInfoPredicate PlayerCondition;
+    std::unique_ptr<AST_Base> Copy() const override{return(MBCC::CopyAST(*this));}
+    
+};
+class GameInfoPredicate_OperatorList :  public MBCC::AST_Base
+{
+    public:
+    std::vector<GameInfoPredicate> Terms;
+    std::unique_ptr<AST_Base> Copy() const override{return(MBCC::CopyAST(*this));}
+    
+};
+class Filter_OperatorList :  public MBCC::AST_Base
+{
+    public:
+    std::vector<Filter_Component> Components;
     std::unique_ptr<AST_Base> Copy() const override{return(MBCC::CopyAST(*this));}
     
 };
@@ -404,36 +432,42 @@ template<> inline int MBCC::GetTypeBegin<Filter_ArgList>(){return(22);}
 template<> inline int MBCC::GetTypeEnd<Filter_ArgList>(){return(23);}
 template<> inline int MBCC::GetTypeBegin<Filter_Arg_Base>(){return(23);}
 template<> inline int MBCC::GetTypeEnd<Filter_Arg_Base>(){return(26);}
+template<> inline int MBCC::GetTypeBegin<Literal_Base>(){return(26);}
+template<> inline int MBCC::GetTypeEnd<Literal_Base>(){return(29);}
+template<> inline int MBCC::GetTypeBegin<Literal_String>(){return(27);}
+template<> inline int MBCC::GetTypeEnd<Literal_String>(){return(28);}
+template<> inline int MBCC::GetTypeBegin<Literal_Symbol>(){return(28);}
+template<> inline int MBCC::GetTypeEnd<Literal_Symbol>(){return(29);}
 template<> inline int MBCC::GetTypeBegin<Filter_Arg_Positional>(){return(24);}
 template<> inline int MBCC::GetTypeEnd<Filter_Arg_Positional>(){return(25);}
 template<> inline int MBCC::GetTypeBegin<Filter_Arg_Named>(){return(25);}
 template<> inline int MBCC::GetTypeEnd<Filter_Arg_Named>(){return(26);}
-template<> inline int MBCC::GetTypeBegin<ArgList>(){return(26);}
-template<> inline int MBCC::GetTypeEnd<ArgList>(){return(27);}
-template<> inline int MBCC::GetTypeBegin<AttributeList>(){return(27);}
-template<> inline int MBCC::GetTypeEnd<AttributeList>(){return(28);}
-template<> inline int MBCC::GetTypeBegin<Filter_Component_Data_Base>(){return(28);}
-template<> inline int MBCC::GetTypeEnd<Filter_Component_Data_Base>(){return(31);}
-template<> inline int MBCC::GetTypeBegin<Filter_Component_Variable>(){return(29);}
-template<> inline int MBCC::GetTypeEnd<Filter_Component_Variable>(){return(30);}
-template<> inline int MBCC::GetTypeBegin<Filter_Component_Function>(){return(30);}
-template<> inline int MBCC::GetTypeEnd<Filter_Component_Function>(){return(31);}
-template<> inline int MBCC::GetTypeBegin<Filter_Component>(){return(31);}
-template<> inline int MBCC::GetTypeEnd<Filter_Component>(){return(32);}
-template<> inline int MBCC::GetTypeBegin<Filter_OperatorList>(){return(32);}
-template<> inline int MBCC::GetTypeEnd<Filter_OperatorList>(){return(33);}
-template<> inline int MBCC::GetTypeBegin<Filter>(){return(33);}
-template<> inline int MBCC::GetTypeEnd<Filter>(){return(34);}
-template<> inline int MBCC::GetTypeBegin<Result_Base>(){return(34);}
-template<> inline int MBCC::GetTypeEnd<Result_Base>(){return(38);}
-template<> inline int MBCC::GetTypeBegin<Result_Record>(){return(35);}
-template<> inline int MBCC::GetTypeEnd<Result_Record>(){return(36);}
-template<> inline int MBCC::GetTypeBegin<Result_Print>(){return(36);}
-template<> inline int MBCC::GetTypeEnd<Result_Print>(){return(37);}
-template<> inline int MBCC::GetTypeBegin<Result_Tabulate>(){return(37);}
-template<> inline int MBCC::GetTypeEnd<Result_Tabulate>(){return(38);}
-template<> inline int MBCC::GetTypeBegin<ImportBinding>(){return(38);}
-template<> inline int MBCC::GetTypeEnd<ImportBinding>(){return(39);}
+template<> inline int MBCC::GetTypeBegin<ArgList>(){return(29);}
+template<> inline int MBCC::GetTypeEnd<ArgList>(){return(30);}
+template<> inline int MBCC::GetTypeBegin<AttributeList>(){return(30);}
+template<> inline int MBCC::GetTypeEnd<AttributeList>(){return(31);}
+template<> inline int MBCC::GetTypeBegin<Filter_Component_Data_Base>(){return(31);}
+template<> inline int MBCC::GetTypeEnd<Filter_Component_Data_Base>(){return(34);}
+template<> inline int MBCC::GetTypeBegin<Filter_Component_Variable>(){return(32);}
+template<> inline int MBCC::GetTypeEnd<Filter_Component_Variable>(){return(33);}
+template<> inline int MBCC::GetTypeBegin<Filter_Component_Function>(){return(33);}
+template<> inline int MBCC::GetTypeEnd<Filter_Component_Function>(){return(34);}
+template<> inline int MBCC::GetTypeBegin<Filter_Component>(){return(34);}
+template<> inline int MBCC::GetTypeEnd<Filter_Component>(){return(35);}
+template<> inline int MBCC::GetTypeBegin<Filter_OperatorList>(){return(35);}
+template<> inline int MBCC::GetTypeEnd<Filter_OperatorList>(){return(36);}
+template<> inline int MBCC::GetTypeBegin<Filter>(){return(36);}
+template<> inline int MBCC::GetTypeEnd<Filter>(){return(37);}
+template<> inline int MBCC::GetTypeBegin<Result_Base>(){return(37);}
+template<> inline int MBCC::GetTypeEnd<Result_Base>(){return(41);}
+template<> inline int MBCC::GetTypeBegin<Result_Record>(){return(38);}
+template<> inline int MBCC::GetTypeEnd<Result_Record>(){return(39);}
+template<> inline int MBCC::GetTypeBegin<Result_Print>(){return(39);}
+template<> inline int MBCC::GetTypeEnd<Result_Print>(){return(40);}
+template<> inline int MBCC::GetTypeBegin<Result_Tabulate>(){return(40);}
+template<> inline int MBCC::GetTypeEnd<Result_Tabulate>(){return(41);}
+template<> inline int MBCC::GetTypeBegin<ImportBinding>(){return(41);}
+template<> inline int MBCC::GetTypeEnd<ImportBinding>(){return(42);}
 template<> inline int MBCC::GetTypeBegin<Import>(){return(6);}
 template<> inline int MBCC::GetTypeEnd<Import>(){return(7);}
 template<> inline int MBCC::GetTypeBegin<Selection>(){return(7);}
@@ -470,10 +504,17 @@ Filter_Arg_Named ParseFilter_Arg_Named(MBCC::Tokenizer& Tokenizer);
 Filter_Arg_Named ParseFilter_Arg_Named_0(MBCC::Tokenizer& Tokenizer);
 Filter_Arg_Positional ParseFilter_Arg_Positional(MBCC::Tokenizer& Tokenizer);
 Filter_Arg_Positional ParseFilter_Arg_Positional_0(MBCC::Tokenizer& Tokenizer);
-ArgList ParseFilter_ArgList_Arguments(MBCC::Tokenizer& Tokenizer);
-ArgList ParseFilter_ArgList_Arguments_0(MBCC::Tokenizer& Tokenizer);
-ArgList ParseFilter_ArgList(MBCC::Tokenizer& Tokenizer);
-ArgList ParseFilter_ArgList_0(MBCC::Tokenizer& Tokenizer);
+Filter_ArgList ParseFilter_ArgList_Arguments(MBCC::Tokenizer& Tokenizer);
+Filter_ArgList ParseFilter_ArgList_Arguments_0(MBCC::Tokenizer& Tokenizer);
+Filter_ArgList ParseFilter_ArgList(MBCC::Tokenizer& Tokenizer);
+Filter_ArgList ParseFilter_ArgList_0(MBCC::Tokenizer& Tokenizer);
+Literal ParseLiteral(MBCC::Tokenizer& Tokenizer);
+Literal ParseLiteral_0(MBCC::Tokenizer& Tokenizer);
+Literal ParseLiteral_1(MBCC::Tokenizer& Tokenizer);
+Literal_String ParseLiteral_String(MBCC::Tokenizer& Tokenizer);
+Literal_String ParseLiteral_String_0(MBCC::Tokenizer& Tokenizer);
+Literal_Symbol ParseLiteral_Symbol(MBCC::Tokenizer& Tokenizer);
+Literal_Symbol ParseLiteral_Symbol_0(MBCC::Tokenizer& Tokenizer);
 Filter_Component ParseFilter_Component_Or(MBCC::Tokenizer& Tokenizer);
 Filter_Component ParseFilter_Component_Or_0(MBCC::Tokenizer& Tokenizer);
 Filter_Component ParseFilter_Component_Base(MBCC::Tokenizer& Tokenizer);
@@ -540,6 +581,14 @@ Token ParseIdentifierPart_Rest(MBCC::Tokenizer& Tokenizer);
 Token ParseIdentifierPart_Rest_0(MBCC::Tokenizer& Tokenizer);
 Identifier ParseIdentifier(MBCC::Tokenizer& Tokenizer);
 Identifier ParseIdentifier_0(MBCC::Tokenizer& Tokenizer);
+Token ParseGameList_Part(MBCC::Tokenizer& Tokenizer);
+Token ParseGameList_Part_0(MBCC::Tokenizer& Tokenizer);
+Token ParseGameList_Rest(MBCC::Tokenizer& Tokenizer);
+Token ParseGameList_Rest_0(MBCC::Tokenizer& Tokenizer);
+UsingDirective ParseGameList(MBCC::Tokenizer& Tokenizer);
+UsingDirective ParseGameList_0(MBCC::Tokenizer& Tokenizer);
+UsingDirective ParseUsingDirective(MBCC::Tokenizer& Tokenizer);
+UsingDirective ParseUsingDirective_0(MBCC::Tokenizer& Tokenizer);
 ImportBinding ParseImportBinding(MBCC::Tokenizer& Tokenizer);
 ImportBinding ParseImportBinding_0(MBCC::Tokenizer& Tokenizer);
 Import ParseImport(MBCC::Tokenizer& Tokenizer);
@@ -550,6 +599,6 @@ Statement ParseStatement_1(MBCC::Tokenizer& Tokenizer);
 Statement ParseStatement_2(MBCC::Tokenizer& Tokenizer);
 inline MBCC::Tokenizer GetTokenizer()
 {
-    MBCC::Tokenizer ReturnValue("((( |\\t|\\n|\\r)*)|(#.*\\n))*",{"\\(","\\)","\\{","\\}","\\[","\\]","[[:digit:]]+","$\"((\\\\.|[^\"\\\\])*)\"","true|false","WITH","IMPORT","AS","SELECT","RECORD","Games","GamePredicate","PlayerSelection","Filter","PRINT","$\\$([[:alnum:]_]+)","[[:alpha:]_]+[[:alnum:]_]*",";","<=","<","!",">=",">","!=",":",",","=","\\.","\\|\\|","\\|","&&","&","\\?",});
+    MBCC::Tokenizer ReturnValue("((( |\\t|\\n|\\r)*)|(#.*\\n))*",{"\\(","\\)","\\{","\\}","\\[","\\]","[[:digit:]]+","$\"((\\\\.|[^\"\\\\])*)\"","true|false","WITH","IMPORT","USING","AS","SELECT","RECORD","Games","GamePredicate","PlayerSelection","Filter","PRINT","$\\$([[:alnum:]_]+)","[[:alpha:]_]+[[:alnum:]_]*",";","<=","<","!",">=",">","!=",":",",","=","\\.","\\|\\|","\\|","&&","&","\\?",});
     return(ReturnValue);
 }

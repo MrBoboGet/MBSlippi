@@ -75,28 +75,6 @@ namespace MBSlippi
         virtual void RecordGames(std::vector<RecordingInfo> const& GamesToRecord,std::filesystem::path const& OutPath) = 0;
     };
 
-    class ArgumentList
-    {
-    public:
-        ArgumentList() = default;
-        ArgumentList(Filter_ArgList const& ListToConvert)
-        {
-            for(auto const& Argument : ListToConvert.Arguments)
-            {
-                if(Argument.IsType<Filter_Arg_Positional>())
-                {
-                    PositionalArguments.push_back(Argument.GetType<Filter_Arg_Positional>().Value);
-                }
-                else if(Argument.IsType<Filter_Arg_Named>())
-                {
-                    auto const& KeyArgument = Argument.GetType<Filter_Arg_Named>();
-                    KeyArguments[KeyArgument.Name] = KeyArgument.Value;
-                }
-            }   
-        }
-        std::vector<std::string>  PositionalArguments;
-        std::unordered_map<std::string,std::string> KeyArguments;
-    };
     
 
     class SpecServer
@@ -157,10 +135,15 @@ namespace MBSlippi
         bool IsPlayerAssignment = false;
         GameInfoPredicate Predicate;
     };
+    struct MQL_FilterDefinition
+    {
+        Filter_Component Component;
+        Filter_ArgList Arguments;
+    };
     class MQL_Variable
     {
     public:
-        std::variant<MQL_LazyGameList,MQL_Variable_GameInfoPredicate,Filter_Component>  Data;
+        std::variant<MQL_LazyGameList,MQL_Variable_GameInfoPredicate,MQL_FilterDefinition>  Data;
     };
     class MQL_Module;
     class MQL_Scope
@@ -205,6 +188,112 @@ namespace MBSlippi
             Contents = Module();
             LoadErrors.clear();
         }
+    };
+    class ArgumentList
+    {
+        ArgumentList* m_ParentArgList = nullptr;
+        std::vector<Literal>  m_PositionalArguments;
+        std::unordered_map<std::string,Literal> m_KeyArguments;
+    public:
+
+        void SetParentArgList(ArgumentList* ParentList)
+        {
+            m_ParentArgList = ParentList;
+        }
+        ArgumentList() = default;
+        ArgumentList(Filter_ArgList const& ListToConvert)
+        {
+            for(auto const& Argument : ListToConvert.Arguments)
+            {
+                if(Argument.IsType<Filter_Arg_Positional>())
+                {
+                    m_PositionalArguments.push_back(Argument.GetType<Filter_Arg_Positional>().Argument);
+                }
+                else if(Argument.IsType<Filter_Arg_Named>())
+                {
+                    auto const& KeyArgument = Argument.GetType<Filter_Arg_Named>();
+                    m_KeyArguments[KeyArgument.Name] = KeyArgument.Argument;
+                }
+            }   
+        }
+        //includes parent scope
+        ArgumentList(Filter_ArgList const& DefinitionBindings,ArgumentList const& SuppliedArguments)
+        {
+            int CurrentArgumentIndex = 0;
+            for(auto const& Argument : DefinitionBindings.Arguments)
+            {
+                if(Argument.IsType<Filter_Arg_Positional>())
+                {
+                    Literal_String NewLiteral;
+                    NewLiteral.Value  = SuppliedArguments.GetPositionalArgumentString(CurrentArgumentIndex);
+                    CurrentArgumentIndex++;
+                    m_PositionalArguments.push_back(std::move(NewLiteral));
+                }
+                else if(Argument.IsType<Filter_Arg_Named>())
+                {
+                    auto const& NamedArgument = Argument.GetType<Filter_Arg_Named>();
+                    Literal_String NewLiteral;
+                    NewLiteral.Value = SuppliedArguments.GetNamedVariableString(NamedArgument.Name);
+                    m_KeyArguments[NamedArgument.Name] = std::move(NewLiteral);
+                }
+            }
+        }
+
+        bool HasNamedVariable(std::string const& VariableToCheck) const
+        {
+            return(m_KeyArguments.find(VariableToCheck) != m_KeyArguments.end());
+        }
+        std::string GetNamedVariableString(std::string const& VariableName) const
+        {
+            std::string ReturnValue;
+            auto VarIt = m_KeyArguments.find(VariableName);
+            if(VarIt == m_KeyArguments.end())
+            {
+                throw std::runtime_error("Can't find variable with name"+VariableName+ " in argument list");   
+            }
+            if(VarIt->second.IsType<Literal_String>())
+            {
+                ReturnValue = VarIt->second.GetType<Literal_String>().Value;
+            }
+            else if(VarIt->second.IsType<Literal_Symbol>())
+            {
+                //look for symbol in partent scope
+                if(m_ParentArgList == nullptr)
+                {
+                    throw std::runtime_error("Symbol lookup requires parent ArgList");
+                }
+                ReturnValue = m_ParentArgList->GetNamedVariableString(VarIt->second.GetType<Literal_Symbol>().Value);
+            }
+            return ReturnValue;
+        }
+        std::string GetPositionalArgumentString(int Index) const
+        {
+            std::string ReturnValue;
+            if(Index > m_PositionalArguments.size())
+            {
+                throw std::runtime_error("Index out of range in Positional argument access");   
+            }
+            auto const& Literal = m_PositionalArguments[Index];
+            if(Literal.IsType<Literal_String>())
+            {
+                ReturnValue = Literal.GetType<Literal_String>().Value;
+            }
+            else if(Literal.IsType<Literal_Symbol>())
+            {
+                //look for symbol in partent scope
+                if(m_ParentArgList == nullptr)
+                {
+                    throw std::runtime_error("Symbol lookup requires parent ArgList");
+                }
+                ReturnValue = m_ParentArgList->GetNamedVariableString(Literal.GetType<Literal_Symbol>().Value);
+            }
+            return ReturnValue;
+        }
+        size_t PositionalCount() const
+        {
+            return(m_PositionalArguments.size());
+        }
+
     };
     class SpecEvaluator
     {
@@ -274,7 +363,7 @@ namespace MBSlippi
         void p_ApplyAssignment(MeleeGame& GameToModify,char InAssignments[4]);
 
         std::vector<MeleeGame> p_RetrieveSpecGames(MQL_Module& AssociatedModule,GameSelection const& GameSelection);
-        std::vector<GameIntervall> p_EvaluateGameIntervalls(MQL_Module& AssociatedModule,Filter_Component const& FilterToUse,
+        std::vector<GameIntervall> p_EvaluateGameIntervalls(MQL_Module& AssociatedModule,ArgumentList& ParentArgList,Filter_Component const& FilterToUse,
                 std::vector<GameIntervall> const& InputIntervalls,MeleeGame const& GameToFilter);
 
         void p_InitializeServers();

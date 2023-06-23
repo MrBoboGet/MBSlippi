@@ -511,7 +511,7 @@ namespace MBSlippi
             if(AssociatedModule.ModuleScope.HasVariable(FilterToVerify.FilterName))
             {
                 auto const& Variable = AssociatedModule.ModuleScope.GetVariable(FilterToVerify.FilterName);   
-                if(!std::holds_alternative<Filter_Component>(Variable.Data))
+                if(!std::holds_alternative<MQL_FilterDefinition>(Variable.Data))
                 {
                     MBLSP::Diagnostic NewDiagnostic;
                     NewDiagnostic.message = "Variable isn't of type Filter";
@@ -665,7 +665,7 @@ namespace MBSlippi
             if(UpdateState && !VariableExists)
             {
                 MQL_Variable TemporaryVariable;
-                TemporaryVariable.Data = Filter_Component();
+                TemporaryVariable.Data = MQL_FilterDefinition();
                 AssociatedModule.ModuleScope.AddVariable(VariableBase.Name,std::move(TemporaryVariable));
             }
         }
@@ -1198,7 +1198,7 @@ namespace MBSlippi
         }
         IntervallsToNormalize = std::move(Result);
     }
-    std::vector<GameIntervall> SpecEvaluator::p_EvaluateGameIntervalls(MQL_Module& AssociatedModule,Filter_Component const& FilterToUse,
+    std::vector<GameIntervall> SpecEvaluator::p_EvaluateGameIntervalls(MQL_Module& AssociatedModule,ArgumentList& ParentArgList,Filter_Component const& FilterToUse,
             std::vector<GameIntervall> const& InputIntervalls,MeleeGame const& GameToFilter)
     {
         std::vector<GameIntervall> ReturnValue;
@@ -1211,7 +1211,9 @@ namespace MBSlippi
                 {
                     for(auto const& Intervall : InputIntervalls)
                     {
-                        auto NewIntervalls = BuiltinFilter->second(GameToFilter,FilterToUse.ArgumentList,Intervall);
+                        ArgumentList Arguments(FilterToUse.ArgumentList);
+                        Arguments.SetParentArgList(&ParentArgList);
+                        auto NewIntervalls = BuiltinFilter->second(GameToFilter,Arguments,Intervall);
                         ReturnValue.insert(ReturnValue.end(),NewIntervalls.begin(),NewIntervalls.end());
                     }
                 }
@@ -1226,9 +1228,12 @@ namespace MBSlippi
             }
             if(ReturnValue.size() == 0 && AssociatedModule.ModuleScope.HasVariable(FilterToUse.FilterName))
             {
-                Filter_Component const& DerferencedFilter = std::get<Filter_Component>(
+                MQL_FilterDefinition const& DerferencedFilter = std::get<MQL_FilterDefinition>(
                         AssociatedModule.ModuleScope.GetVariable(FilterToUse.FilterName).Data);
-                auto NewIntervalls = p_EvaluateGameIntervalls(AssociatedModule,DerferencedFilter,InputIntervalls,GameToFilter);
+                ArgumentList FilterArgument(FilterToUse.ArgumentList);
+                FilterArgument.SetParentArgList(&ParentArgList);
+                ArgumentList ParentEnvironment(DerferencedFilter.Arguments,FilterArgument);
+                auto NewIntervalls = p_EvaluateGameIntervalls(AssociatedModule,ParentEnvironment,DerferencedFilter.Component,InputIntervalls,GameToFilter);
                 ReturnValue.insert(ReturnValue.end(),NewIntervalls.begin(),NewIntervalls.end());
             }
             std::sort(ReturnValue.begin(),ReturnValue.end());
@@ -1247,7 +1252,7 @@ namespace MBSlippi
         {
             if(FilterToUse.Operator == "&")
             {
-                std::vector<GameIntervall> NewSituations = p_EvaluateGameIntervalls(AssociatedModule,ExtraFilter,InputIntervalls,GameToFilter); 
+                std::vector<GameIntervall> NewSituations = p_EvaluateGameIntervalls(AssociatedModule,ParentArgList,ExtraFilter,InputIntervalls,GameToFilter); 
                 std::vector<GameIntervall> NewReturnValue;
                 NewReturnValue.resize(NewSituations.size()+ReturnValue.size());
                 std::merge(NewSituations.begin(),NewSituations.end(),ReturnValue.begin(),ReturnValue.end(),NewReturnValue.begin());
@@ -1256,7 +1261,7 @@ namespace MBSlippi
             else if(FilterToUse.Operator == "|")
             {
                 std::vector<GameIntervall> NewIntervalls;
-                NewIntervalls = p_EvaluateGameIntervalls(AssociatedModule,ExtraFilter,ReturnValue,GameToFilter);
+                NewIntervalls = p_EvaluateGameIntervalls(AssociatedModule,ParentArgList,ExtraFilter,ReturnValue,GameToFilter);
                 std::swap(ReturnValue,NewIntervalls);
             }
             else
@@ -1289,10 +1294,11 @@ namespace MBSlippi
         GameIntervalls.reserve(GamesToInspect.size());
 
         std::vector<RecordingInfo> GamesToRecord;
+        ArgumentList TempList;
         for(auto& Game : GamesToInspect)
         {
             //assumes are sorted
-            auto Intervalls = p_EvaluateGameIntervalls(AssociatedModule,SpecToEvaluate.SituationFilter.Component,{GameIntervall(0,Game.Frames.size()-1)},Game);
+            auto Intervalls = p_EvaluateGameIntervalls(AssociatedModule,TempList,SpecToEvaluate.SituationFilter.Component,{GameIntervall(0,Game.Frames.size()-1)},Game);
             h_NormalizeIntervalls(Intervalls);
             if(Intervalls.size() != 0)
             {
@@ -1413,7 +1419,11 @@ namespace MBSlippi
         if(SpecToEvaluate.IsType<VariableDeclaration_Filter>())
         {
             MQL_Variable NewVariable;
-            NewVariable.Data = SpecToEvaluate.GetType<VariableDeclaration_Filter>().Component;
+            auto const& FilterDefinition = SpecToEvaluate.GetType<VariableDeclaration_Filter>();
+            MQL_FilterDefinition NewVariableData;
+            NewVariableData.Arguments = FilterDefinition.Arguments;
+            NewVariableData.Component = FilterDefinition.Component;
+            NewVariable.Data = std::move(NewVariableData);
             AssociatedModule.ModuleScope.AddVariable(SpecToEvaluate.GetType<VariableDeclaration_Base>().Name, std::move(NewVariable));
         }
         else if(SpecToEvaluate.IsType<VariableDeclaration_GameList>())
@@ -1538,13 +1548,13 @@ namespace MBSlippi
         int PunisherIndex = GetPlayerIndex(ExtraArguments);
         int PunisheeIndex = PunisherIndex == 1 ? 0 : 1;
         float ExtractCount = 10;
-        if(auto const& PercentIt = ExtraArguments.KeyArguments.find("Percent"); PercentIt != ExtraArguments.KeyArguments.end())
+        if( ExtraArguments.HasNamedVariable("Percent"))
         {
-            PercentThreshold = h_ParseFloat(PercentIt->second);
+            PercentThreshold = h_ParseFloat(ExtraArguments.GetNamedVariableString("Percent"));
         }
-        if(auto const& CountIt = ExtraArguments.KeyArguments.find("Count"); CountIt != ExtraArguments.KeyArguments.end())
+        if(ExtraArguments.HasNamedVariable("Count"))
         {
-            ExtractCount = h_ParseExpandInteger(CountIt->second);
+            ExtractCount = h_ParseExpandInteger(ExtraArguments.GetNamedVariableString("Count"));
         }
         std::vector<i_PunishInfo> Punishes = h_ExtractPunishes2(GameToInspect,PunisherIndex,PunisheeIndex,PercentThreshold);
         std::sort(Punishes.begin(),Punishes.end(),
@@ -1562,13 +1572,14 @@ namespace MBSlippi
     int SpecEvaluator::GetPlayerIndex(ArgumentList const& ExtraArguments)
     {
         int ReturnValue = 0;
-        if(auto const& PlayerIndexIt = ExtraArguments.KeyArguments.find("Player"); PlayerIndexIt != ExtraArguments.KeyArguments.end())
+        if(ExtraArguments.HasNamedVariable("Player"))
         {
-            if(PlayerIndexIt->second == "0")
+            std::string PlayerString = ExtraArguments.GetNamedVariableString("Player");
+            if(PlayerString == "0")
             {
 
             }
-            else if(PlayerIndexIt->second == "1")
+            else if(PlayerString == "1")
             {
                 ReturnValue = 1;
             }
@@ -1582,11 +1593,11 @@ namespace MBSlippi
     std::vector<GameIntervall> SpecEvaluator::HasMove(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,GameIntervall IntervallToInspect)
     {
         std::vector<GameIntervall> ReturnValue;
-        if(ExtraArguments.PositionalArguments.size() == 0)
+        if(ExtraArguments.PositionalCount() == 0)
         {
             throw std::runtime_error("HasMove requires the move to search for as the first positional argument");
         }
-        MBAttackID Attack = StringToMBAttackID(ExtraArguments.PositionalArguments[0]);
+        MBAttackID Attack = StringToMBAttackID(ExtraArguments.GetPositionalArgumentString(0));
         int PlayerIndex = GetPlayerIndex(ExtraArguments);
         for(int i = IntervallToInspect.FirstFrame; i <= IntervallToInspect.LastFrame;i++)
         {
@@ -1601,11 +1612,11 @@ namespace MBSlippi
     std::vector<GameIntervall> SpecEvaluator::Move(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,GameIntervall IntervallToInspect)
     {
         std::vector<GameIntervall> ReturnValue;
-        if(ExtraArguments.PositionalArguments.size() != 1)
+        if(ExtraArguments.PositionalCount() != 1)
         {
             throw std::runtime_error("Move requries exactly 1 positional option, the name of the move to inspect");
         }
-        MBAttackID Move = StringToMBAttackID(ExtraArguments.PositionalArguments[0]);
+        MBAttackID Move = StringToMBAttackID(ExtraArguments.GetPositionalArgumentString(0));
         int PlayerIndex = GetPlayerIndex(ExtraArguments);
         ReturnValue = ExtractSequences(GameToInspect,IntervallToInspect,
                 [&](FrameInfo const& Frame)
@@ -1618,14 +1629,8 @@ namespace MBSlippi
     {
         std::vector<GameIntervall> ReturnValue;
         int PlayerIndex = GetPlayerIndex(ExtraArguments);
-        bool CheckShielding = true;
-        bool CheckShieldstun = true;
-        if(auto ShieldingIt = ExtraArguments.KeyArguments.find("Shielding"),ShieldstunIt = ExtraArguments.KeyArguments.find("Shieldstun");
-                ShieldingIt != ExtraArguments.KeyArguments.end() || ShieldstunIt != ExtraArguments.KeyArguments.end())
-        {
-            CheckShieldstun = ShieldstunIt != ExtraArguments.KeyArguments.end();
-            CheckShielding = ShieldingIt != ExtraArguments.KeyArguments.end();
-        }
+        bool CheckShielding = ExtraArguments.HasNamedVariable("Shielding");
+        bool CheckShieldstun = ExtraArguments.HasNamedVariable("Shieldstun");
         ReturnValue = ExtractSequences(GameToInspect,IntervallToInspect,
                 [&](FrameInfo const& Frame)
                 {
@@ -1645,40 +1650,41 @@ namespace MBSlippi
     std::vector<GameIntervall> SpecEvaluator::Until(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,GameIntervall IntervallToInspect)
     {
         std::vector<GameIntervall> ReturnValue;
-        if(ExtraArguments.KeyArguments.find("State") == ExtraArguments.KeyArguments.end() && 
-                ExtraArguments.KeyArguments.find("Flag") == ExtraArguments.KeyArguments.end())
+        if(!ExtraArguments.HasNamedVariable("State") && 
+                !ExtraArguments.HasNamedVariable("Flag"))
         {
             throw std::runtime_error("Until requires requires either 'State' key argument or 'Flag' key argument");
         }
         int PlayerIndex = GetPlayerIndex(ExtraArguments);
         MBActionState StateToCheck = MBActionState::None;
-        if(auto const& StateIt = ExtraArguments.KeyArguments.find("State"); StateIt != ExtraArguments.KeyArguments.end())
+        if(ExtraArguments.HasNamedVariable("State"))
         {
-            StateToCheck = StringToMBActionState(StateIt->second);
+            StateToCheck = StringToMBActionState(ExtraArguments.GetNamedVariableString("State"));
         }
         //only airborne as of now
         bool CheckAirborne = false;
         bool Airborne = false;
-        if(auto const& FlagIt = ExtraArguments.KeyArguments.find("Flag"); FlagIt != ExtraArguments.KeyArguments.end())
+        if(ExtraArguments.HasNamedVariable("Flag"))
         {
+            std::string FlagValue = ExtraArguments.GetNamedVariableString("Flag");
             CheckAirborne = true;
-            if(FlagIt->second== "Airborne")
+            if(FlagValue == "Airborne")
             {
                 Airborne = true;
             }
-            else if(FlagIt->second  == "NoAirborne")
+            else if(FlagValue  == "NoAirborne")
             {
                 Airborne = false;
             }
             else
             {
-                throw std::runtime_error("Unknown state flag \""+FlagIt->second+"\"");   
+                throw std::runtime_error("Unknown state flag \""+FlagValue+"\"");   
             }
         }
         int Skip = -1;
-        if(auto const& SkipIt = ExtraArguments.KeyArguments.find("Skip"); SkipIt != ExtraArguments.KeyArguments.end())
+        if(ExtraArguments.HasNamedVariable("Skip"))
         {
-            Skip = h_ParseExpandInteger(SkipIt->second);
+            Skip = h_ParseExpandInteger(ExtraArguments.GetNamedVariableString("Skip"));
             if(Skip < 0)
             {
                 throw std::runtime_error("Cannot skip by negative number");   
@@ -1708,12 +1714,12 @@ namespace MBSlippi
     std::vector<GameIntervall> SpecEvaluator::ActionState(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,GameIntervall IntervallToInspect)
     {
         std::vector<GameIntervall> ReturnValue;
-        if(ExtraArguments.PositionalArguments.size() != 1)
+        if(ExtraArguments.PositionalCount() != 1)
         {
             throw std::runtime_error("ActionState requires exactly 1 positional argument, the name of the action state");
         }
         int PlayerIndex = GetPlayerIndex(ExtraArguments);
-        MBActionState StateToCheck = StringToMBActionState(ExtraArguments.PositionalArguments[0]);
+        MBActionState StateToCheck = StringToMBActionState(ExtraArguments.GetPositionalArgumentString(0));
         ReturnValue = ExtractSequences(GameToInspect,IntervallToInspect,
                 [&](FrameInfo const& Frame){return(Frame.PlayerInfo[PlayerIndex].ActionState == StateToCheck);});
         return(ReturnValue);
@@ -1723,19 +1729,19 @@ namespace MBSlippi
         std::vector<GameIntervall> ReturnValue;
         int LeftExpand = 0;
         int RightExpand = 0;
-        if(ExtraArguments.PositionalArguments.size() > 0)
+        if(ExtraArguments.PositionalCount() > 0)
         {
-            int TotalExpandSize = h_ParseExpandInteger(ExtraArguments.PositionalArguments[0]);
+            int TotalExpandSize = h_ParseExpandInteger(ExtraArguments.GetPositionalArgumentString(0));
             LeftExpand = -TotalExpandSize;
             RightExpand = TotalExpandSize;
         }
-        if(auto RightIt = ExtraArguments.KeyArguments.find("Right"); RightIt != ExtraArguments.KeyArguments.end())
+        if(ExtraArguments.HasNamedVariable("Right"))
         {
-            RightExpand = h_ParseExpandInteger(RightIt->second);
+            RightExpand = h_ParseExpandInteger(ExtraArguments.GetNamedVariableString("Right"));
         }
-        if(auto LeftIt = ExtraArguments.KeyArguments.find("Left"); LeftIt != ExtraArguments.KeyArguments.end())
+        if(ExtraArguments.HasNamedVariable("Left"))
         {
-            LeftExpand = -h_ParseExpandInteger(LeftIt->second);   
+            LeftExpand = -h_ParseExpandInteger(ExtraArguments.GetNamedVariableString("Left"));   
         }
         //automatically inverted
         if(LeftExpand == 1)
@@ -1767,14 +1773,14 @@ namespace MBSlippi
         int PlayerIndex = GetPlayerIndex(ExtraArguments);
         int OpponentIndex = PlayerIndex == 0 ? 1 : 0;
         int Context = 10;
-        if(ExtraArguments.PositionalArguments.size() != 1)
+        if(ExtraArguments.PositionalCount() != 1)
         {
             throw std::runtime_error("HitBy requires exactly 1 positional argument, the name of the hit move");
         }
-        MBAttackID Attack = StringToMBAttackID(ExtraArguments.PositionalArguments[0]);
-        if(auto ContextIt = ExtraArguments.KeyArguments.find("Context"); ContextIt != ExtraArguments.KeyArguments.end())
+        MBAttackID Attack = StringToMBAttackID(ExtraArguments.GetPositionalArgumentString(0));
+        if(ExtraArguments.HasNamedVariable("Context"))
         {
-            Context = std::stoi(ContextIt->second);
+            Context = std::stoi(ExtraArguments.GetNamedVariableString("Context"));
         }
         ReturnValue = ExtractSequences(GameToInspect,IntervallToInspect,[&]
                 (FrameInfo const& Frame)
@@ -1789,11 +1795,11 @@ namespace MBSlippi
         std::vector<GameIntervall> ReturnValue;
         int PlayerIndex = GetPlayerIndex(ExtraArguments);
         int OpponentIndex = PlayerIndex == 0 ? 1 : 0;
-        if(ExtraArguments.PositionalArguments.size() != 1)
+        if(ExtraArguments.PositionalCount() != 1)
         {
             throw std::runtime_error("HasHitBy requires exactly 1 positional argument, the name of the hit move");
         }
-        MBAttackID Attack = StringToMBAttackID(ExtraArguments.PositionalArguments[0]);
+        MBAttackID Attack = StringToMBAttackID(ExtraArguments.GetPositionalArgumentString(0));
         for(int i = IntervallToInspect.FirstFrame; i < IntervallToInspect.LastFrame;i++)
         {
             FrameInfo const& Frame = GameToInspect.Frames[i];
@@ -1845,11 +1851,11 @@ namespace MBSlippi
     std::vector<GameIntervall> SpecEvaluator::Length(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,GameIntervall IntervallToInspect)
     {
         std::vector<GameIntervall> ReturnValue;
-        if(ExtraArguments.PositionalArguments.size() == 0)
+        if(ExtraArguments.PositionalCount() == 0)
         {
             throw std::runtime_error("Error in length filter: requires the minimum length of the intervall as the first positiional argument");
         }
-        int Length = h_ParseExpandInteger(ExtraArguments.PositionalArguments[0]);
+        int Length = h_ParseExpandInteger(ExtraArguments.GetPositionalArgumentString(0));
         if(IntervallToInspect.LastFrame-IntervallToInspect.FirstFrame >= Length)
         {
             ReturnValue = {IntervallToInspect};
@@ -1869,26 +1875,26 @@ namespace MBSlippi
         i_StageBoundaryInfo const& StageInfo = i_GetStageBoundaryInfo(GameToInspect.Stage);
         float XStageMargin = 15;
         float XOffstageMargin = 5;
-        if(auto const& Margin = ExtraArguments.KeyArguments.find("Margin"); Margin != ExtraArguments.KeyArguments.end())
+        if(ExtraArguments.HasNamedVariable("Margin"))
         {
-            float MarginValue = h_ParseFloat(Margin->second); 
+            float MarginValue = h_ParseFloat(ExtraArguments.GetNamedVariableString("Margin")); 
             XStageMargin = MarginValue;
             XOffstageMargin = MarginValue;
         }
         else
         {
-            if(auto const& LeftMargin = ExtraArguments.KeyArguments.find("StageMargin"); LeftMargin != ExtraArguments.KeyArguments.end())
+            if(ExtraArguments.HasNamedVariable("StageMargin"))
             {
-                XStageMargin = h_ParseFloat(LeftMargin->second);
+                XStageMargin = h_ParseFloat(ExtraArguments.GetNamedVariableString("StageMargin"));
             }
-            if(auto const& RightMargin = ExtraArguments.KeyArguments.find("OffstageMargin"); RightMargin != ExtraArguments.KeyArguments.end())
+            if(ExtraArguments.HasNamedVariable("OffstageMargin"))
             {
-                XOffstageMargin = h_ParseFloat(RightMargin->second);
+                XOffstageMargin = h_ParseFloat(ExtraArguments.GetNamedVariableString("OffstageMargin"));
             }
         }
-        if(auto const& Distance = ExtraArguments.KeyArguments.find("Distance"); Distance != ExtraArguments.KeyArguments.end())
+        if(ExtraArguments.HasNamedVariable("Distance"))
         {
-            OpponentDistance = h_ParseFloat(Distance->second); 
+            OpponentDistance = h_ParseFloat(ExtraArguments.GetNamedVariableString("Distance")); 
         }
         ReturnValue = ExtractSequences(GameToInspect,IntervallToInspect,[&](FrameInfo const& Frame)
                 {
@@ -1918,8 +1924,9 @@ namespace MBSlippi
         //ReturnValue = {IntervallToInspect};
         int PlayerIndex = GetPlayerIndex(ExtraArguments);
         MBActionStateFlags FlagsToCompare;
-        for(auto const& Argument : ExtraArguments.PositionalArguments)
+        for(int i = 0; i < ExtraArguments.PositionalCount();i++)
         {
+            auto const& Argument = ExtraArguments.GetPositionalArgumentString(i);
             if(Argument == "Airborne")
             {
                 FlagsToCompare.Airborne = true;

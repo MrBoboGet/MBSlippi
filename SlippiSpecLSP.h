@@ -25,6 +25,9 @@ namespace MBSlippi
         //Filter SituationFilter;
         //Result Output;
 
+
+        static MBLSP::SemanticToken GetToken(Literal const& LiteralToConvert);
+        
         void p_ExtractTokens(std::vector<MBLSP::SemanticToken>& OutTokens,Filter const& FilterToExamine);
         void p_ExtractTokens(std::vector<MBLSP::SemanticToken>& OutTokens,Filter_Component const& ComponentToExamine);
         void p_ExtractTokens(std::vector<MBLSP::SemanticToken>& OutTokens,Filter_ArgList const& ComponentToExamine);

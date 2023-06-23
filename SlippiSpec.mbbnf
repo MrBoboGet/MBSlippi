@@ -12,6 +12,7 @@ term bool = "true|false";
 
 term WITH = "WITH";
 term IMPORT = "IMPORT";
+term USING = "USING";
 term AS = "AS";
 term SELECT = "SELECT";
 term RECORD = "RECORD";
@@ -58,6 +59,7 @@ struct VariableDeclaration_Filter : VariableDeclaration
 {
     tokenPos FilterPosition;
     Filter_Component Component;
+    Filter_ArgList Arguments;
 }
 
 struct VariableDeclaration_GameList : VariableDeclaration
@@ -171,21 +173,31 @@ struct Filter_ArgList
 struct Filter_Arg
 {
 }
-struct Filter_Arg_Positional : Filter_Arg
+
+struct Literal
+{
+}
+
+struct Literal_String : Literal
 {
     tokenPos ValuePosition;
     string Value; 
+}
+struct Literal_Symbol : Literal
+{
+    tokenPos ValuePosition;
+    string Value; 
+}
+
+struct Filter_Arg_Positional : Filter_Arg
+{
+    Literal Argument;
 }
 struct Filter_Arg_Named : Filter_Arg
 {
     tokenPos NamePosition;
     string Name;
-    tokenPos ValuePosition;
-    string Value;
-}
-struct ArgList
-{
-    List<Filter_Arg> Args;
+    Literal Argument;
 }
 struct AttributeList
 {
@@ -278,7 +290,7 @@ def Filter_Component_Base=Filter_Component;
 def Filter_Arg=Filter_Arg;
 def Filter_Arg_Named=Filter_Arg_Named;
 def Filter_Arg_Positional=Filter_Arg_Positional;
-def Filter_ArgList = ArgList;
+def Filter_ArgList = Filter_ArgList;
 
 def Operator=Operator;
 def Comparator=Operator;
@@ -291,11 +303,20 @@ Combinator = Op=pipe | Op=AND | Op = OR;
 def Filter_Arg_Extra = Filter_Arg;
 Filter_Arg_Extra = comma this=Filter_Arg;
 Filter_Arg = this=Filter_Arg_Named | this=Filter_Arg_Positional;
-Filter_Arg_Named = NamePosition = TOKEN.Position Name=idf eq ValuePosition = TOKEN.Position Value=string;
-Filter_Arg_Positional = ValuePosition = TOKEN.Position Value=string;
-def Filter_ArgList_Arguments = ArgList;
-Filter_ArgList_Arguments = Args=Filter_Arg Args=Filter_Arg_Extra*;
+
+Filter_Arg_Named = NamePosition = TOKEN.Position Name=idf eq Argument=Literal;
+Filter_Arg_Positional = Argument=Literal;
+def Filter_ArgList_Arguments = Filter_ArgList;
+Filter_ArgList_Arguments = Arguments=Filter_Arg Arguments=Filter_Arg_Extra*;
 Filter_ArgList = lpar this=Filter_ArgList_Arguments? rpar;
+
+
+def Literal=Literal;
+def Literal_String=Literal_String;
+def Literal_Symbol=Literal_Symbol;
+Literal=this=Literal_String | this=Literal_Symbol;
+Literal_String = ValuePosition = TOKEN.Position Value=string;
+Literal_Symbol = ValuePosition = TOKEN.Position Value=idf;
 
 
 def Filter_Component_Or=Filter_Component;
@@ -303,7 +324,7 @@ def Filter_Term=Filter_Component;
 
 
 Filter_Component_Or = Operator=pipe this=Filter_Term;
-Filter_Component_Base = NamePosition=TOKEN.Position FilterName=Identifier ArgumentList.Arguments=Filter_ArgList.Args?;
+Filter_Component_Base = NamePosition=TOKEN.Position FilterName=Identifier ArgumentList=Filter_ArgList?;
 
 Filter_Term =   lpar this=Filter_Component rpar |
                 this=Filter_Component_Base |
@@ -343,7 +364,7 @@ GameInfoPredicate = {ReturnValue.Operator="&&";} ExtraTerms=GameInfoPredicateOr 
 
 
 
-GameSelection = Assignment=PlayerAssignment? SelectPosition = TOKEN.Position SELECT GameCondition=GameInfoPredicate;
+GameSelection = Using=UsingDirective? Assignment=PlayerAssignment? SelectPosition = TOKEN.Position SELECT GameCondition=GameInfoPredicate;
 
 PlayerAssignment = WithPosition = TOKEN.Position WITH PlayerPosition = TOKEN.Position AffectedPlayer=idf PlayerCondition=GameInfoPredicate;
 Result_Record = RecordPosition = TOKEN.Position RECORD  FilePosition = TOKEN.Position OutFile=string;
@@ -360,7 +381,9 @@ def VariableDeclaration_GameList=VariableDeclaration_GameList;
 def VariableDeclaration_PlayerSelection=VariableDeclaration_PlayerSelection;
 def VariableDeclaration_GameInfoPredicate=VariableDeclaration_GameInfoPredicate;
 
-VariableDeclaration_Filter = FilterPosition=TOKEN.Position FILTER NamePosition = TOKEN.Position Name = idf eq Component=Filter_Component semi;
+VariableDeclaration_Filter = FilterPosition=TOKEN.Position FILTER NamePosition = TOKEN.Position Name = idf 
+  Arguments=Filter_ArgList? eq Component=Filter_Component semi;
+
 VariableDeclaration_GameList = GamePosition=TOKEN.Position GAMES NamePosition = TOKEN.Position Name = idf eq Selection=GameSelection semi;
 VariableDeclaration_PlayerSelection = GamePosition=TOKEN.Position PlayerSelection NamePosition = TOKEN.Position Name = idf eq 
     Predicate=GameInfoPredicate semi;
@@ -376,6 +399,18 @@ def IdentifierPart_Rest = Token;
 IdentifierPart = Position=TOKEN.Position Value=idf;
 IdentifierPart_Rest = dot this=IdentifierPart;
 Identifier = Parts=IdentifierPart Parts=IdentifierPart_Rest*;
+
+def GameList=UsingDirective;
+def GameList_Part = Token;
+def GameList_Rest = Token;
+GameList_Part = Position=TOKEN.Position Value=idf;
+GameList_Rest = comma this=IdentifierPart;
+GameList = GameSets=GameList_Part GameSets=GameList_Rest*;
+
+def UsingDirective=UsingDirective;
+
+UsingDirective = USING this=GameList;
+
 
 def Import=Import;
 def ImportBinding=ImportBinding;

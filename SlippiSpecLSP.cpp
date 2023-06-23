@@ -39,6 +39,25 @@ namespace MBSlippi
             p_ExtractTokens(OutTokens,SubComponent);
         }
     }
+    MBLSP::SemanticToken SlippiLSP::GetToken(Literal const& LiteralToConvert)
+    {
+        MBLSP::SemanticToken ReturnValue;
+        if(LiteralToConvert.IsType<Literal_String>())
+        {
+            auto const& Literal = LiteralToConvert.GetType<Literal_String>();
+            ReturnValue = MBLSP::SemanticToken(MBLSP::TokenType::String,h_Convert(Literal.ValuePosition),Literal.Value.size()+2);
+        }
+        else if(LiteralToConvert.IsType<Literal_Symbol>())
+        {
+            auto const& Literal = LiteralToConvert.GetType<Literal_Symbol>();
+            ReturnValue = MBLSP::SemanticToken(MBLSP::TokenType::Property,h_Convert(Literal.ValuePosition),Literal.Value.size());
+        }
+        else
+        {
+            assert(false && "LSP doesnt cover all cases for literal type");
+        }
+        return ReturnValue;
+    }
     void SlippiLSP::p_ExtractTokens(std::vector<MBLSP::SemanticToken>& OutTokens,Filter_ArgList const& ComponentToExamine)
     {
         for(auto const& Arg : ComponentToExamine.Arguments)
@@ -47,12 +66,12 @@ namespace MBSlippi
             {
                 auto const& NamedArg = Arg.GetType<Filter_Arg_Named>();
                 OutTokens.push_back(MBLSP::SemanticToken(MBLSP::TokenType::Property,h_Convert(NamedArg.NamePosition),NamedArg.Name.size()));
-                OutTokens.push_back(MBLSP::SemanticToken(MBLSP::TokenType::String,h_Convert(NamedArg.ValuePosition),NamedArg.Value.size()+2));
+                OutTokens.push_back(GetToken(NamedArg.Argument));
             }   
             else if(Arg.IsType<Filter_Arg_Positional>())
             {
                 auto const& PositionalArg  = Arg.GetType<Filter_Arg_Positional>();
-                OutTokens.push_back(MBLSP::SemanticToken(MBLSP::TokenType::String,h_Convert(PositionalArg.ValuePosition),PositionalArg.Value.size()+2));
+                OutTokens.push_back(GetToken(PositionalArg.Argument));
             }
             else
             {
