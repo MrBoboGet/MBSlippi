@@ -149,11 +149,15 @@ namespace MBSlippi
         }
         return(MessageToSend);
     }
-    std::vector<SlippiGameInfo> MBSlippiCLIHandler::RetrieveGames(std::string const& WhereCondition)
+    std::vector<SlippiGameInfo> MBSlippiCLIHandler::RetrieveGames(std::string const& WhereCondition,std::vector<std::string> const& GameSets)
     {
         std::vector<SlippiGameInfo> ReturnValue;
         for(auto const& Path : m_ReplayDirectories)
         {
+            if(GameSets.size() != 0 && std::find(GameSets.begin(),GameSets.end(),Path.filename()) == GameSets.end())
+            {
+                continue;
+            }
             MBDB::MrBoboDatabase Database(MBUnicode::PathToUTF8(Path/"SlippiGames.db"), MBDB::DBOpenOptions::ReadOnly);
             std::string QueryString = "SELECT * FROM GAMES";
             if(WhereCondition != "")
@@ -330,7 +334,19 @@ namespace MBSlippi
         ObjectToWrite["SituationBegin"] = std::move(SituationBegin);
         OutJSON<<ObjectToWrite.ToString();
     }
-    void MBSlippiCLIHandler::p_LoadGlobalConfig()
+    bool MBSlippiCLIHandler::GameSetExists(std::string const& WhereCondition)
+    {
+        bool ReturnValue = false;
+        for(auto const& Directory : m_ReplayDirectories)
+        {
+            if(Directory.filename() == WhereCondition)
+            {
+                return true;
+            }
+        }
+        return ReturnValue;
+    }
+    void MBSlippiCLIHandler::LoadGlobalConfig()
     {
         try
         {
@@ -364,7 +380,7 @@ namespace MBSlippi
             }
         }
         catch (std::exception const& e)
-    {
+        {
             m_Terminal.SetTextColor(MBCLI::ANSITerminalColor::Red);
             m_Terminal.Print("Error loading config: " +std::string(e.what()));
             m_Terminal.SetTextColor(MBCLI::ANSITerminalColor::White);
@@ -737,7 +753,6 @@ namespace MBSlippi
         MBCLI::ProcessedCLInput Input(argc, argv);
         try
         {
-            p_LoadGlobalConfig();
             //DEPRECATED Input.TopCommand
             if (Input.TopCommand == "index")
             {

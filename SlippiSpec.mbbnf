@@ -108,6 +108,7 @@ struct Token
 
 struct UsingDirective
 {
+    tokenPos UsingPosition;
     List<Token> GameSets;
 }
 
@@ -409,7 +410,7 @@ GameList = GameSets=GameList_Part GameSets=GameList_Rest*;
 
 def UsingDirective=UsingDirective;
 
-UsingDirective = USING this=GameList;
+UsingDirective = UsingPosition = TOKEN.Position USING this=GameList;
 
 
 def Import=Import;

@@ -1610,6 +1610,8 @@ UsingDirective ParseUsingDirective(MBCC::Tokenizer& Tokenizer)
 UsingDirective ParseUsingDirective_0(MBCC::Tokenizer& Tokenizer)
 {
     UsingDirective ReturnValue;
+    MBCC::TokenPosition UsingPosition;
+    UsingPosition = Tokenizer.Peek().Position;
     if(Tokenizer.Peek().Type != 11)
     {
         throw MBCC::ParsingException(Tokenizer.Peek().Position,"UsingDirective","USING");
@@ -1623,6 +1625,7 @@ UsingDirective ParseUsingDirective_0(MBCC::Tokenizer& Tokenizer)
     {
          throw MBCC::ParsingException(Tokenizer.Peek().Position,"UsingDirective","GameList");
     }
+    ReturnValue.UsingPosition = std::move(UsingPosition);
     return(ReturnValue);
 }
 ImportBinding ParseImportBinding(MBCC::Tokenizer& Tokenizer)

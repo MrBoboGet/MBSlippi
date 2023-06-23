@@ -2,6 +2,7 @@
 #include "MBLSP/LSP_Structs.h"
 #include "MBLSP/TextChanges.h"
 #include "SlippiSpec.h"
+#include "MBSlippi_CLI.h"
 #include <MBLSP/SemanticTokens.h>
 namespace MBSlippi
 {
@@ -18,7 +19,9 @@ namespace MBSlippi
         };
         MBLSP::LSP_ServerHandler* m_AssociatedHandler = nullptr;
         MBCC::Tokenizer m_Tokenizer = GetTokenizer();
+        
 
+        MBSlippiCLIHandler m_TempHandler;
 
         //PlayerAssignment Assignment;
         //GameSelection Games;
@@ -37,6 +40,7 @@ namespace MBSlippi
         void p_ExtractTokens(std::vector<MBLSP::SemanticToken>& OutTokens,Result const& ResultToExamine);
         void p_ExtractTokens(std::vector<MBLSP::SemanticToken>& OutTokens,Statement const& StatementToExamine);
         void p_ExtractTokens(std::vector<MBLSP::SemanticToken>& OutTokens,Selection const& SelectionToExamine);
+        void p_ExtractTokens(std::vector<MBLSP::SemanticToken>& OutTokens,Import const& ImportToExamine);
 
         void p_PushDiagnostics(DocumentInfo& DocumentData,std::string const& URI);
         std::vector<MBLSP::SemanticToken> p_ExtractTokens(Module const& Spec);

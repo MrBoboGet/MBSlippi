@@ -66,7 +66,8 @@ namespace MBSlippi
     class MeleeGameDBAdapter
     {
     public:      
-        virtual std::vector<SlippiGameInfo> RetrieveGames(std::string const& WhereCondition) = 0;
+        virtual std::vector<SlippiGameInfo> RetrieveGames(std::string const& WhereCondition,std::vector<std::string> const& GameSets) = 0;
+        virtual bool GameSetExists(std::string const& GameSet) = 0;
     };
     class MeleeGameRecorder
     {

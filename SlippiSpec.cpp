@@ -555,10 +555,9 @@ namespace MBSlippi
         }
         std::filesystem::path PotentialFilePath = PotentialDirectoryPath;
         PotentialFilePath.replace_extension(".slpspec");
-
+        bool LibraryImported = false;
         try
         {
-            bool LibraryImported = false;
             for(auto const& Dir : SearchDirectories)
             {
                 if(std::filesystem::exists(Dir/PotentialDirectoryPath))
@@ -589,6 +588,7 @@ namespace MBSlippi
                                 OutDiagnostics.push_back(NewDiagnostic);
                                 ReturnValue = false;
                             }
+                            break;
                         }
                     }
                 }
@@ -615,6 +615,7 @@ namespace MBSlippi
                         OutDiagnostics.push_back(NewDiagnostic);
                         ReturnValue = false;
                     }
+                    break;
                 }
             }
             if(!LibraryImported)
@@ -638,7 +639,6 @@ namespace MBSlippi
             OutDiagnostics.push_back(NewDiagnostic);
             ReturnValue = false;
         }
-
         return ReturnValue;
     }
     bool SpecEvaluator::VerifyVariableDeclaration(MQL_Module& AssociatedModule,Statement& DeclarationToVerify,std::vector<MBLSP::Diagnostic>& OutDiagnostics,bool UpdateState)
@@ -662,10 +662,13 @@ namespace MBSlippi
         {
             auto const& FilterVariable = DeclarationToVerify.GetType<VariableDeclaration_Filter>();
             p_VerifyFilterComponent(AssociatedModule,FilterVariable.Component,Diagnostics);
+            //check bindings
+            
             if(UpdateState && !VariableExists)
             {
                 MQL_Variable TemporaryVariable;
-                TemporaryVariable.Data = MQL_FilterDefinition();
+                MQL_FilterDefinition NewDefinition = MQL_FilterDefinition();
+                TemporaryVariable.Data = std::move(NewDefinition);
                 AssociatedModule.ModuleScope.AddVariable(VariableBase.Name,std::move(TemporaryVariable));
             }
         }
@@ -749,13 +752,28 @@ namespace MBSlippi
     {
         bool ReturnValue = true;
         std::vector<MBLSP::Diagnostic> Diagnostics;
+        for(auto const& Set : SpecToVerify.Games.Using.GameSets)
+        {
+            if(!m_DBAdapter->GameSetExists(Set.Value))
+            {
+                MBLSP::Diagnostic NewDiagnostic;
+                NewDiagnostic.message = "Can't find game set with name \""+Set.Value+"\"";
+                NewDiagnostic.range.start.line = Set.Position.Line;
+                NewDiagnostic.range.start.character = Set.Position.ByteOffset;
+                NewDiagnostic.range.end = NewDiagnostic.range.start + Set.Value.size();
+                OutDiagnostics.push_back(std::move(NewDiagnostic));
+            }
+        }
         p_VerifyPlayerAssignment(AssociatedModule,SpecToVerify.Games.Assignment,Diagnostics);
         p_VerifyGameInfoPredicate(AssociatedModule,SpecToVerify.Games.GameCondition,false,Diagnostics);
         p_VerifyFilter(AssociatedModule,SpecToVerify.SituationFilter,Diagnostics);
         if(Diagnostics.size() > 0)
         {
             ReturnValue = false;
-            OutDiagnostics = std::move(Diagnostics);
+            for(auto& Diagnostic : Diagnostics)
+            {
+                OutDiagnostics.push_back(std::move(Diagnostic));
+            }
         }
         return(ReturnValue);
     }
@@ -795,11 +813,11 @@ namespace MBSlippi
         {
             if(Statement.IsType<VariableDeclaration_Base>())
             {
-                ReturnValue = ReturnValue && VerifyVariableDeclaration(TempModule,Statement,OutDiagnostics,true);
+                ReturnValue = VerifyVariableDeclaration(TempModule,Statement,OutDiagnostics,true) && ReturnValue;
             }
             else
             {
-                ReturnValue = ReturnValue && VerifyStatement(TempModule,Statement,OutDiagnostics);
+                ReturnValue = VerifyStatement(TempModule,Statement,OutDiagnostics) && ReturnValue;
             }
         }
         return(ReturnValue);
@@ -1081,7 +1099,12 @@ namespace MBSlippi
     {
         std::vector<MeleeGame> ReturnValue;
         //TODO improve this, use SQL query so unneccesary game info doesn't need to be parsed
-        std::vector<SlippiGameInfo> Candidates = m_DBAdapter->RetrieveGames("");
+        std::vector<std::string> GameSets;
+        for(auto const& Sets : SpecToEvalaute.Using.GameSets)
+        {
+            GameSets.push_back(Sets.Value);
+        }
+        std::vector<SlippiGameInfo> Candidates = m_DBAdapter->RetrieveGames("",GameSets);
         for(auto& Candidate : Candidates)
         {
             bool IsSwapped = false;

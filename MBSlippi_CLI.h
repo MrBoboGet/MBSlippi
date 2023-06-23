@@ -64,13 +64,14 @@ namespace MBSlippi
         }
     };
 
-	class MBSlippiCLIHandler : MeleeGameRecorder,MeleeGameDBAdapter
+	class MBSlippiCLIHandler : public MeleeGameRecorder,public MeleeGameDBAdapter
 	{
 	private:
         void p_WriteReplayInfo(std::vector<RecordingInfo> const& RecordingToWrite,MBUtility::MBOctetOutputStream& OutStream);
         void p_RestoreDolphinConfigs(std::string const& DumpDirectory, DolphinConfigParser const& DolphinINI, DolphinConfigParser const& DolphinGFX);
         std::string p_UpdateDolphinConfigs(DolphinConfigParser* OutOriginalIni,DolphinConfigParser* OutOriginalGFX);
-        virtual std::vector<SlippiGameInfo> RetrieveGames(std::string const& WhereCondition) override;
+        virtual std::vector<SlippiGameInfo> RetrieveGames(std::string const& WhereCondition,std::vector<std::string> const& GameSets) override;
+        virtual bool GameSetExists(std::string const& WhereCondition) override;
         virtual void RecordGames(std::vector<RecordingInfo> const& GamesToRecord,std::filesystem::path const& OutPath) override;
 
 
@@ -79,7 +80,7 @@ namespace MBSlippi
 		MBSlippiConfig m_Config;
 
 		MBCLI::MBTerminal m_Terminal;
-		void p_LoadGlobalConfig();
+		void LoadGlobalConfig();
 
 		void p_CreateDatabase(std::string const& DirectoryToCreate);
 		SlippiGameInfo p_SlippiFileToGameInfo(MBParsing::JSONObject const& TotalGameData);
@@ -93,6 +94,10 @@ namespace MBSlippi
 		void p_Handle_Play(MBCLI::ProcessedCLInput const& Input);
 		void p_Handle_Query(MBCLI::ProcessedCLInput const& Input);
 	public:
+        MBSlippiCLIHandler()
+        {
+            LoadGlobalConfig();
+        }
 		int Run(int argc, const char** argv);
 	};
 }
