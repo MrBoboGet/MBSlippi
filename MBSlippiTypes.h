@@ -53,6 +53,18 @@ namespace MBSlippi
             {
                 ReturnValue = '$';
             }
+            else if(charCode == 0x8194)
+            {
+                ReturnValue = '#';
+            }
+            else if(charCode == 0x8193)
+            {
+                ReturnValue = '%';
+            }
+            else if(charCode == 0x8195)
+            {
+                ReturnValue = '&';
+            }
             else if(charCode >= 0x824f && charCode <= 0x8258)
             {
                 ReturnValue = '0'+((charCode &0xff)-0x4f);
@@ -370,12 +382,12 @@ namespace MBSlippi
 			}
 			for (size_t i = 0; i < 4; i++)
 			{
-				DisplayName[i] = std::string((const char*) ByteData + ParseOffset);
+				DisplayName[i] = ShiftJISConvert((const char*)ByteData+ParseOffset,30);
 				ParseOffset += 31;
 			}
 			for (size_t i = 0; i < 4; i++)
 			{
-				ConnectCode[i] = std::string((const char*)ByteData + ParseOffset);
+				ConnectCode[i] = ShiftJISConvert((const char*)ByteData+ParseOffset,10);
 				ParseOffset += 10;
 			}
 			if (Version < ParseVersion{3, 11, 0})

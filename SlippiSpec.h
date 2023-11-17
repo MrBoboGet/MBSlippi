@@ -150,7 +150,7 @@ namespace MBSlippi
     class MQL_Scope
     {
         std::vector<std::shared_ptr<MQL_Module>> m_OverlayedModules;
-        std::map<std::string,std::shared_ptr<MQL_Module>> m_BoundModules;
+        std::map<std::string,std::vector<std::shared_ptr<MQL_Module>>> m_BoundModules;
 
         std::unordered_map<std::string,MQL_Variable> m_Variables;
 
@@ -296,10 +296,64 @@ namespace MBSlippi
         }
 
     };
+    typedef std::vector<GameIntervall> (* BuiltinFilterType)(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,GameIntervall IntervallToInspect);
+    typedef std::vector<GameIntervall> (* MetricFuncType)(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,GameIntervall IntervallToInspect);
+    enum class OperatorType
+    {
+        Add,
+        Pipe,
+        Minus,
+        Plus,
+        Times,
+        Null
+    };
+    class MQL_Filter;
+    class MQL_Filter_Func
+    {
+        OperatorType Type = OperatorType::Null;
+        std::vector<MQL_Filter> Operands;
+    };
+    class MQL_Filter_Literal
+    {
+        Literal Value;
+    };
+    class MQL_Filter_IntervallExtractor
+    {
+        ArgumentList Args;
+        BuiltinFilterType Filter;
+    };
+    class MQL_Filter_Metric
+    {
+        ArgumentList Args;
+        MetricFuncType Metric;
+    };
+
+    std::ostream& operator<<(std::ostream& OutStream, MQL_Filter const& FilterToPrint);
+
+    class MQL_Filter
+    {
+        std::variant<MQL_Filter_Func,MQL_Filter_IntervallExtractor,MQL_Filter_Metric> m_Data;
+        public:
+        template<typename T>
+        T const& GetType() const
+        {
+            return std::get<T>(m_Data);
+        }
+        template<typename T>
+        T& GetType()
+        {
+            return std::get<T>(m_Data);
+        }
+        template<typename T>
+        bool IsType() const
+        {
+            return std::holds_alternative<T>(m_Data);   
+        }
+    };
+
     class SpecEvaluator
     {
     private:
-        typedef std::vector<GameIntervall> (* BuiltinFilterType)(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,GameIntervall IntervallToInspect);
 
         static int GetPlayerIndex(ArgumentList const& ExtraArguments);
     
@@ -309,6 +363,7 @@ namespace MBSlippi
         static std::vector<GameIntervall> InShield(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,GameIntervall IntervallToInspect);
         static std::vector<GameIntervall> Expand(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,GameIntervall IntervallToInspect);
         static std::vector<GameIntervall> ActionState(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,GameIntervall IntervallToInspect);
+        static std::vector<GameIntervall> HasState(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,GameIntervall IntervallToInspect);
         static std::vector<GameIntervall> Until(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,GameIntervall IntervallToInspect);
         static std::vector<GameIntervall> PlayerFlags(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,GameIntervall IntervallToInspect);
         static std::vector<GameIntervall> HasProjectile(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,GameIntervall IntervallToInspect);
@@ -329,10 +384,15 @@ namespace MBSlippi
             {"PlayerFlags",PlayerFlags},
             {"HasProjectile",HasProjectile},
             {"ActionState",ActionState},
+            {"HasState",HasState},
             {"Until",Until},
             {"Offstage",Offstage},
             {"Length",Length},
             {"Cornered",Cornered},
+        };
+        std::unordered_map<std::string,MetricFuncType> m_BuiltinMetrics = 
+        {
+               
         };
 
         std::vector<SpecServer> m_SpecServers;
@@ -350,7 +410,7 @@ namespace MBSlippi
         MeleeGameRecorder* m_Recorder = nullptr;
 
         void p_VerifyAttribute(std::vector<std::string> const& Attribute,bool IsPlayerAssignment,std::vector<MBLSP::Diagnostic>& OutDiagnostics);
-        void p_VerifyFilterComponent(MQL_Module& AssociatedModule,Filter_Component const& FilterToVerify,std::vector<MBLSP::Diagnostic>& OutDiagnostics);
+        void p_VerifyFilterComponent(MQL_Module& AssociatedModule,Filter_Component_Func const& FilterToVerify,std::vector<MBLSP::Diagnostic>& OutDiagnostics);
         void p_VerifyFilter(MQL_Module& AssociatedModule,Filter const& FilterToVerify,std::vector<MBLSP::Diagnostic>& OutDiagnostics);
         void p_VerifyGameInfoPredicate_Direct(MQL_Module& AssociatedModule,Identifier const& Attribute,GameInfoPredicate_Direct& PredicateToVerify,
                 bool IsPlayerAssignment,std::vector<MBLSP::Diagnostic>& OutDiagnostics);
@@ -364,9 +424,19 @@ namespace MBSlippi
         void p_ApplyAssignment(MeleeGame& GameToModify,char InAssignments[4]);
 
         std::vector<MeleeGame> p_RetrieveSpecGames(MQL_Module& AssociatedModule,GameSelection const& GameSelection);
-        std::vector<GameIntervall> p_EvaluateGameIntervalls(MQL_Module& AssociatedModule,ArgumentList& ParentArgList,Filter_Component const& FilterToUse,
+        std::vector<GameIntervall> p_EvaluateGameIntervalls(MQL_Module& AssociatedModule,ArgumentList& ParentArgList,Filter_Component_Func const& FilterToUse,
                 std::vector<GameIntervall> const& InputIntervalls,MeleeGame const& GameToFilter);
 
+        
+        static std::vector<GameIntervall> p_EvaluateGameIntervalls(
+                MeleeGame const& InputGame,
+                std::vector<GameIntervall> const& InputIntervalls,
+                ArgumentList& ArgList,
+                MQL_Filter const& Filter);
+
+        static MQL_Filter p_ConvertFilterComponent(MQL_Module& AssociatedModule,ArgumentList& ParentArgList,Filter_Component const& FilterToConvert);
+
+        
         void p_InitializeServers();
 
         bool p_EvaluateImport(MQL_Module& AssociatedModule,Import& ImportStatement,std::vector<MBLSP::Diagnostic>& OutDiagnostics);

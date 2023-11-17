@@ -198,7 +198,10 @@ namespace MBSlippi
             auto AssociatedModule = m_BoundModules.find(Idf.Parts[Offset].Value);
             if(AssociatedModule != m_BoundModules.end())
             {
-                ReturnValue = AssociatedModule->second->ModuleScope.p_GetVariable(Idf,Offset+1);
+                for(auto const& BoundModule : AssociatedModule->second)
+                {
+                    ReturnValue = BoundModule->ModuleScope.p_GetVariable(Idf,Offset+1);
+                }
             }
         }
         return ReturnValue;
@@ -217,7 +220,8 @@ namespace MBSlippi
     }
     void MQL_Scope::BindScope(std::string ScopeName,std::shared_ptr<MQL_Module> ScopeToOverlay)
     {
-        m_BoundModules.emplace(std::make_pair(ScopeName,std::move(ScopeToOverlay)));
+        m_BoundModules[ScopeName].push_back(std::move(ScopeToOverlay));
+
     }
     //doesn't verify that the variable doesn't already exist
     void MQL_Scope::AddVariable(std::string const& Name,MQL_Variable Value)
@@ -504,7 +508,7 @@ namespace MBSlippi
             p_VerifyGameInfoPredicate(AssociatedModule,SubPredicate,IsPlayerAssignment,OutDiagnostics);
         }
     }
-    void SpecEvaluator::p_VerifyFilterComponent(MQL_Module& AssociatedModule,Filter_Component const& FilterToVerify,std::vector<MBLSP::Diagnostic>& OutDiagnostics)
+    void SpecEvaluator::p_VerifyFilterComponent(MQL_Module& AssociatedModule,Filter_Component_Func const& FilterToVerify,std::vector<MBLSP::Diagnostic>& OutDiagnostics)
     {
         if(FilterToVerify.FilterName.Parts.size() != 0)
         {
@@ -588,7 +592,6 @@ namespace MBSlippi
                                 OutDiagnostics.push_back(NewDiagnostic);
                                 ReturnValue = false;
                             }
-                            break;
                         }
                     }
                 }
@@ -1221,7 +1224,7 @@ namespace MBSlippi
         }
         IntervallsToNormalize = std::move(Result);
     }
-    std::vector<GameIntervall> SpecEvaluator::p_EvaluateGameIntervalls(MQL_Module& AssociatedModule,ArgumentList& ParentArgList,Filter_Component const& FilterToUse,
+    std::vector<GameIntervall> SpecEvaluator::p_EvaluateGameIntervalls(MQL_Module& AssociatedModule,ArgumentList& ParentArgList,Filter_Component_Func const& FilterToUse,
             std::vector<GameIntervall> const& InputIntervalls,MeleeGame const& GameToFilter)
     {
         std::vector<GameIntervall> ReturnValue;
@@ -1230,7 +1233,8 @@ namespace MBSlippi
             //temporery until filters are properly vectorized
             if(FilterToUse.FilterName.Parts.size() == 1)
             {
-                if(auto BuiltinFilter = m_BuiltinFilters.find(FilterToUse.FilterName.Parts[0].Value); BuiltinFilter != m_BuiltinFilters.end())
+                if(auto BuiltinFilter = m_BuiltinFilters.find(FilterToUse.FilterName.Parts[0].Value); 
+                        BuiltinFilter != m_BuiltinFilters.end())
                 {
                     for(auto const& Intervall : InputIntervalls)
                     {
@@ -1240,7 +1244,8 @@ namespace MBSlippi
                         ReturnValue.insert(ReturnValue.end(),NewIntervalls.begin(),NewIntervalls.end());
                     }
                 }
-                else if(auto ServerIndex = m_FilterToServer.find(FilterToUse.FilterName.Parts[0].Value); ServerIndex != m_FilterToServer.end())
+                else if(auto ServerIndex = m_FilterToServer.find(FilterToUse.FilterName.Parts[0].Value);
+                        ServerIndex != m_FilterToServer.end())
                 {
                     for(auto const& Intervall : InputIntervalls)
                     {
@@ -1268,6 +1273,7 @@ namespace MBSlippi
         //special case becuase the filter is always present, but doesn't neccesarially contain anything
         if(FilterToUse.FilterName.Parts.size()  == 0 && FilterToUse.ExtraTerms.size() == 0)
         {
+            ReturnValue = InputIntervalls;
             return(ReturnValue);
         }
         //only present if not term
@@ -1275,7 +1281,8 @@ namespace MBSlippi
         {
             if(FilterToUse.Operator == "&")
             {
-                std::vector<GameIntervall> NewSituations = p_EvaluateGameIntervalls(AssociatedModule,ParentArgList,ExtraFilter,InputIntervalls,GameToFilter); 
+                std::vector<GameIntervall> NewSituations = p_EvaluateGameIntervalls(AssociatedModule,
+                        ParentArgList,ExtraFilter,InputIntervalls,GameToFilter); 
                 std::vector<GameIntervall> NewReturnValue;
                 NewReturnValue.resize(NewSituations.size()+ReturnValue.size());
                 std::merge(NewSituations.begin(),NewSituations.end(),ReturnValue.begin(),ReturnValue.end(),NewReturnValue.begin());
@@ -1286,6 +1293,10 @@ namespace MBSlippi
                 std::vector<GameIntervall> NewIntervalls;
                 NewIntervalls = p_EvaluateGameIntervalls(AssociatedModule,ParentArgList,ExtraFilter,ReturnValue,GameToFilter);
                 std::swap(ReturnValue,NewIntervalls);
+            }
+            else if(FilterToUse.Operator == "+")
+            {
+                   
             }
             else
             {
@@ -1654,6 +1665,11 @@ namespace MBSlippi
         int PlayerIndex = GetPlayerIndex(ExtraArguments);
         bool CheckShielding = ExtraArguments.HasNamedVariable("Shielding");
         bool CheckShieldstun = ExtraArguments.HasNamedVariable("Shieldstun");
+        if(!CheckShielding && !CheckShieldstun)
+        {
+            CheckShielding = true;   
+            CheckShieldstun = true;   
+        }
         ReturnValue = ExtractSequences(GameToInspect,IntervallToInspect,
                 [&](FrameInfo const& Frame)
                 {
@@ -1747,6 +1763,16 @@ namespace MBSlippi
                 [&](FrameInfo const& Frame){return(Frame.PlayerInfo[PlayerIndex].ActionState == StateToCheck);});
         return(ReturnValue);
     }
+    std::vector<GameIntervall> SpecEvaluator::HasState(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,GameIntervall IntervallToInspect)
+    {
+        std::vector<GameIntervall> ReturnValue;
+        auto Intervalls = ActionState(GameToInspect,ExtraArguments,IntervallToInspect);
+        if(Intervalls.size() != 0)
+        {
+            return {IntervallToInspect};   
+        }
+        return ReturnValue;
+    }
     std::vector<GameIntervall> SpecEvaluator::Expand(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,GameIntervall IntervallToInspect)
     {
         std::vector<GameIntervall> ReturnValue;
@@ -1782,6 +1808,14 @@ namespace MBSlippi
         else
         {
             IntervallToInspect.LastFrame += RightExpand;
+        }
+        if(IntervallToInspect.FirstFrame < 0)
+        {
+            IntervallToInspect.FirstFrame = 0;   
+        }
+        if(IntervallToInspect.LastFrame >= GameToInspect.Frames.size())
+        {
+            IntervallToInspect.LastFrame = GameToInspect.Frames.size();
         }
         if(IntervallToInspect.FirstFrame < IntervallToInspect.LastFrame)
         {

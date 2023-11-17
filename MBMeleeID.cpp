@@ -18,6 +18,8 @@ namespace MBSlippi
         bool ReturnValue = false;       
         ReturnValue = (StateToInspect == MBActionState::None ||
                StateToInspect == MBActionState::Running ||
+               StateToInspect == MBActionState::Null ||
+               StateToInspect == MBActionState::Tumbling ||
                StateToInspect == MBActionState::Dashing ||
                StateToInspect == MBActionState::Shielding ||
                StateToInspect == MBActionState::Walking);
@@ -493,6 +495,14 @@ namespace MBSlippi
         {
             ReturnValue = MBActionState::TechRoll;
         }
+        else if(AssociatedState.ActionStateID == ActionState::JumpF || AssociatedState.ActionStateID == ActionState::JumpB)
+        {
+            ReturnValue = MBActionState::Jump;
+        }
+        else if(AssociatedState.ActionStateID == ActionState::JumpAerialB || AssociatedState.ActionStateID == ActionState::JumpAerialF)
+        {
+            ReturnValue = MBActionState::DoubleJump;
+        }
         else if(
             AssociatedState.ActionStateID == ActionState::DeadDown ||
             AssociatedState.ActionStateID == ActionState::DeadLeft  ||              
@@ -601,6 +611,8 @@ namespace MBSlippi
         "TechInPlace",
         "TechRoll",
         "Airdodge",
+        "Jump",
+        "DoubleJump",
     };
     std::string MBActionStateToString(MBActionState StateToConvert)
     { 
@@ -638,7 +650,7 @@ namespace MBSlippi
     MBActionState StringToMBActionState(std::string const& StringToConvert)
     {
         MBActionState ReturnValue = MBActionState::None;
-        for(int i = 0; i < sizeof(__MBAttackIDToStringMap)/sizeof(const char*);i++)
+        for(int i = 0; i < sizeof(__MBActionStateToStringMap)/sizeof(const char*);i++)
         {
             if(__MBActionStateToStringMap[i] == StringToConvert)
             {
@@ -648,7 +660,7 @@ namespace MBSlippi
         }
         if(ReturnValue == MBActionState::None)
         {
-            throw std::runtime_error("No attack ID with name \""+StringToConvert+"\"");
+            throw std::runtime_error("No AtionState with name \""+StringToConvert+"\"");
         }
         return(ReturnValue);
     }

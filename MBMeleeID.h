@@ -80,6 +80,8 @@ namespace MBSlippi
         TechInPlace,
         TechRoll,
         Airdodge,
+        Jump,
+        DoubleJump,
         Null
     };
     
