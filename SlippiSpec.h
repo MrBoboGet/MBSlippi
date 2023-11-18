@@ -4,6 +4,7 @@
 #include "MBMeleeID.h"
 #include <MBSystem/BiDirectionalSubProcess.h>
 #include <MBSystem/MBSystem.h>
+#include <typeindex>
 namespace MBSlippi
 {
     inline std::string IdentifierToString(Identifier const& Idf)
@@ -144,7 +145,7 @@ namespace MBSlippi
     class MQL_Variable
     {
     public:
-        std::variant<MQL_LazyGameList,MQL_Variable_GameInfoPredicate,MQL_FilterDefinition>  Data;
+        std::variant<MQL_LazyGameList,MQL_Variable_GameInfoPredicate,std::shared_ptr<MQL_FilterDefinition>>  Data;
     };
     class MQL_Module;
     class MQL_Scope
@@ -305,24 +306,41 @@ namespace MBSlippi
         Minus,
         Plus,
         Times,
+        
+        //comparisons
+        eq,
+        leq,
+        geq,
+        le,
+        ge,
+
         Null
     };
     class MQL_Filter;
-    class MQL_Filter_Func
+    struct MQL_FilterCombiner
     {
         OperatorType Type = OperatorType::Null;
         std::vector<MQL_Filter> Operands;
     };
-    class MQL_Filter_Literal
+    struct MQL_MetricCombiner
+    {
+        OperatorType Type = OperatorType::Null;
+        std::vector<MQL_Filter> Operands;
+    };
+    struct MQL_Filter_Literal
     {
         Literal Value;
     };
-    class MQL_Filter_IntervallExtractor
+    struct MQL_FilterReference
+    {
+        std::shared_ptr<MQL_FilterDefinition> Filter;
+    };
+    struct MQL_IntervallExtractor
     {
         ArgumentList Args;
         BuiltinFilterType Filter;
     };
-    class MQL_Filter_Metric
+    struct MQL_Metric
     {
         ArgumentList Args;
         MetricFuncType Metric;
@@ -332,8 +350,21 @@ namespace MBSlippi
 
     class MQL_Filter
     {
-        std::variant<MQL_Filter_Func,MQL_Filter_IntervallExtractor,MQL_Filter_Metric> m_Data;
+        std::variant<MQL_FilterCombiner,MQL_MetricCombiner,MQL_IntervallExtractor,MQL_Metric> m_Data;
         public:
+
+        template<typename T>
+        MQL_Filter(T const& Data)
+        {
+            m_Data = Data;
+        }
+        template<typename T>
+        MQL_Filter(T&& Data)
+        {
+            m_Data = std::move(Data);
+        }
+        MQL_Filter(){};
+        
         template<typename T>
         T const& GetType() const
         {
@@ -390,7 +421,12 @@ namespace MBSlippi
             {"Length",Length},
             {"Cornered",Cornered},
         };
-        std::unordered_map<std::string,MetricFuncType> m_BuiltinMetrics = 
+        struct BuiltinMetric
+        {
+            MetricFuncType Func = nullptr;
+            std::type_index ResultType;
+        };
+        std::unordered_map<std::string,BuiltinMetric> m_BuiltinMetrics = 
         {
                
         };
@@ -410,8 +446,8 @@ namespace MBSlippi
         MeleeGameRecorder* m_Recorder = nullptr;
 
         void p_VerifyAttribute(std::vector<std::string> const& Attribute,bool IsPlayerAssignment,std::vector<MBLSP::Diagnostic>& OutDiagnostics);
-        void p_VerifyFilterComponent(MQL_Module& AssociatedModule,Filter_Component_Func const& FilterToVerify,std::vector<MBLSP::Diagnostic>& OutDiagnostics);
-        void p_VerifyFilter(MQL_Module& AssociatedModule,Filter const& FilterToVerify,std::vector<MBLSP::Diagnostic>& OutDiagnostics);
+        //void p_VerifyFilterComponent(MQL_Module& AssociatedModule,Filter_Component_Func const& FilterToVerify,std::vector<MBLSP::Diagnostic>& OutDiagnostics);
+        //void p_VerifyFilter(MQL_Module& AssociatedModule,Filter const& FilterToVerify,std::vector<MBLSP::Diagnostic>& OutDiagnostics);
         void p_VerifyGameInfoPredicate_Direct(MQL_Module& AssociatedModule,Identifier const& Attribute,GameInfoPredicate_Direct& PredicateToVerify,
                 bool IsPlayerAssignment,std::vector<MBLSP::Diagnostic>& OutDiagnostics);
         void p_VerifyGameInfoPredicate(MQL_Module& AssociatedModule,GameInfoPredicate& PredicateToVerify,bool IsPlayerAssignment,std::vector<MBLSP::Diagnostic>& OutDiagnostics);
@@ -433,9 +469,30 @@ namespace MBSlippi
                 std::vector<GameIntervall> const& InputIntervalls,
                 ArgumentList& ArgList,
                 MQL_Filter const& Filter);
+        
+        //converts and verifies
+        struct PrecedenceInfo
+        {
+            OperatorType Operator;
+            std::vector<int> OperatorPositions;
+        };
+        PrecedenceInfo p_GetPrecedenceInfo(std::vector<std::string> const& Operators,int BeginIndex,int EndIndex);
+        MQL_Filter p_ConvertMetricOperatorList(MQL_Module& AssociatedModule,ArgumentList& ParentArgList,
+                Filter_OperatorList const& FilterToConvert,int BeginIndex,int EndIndex,
+                std::vector<MBLSP::Diagnostic>& OutDiagnostics,std::type_index& OutType);
+        MQL_Filter p_ConvertMetricComponent(MQL_Module& AssociatedModule,ArgumentList& ParentArgList,
+                Filter_Component const& FilterToConvert,std::vector<MBLSP::Diagnostic>& OutDiagnostics,std::type_index& OutType);
+        MQL_Filter p_ConvertFilterOperatorList(MQL_Module& AssociatedModule,ArgumentList& ParentArgList,
+                Filter_OperatorList const& FilterToConvert,int BeginIndex,int EndIndex,std::vector<MBLSP::Diagnostic>& OutDiagnostics);
+        MQL_Filter p_ConvertFilterComponent(MQL_Module& AssociatedModule,ArgumentList& ParentArgList,
+                Filter_Component const& FilterToConvert,std::vector<MBLSP::Diagnostic>& OutDiagnostics);
 
-        static MQL_Filter p_ConvertFilterComponent(MQL_Module& AssociatedModule,ArgumentList& ParentArgList,Filter_Component const& FilterToConvert);
+      
 
+        static void p_AddDiagnostic(std::vector<MBLSP::Diagnostic>& OutDiagnostics,Literal const& ErrorLiteral,std::string_view Message);
+        static void p_AddDiagnostic(std::vector<MBLSP::Diagnostic>& OutDiagnostics,Identifier const& ErrorIdentifier,std::string_view Message);
+        static void p_AddDiagnostic(std::vector<MBLSP::Diagnostic>& OutDiagnostics,Filter_Component const& ErrorComponent,std::string_view Message);
+        static void p_AddDiagnostic(std::vector<MBLSP::Diagnostic>& OutDiagnostics,Filter_OperatorList const& ErrorList,int Begin,int End,std::string_view Message);
         
         void p_InitializeServers();
 

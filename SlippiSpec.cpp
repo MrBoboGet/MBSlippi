@@ -508,6 +508,226 @@ namespace MBSlippi
             p_VerifyGameInfoPredicate(AssociatedModule,SubPredicate,IsPlayerAssignment,OutDiagnostics);
         }
     }
+    void SpecEvaluator::p_AddDiagnostic(std::vector<MBLSP::Diagnostic>& OutDiagnostics,Literal const& ErrorLiteral,std::string_view Message)
+    {
+        MBLSP::Diagnostic NewDiagnostic;
+        NewDiagnostic.message = Message;
+        //NewDiagnostic.range.start.line = ErrorLiteral. .Line;
+        //NewDiagnostic.range.start.character = FilterToVerify.NamePosition.ByteOffset;
+        //NewDiagnostic.range.end = NewDiagnostic.range.start + IdentifierLength(FilterToVerify.FilterName);
+        OutDiagnostics.emplace_back(std::move(NewDiagnostic));
+    }
+    SpecEvaluator::PrecedenceInfo SpecEvaluator::p_GetPrecedenceInfo(std::vector<std::string> const& Operators,int BeginIndex,int EndIndex)
+    {
+        PrecedenceInfo ReturnValue;
+
+
+        return ReturnValue;
+    }
+    MQL_Filter SpecEvaluator::p_ConvertMetricOperatorList(MQL_Module& AssociatedModule,ArgumentList& ParentArgList,
+            Filter_OperatorList const& FilterToConvert,int BeginIndex,int EndIndex,std::vector<MBLSP::Diagnostic>& OutDiagnostics,std::type_index& OutType)
+    {
+        MQL_MetricCombiner ReturnValue;
+        if(EndIndex - BeginIndex == 1)
+        {
+            return p_ConvertMetricComponent(AssociatedModule,ParentArgList,FilterToConvert.Components[BeginIndex],OutDiagnostics,OutType);
+        }
+        PrecedenceInfo PartOperator = p_GetPrecedenceInfo(FilterToConvert.Operators,BeginIndex,EndIndex);
+        ReturnValue.Type = PartOperator.Operator;
+        int PrevIndex = BeginIndex;
+        std::type_index ResultType = typeid(nullptr);
+        std::type_index NewType = typeid(nullptr);
+        for(auto Index : PartOperator.OperatorPositions)
+        {
+            ReturnValue.Operands.push_back(p_ConvertMetricOperatorList(AssociatedModule,
+                        ParentArgList,FilterToConvert,PrevIndex,Index,OutDiagnostics,NewType));
+            if(ResultType == typeid(nullptr))
+            {
+                ResultType = NewType;
+            }
+            else if(ResultType != NewType)
+            {
+                p_AddDiagnostic(OutDiagnostics,FilterToConvert,PrevIndex,Index,
+                        "Invalid type of expression: lhs has type "+std::string(ResultType.name())+" and rhs has type "+NewType.name());
+            }
+            PrevIndex = Index;
+        }
+        if(ReturnValue.Type == OperatorType::eq ||
+           ReturnValue.Type == OperatorType::leq || 
+           ReturnValue.Type == OperatorType::le || 
+           ReturnValue.Type == OperatorType::ge || 
+           ReturnValue.Type == OperatorType::geq
+                )
+        {
+            OutType = typeid(bool);
+        }
+        else
+        {
+            OutType = ResultType;
+        }
+        return ReturnValue;
+    }
+    MQL_Filter SpecEvaluator::p_ConvertMetricComponent(MQL_Module& AssociatedModule,ArgumentList& ParentArgList,
+            Filter_Component const& FilterToConvert,std::vector<MBLSP::Diagnostic>& OutDiagnostics,std::type_index& OutType)
+    {
+        MQL_Filter ReturnValue;
+        if(FilterToConvert.IsType<Filter_Component_Literal>())
+        {
+            MQL_Filter_Literal NewLiteral;
+            Filter_Component_Literal const& Literal = FilterToConvert.GetType<Filter_Component_Literal>();
+            NewLiteral.Value = Literal.Value;
+            if(Literal.Value.IsType<Literal_String>())
+            {
+                OutType = typeid(std::string);
+            }
+            else if(Literal.Value.IsType<Literal_Number>())
+            {
+                OutType = typeid(float);
+            }
+            else if(Literal.Value.IsType<Literal_Symbol>())
+            {
+                Literal_Symbol const& Symbol = Literal.Value.GetType<Literal_Symbol>();
+                //auto& Variable = AssociatedModule.ModuleScope.GetVariable(Symbol.Value);
+                //what type...
+                OutType = typeid(std::string);
+            }
+            ReturnValue = NewLiteral;
+        }
+        else if(FilterToConvert.IsType<Filter_Component_Func>())
+        {
+            Filter_Component_Func const& Func = FilterToConvert.GetType<Filter_Component_Func>();
+            if(Func.FilterName.Parts.size() != 1)
+            {
+                p_AddDiagnostic(OutDiagnostics,Func.FilterName,"Cannot find metric with name "+IdentifierToString(Func.FilterName));
+            }
+            else
+            {
+                auto MetricIt = m_BuiltinMetrics.find(Func.FilterName.Parts[0].Value);
+                if(MetricIt == m_BuiltinMetrics.end())
+                {
+                    p_AddDiagnostic(OutDiagnostics,Func.FilterName,"Cannot find metric with name "+IdentifierToString(Func.FilterName));
+                }
+                else
+                {
+                    MQL_Metric NewMetric;
+                    NewMetric.Args = ArgumentList(Func.ArgumentList);
+                    NewMetric.Metric = MetricIt->second.Func;
+                    OutType = MetricIt->second.ResultType;
+                    ReturnValue = std::move(NewMetric);
+                }
+            }
+        }
+        else if(FilterToConvert.IsType<Filter_OperatorList>())
+        {
+            auto const& OperatorList = FilterToConvert.GetType<Filter_OperatorList>();
+            MQL_FilterCombiner Combiner;
+            if(OperatorList.Operators.size() == 0)
+            {
+                return p_ConvertMetricComponent(AssociatedModule,ParentArgList,OperatorList.Components[0],OutDiagnostics,OutType);
+            }
+            ReturnValue = p_ConvertMetricOperatorList(AssociatedModule,ParentArgList,OperatorList,0,OperatorList.Components.size(),OutDiagnostics,OutType);
+        }
+        return ReturnValue;
+    }
+    MQL_Filter SpecEvaluator::p_ConvertFilterOperatorList(MQL_Module& AssociatedModule,ArgumentList& ParentArgList,
+            Filter_OperatorList const& FilterToConvert,int BeginIndex,int EndIndex,std::vector<MBLSP::Diagnostic>& OutDiagnostics)
+    {
+        MQL_FilterCombiner ReturnValue;
+        if(EndIndex-BeginIndex == 1)
+        {
+            return p_ConvertFilterComponent(AssociatedModule,ParentArgList,FilterToConvert,OutDiagnostics);
+        }
+        PrecedenceInfo OperatorInfo = p_GetPrecedenceInfo(FilterToConvert.Operators,BeginIndex,EndIndex);
+        ReturnValue.Type = OperatorInfo.Operator;
+        int PrevIndex = BeginIndex;
+        if(OperatorInfo.Operator == OperatorType::Add || OperatorInfo.Operator == OperatorType::Pipe)
+        {
+            for(auto Index : OperatorInfo.OperatorPositions)
+            {
+                ReturnValue.Operands.push_back(p_ConvertFilterOperatorList(AssociatedModule,ParentArgList,FilterToConvert,PrevIndex,Index,OutDiagnostics));
+                PrevIndex = Index;
+            }
+        }
+        else
+        {
+            std::type_index ReturnType = typeid(nullptr);
+            MQL_Filter MetricValue = p_ConvertMetricOperatorList(AssociatedModule,ParentArgList,FilterToConvert,BeginIndex,EndIndex,OutDiagnostics,
+                    ReturnType);
+            if(ReturnType != typeid(bool))
+            {
+                p_AddDiagnostic(OutDiagnostics,FilterToConvert,BeginIndex,EndIndex,"Metric expression has to evaluate to a bool to be a part of a filter");
+            }
+            return MetricValue;
+        }
+        return ReturnValue;
+    }
+    MQL_Filter SpecEvaluator::p_ConvertFilterComponent(MQL_Module& AssociatedModule,ArgumentList& ParentArgList,
+            Filter_Component const& FilterToConvert,std::vector<MBLSP::Diagnostic>& OutDiagnostics)
+    {
+        MQL_Filter ReturnValue;
+        if(FilterToConvert.IsType<Filter_Component_Literal>())
+        {
+            auto& Literal = FilterToConvert.GetType<Filter_Component_Literal>();
+            p_AddDiagnostic(OutDiagnostics,Literal.Value,"Expressions in filter component must be a part of a comparison");
+        }
+        else if(FilterToConvert.IsType<Filter_Component_Func>())
+        {
+            //two cases depending on filter / metric
+            Filter_Component_Func const& FuncFilter = FilterToConvert.GetType<Filter_Component_Func>();
+            MQL_IntervallExtractor NewFilter;
+            if(AssociatedModule.ModuleScope.HasVariable(FuncFilter.FilterName))
+            {
+                auto const& Variable = AssociatedModule.ModuleScope.GetVariable(FuncFilter.FilterName);   
+                if(!std::holds_alternative<std::shared_ptr<MQL_FilterDefinition>>(Variable.Data))
+                {
+                    MBLSP::Diagnostic NewDiagnostic;
+                    NewDiagnostic.message = "Variable isn't of type Filter";
+                    NewDiagnostic.range.start.line = FuncFilter.NamePosition.Line;
+                    NewDiagnostic.range.start.character = FuncFilter.NamePosition.ByteOffset;
+                    NewDiagnostic.range.end = NewDiagnostic.range.start + IdentifierLength(FuncFilter.FilterName);
+                    OutDiagnostics.emplace_back(std::move(NewDiagnostic));
+                }
+                else
+                {
+                    MQL_FilterReference NewValue;
+                    NewValue.Filter = std::get<std::shared_ptr<MQL_FilterDefinition>>(Variable.Data);
+                    return NewValue;
+                }
+            }
+            else 
+            {
+                if(auto It = m_BuiltinFilters.find(FuncFilter.FilterName.Parts[0].Value); 
+                        FuncFilter.FilterName.Parts.size() > 1 || It == m_BuiltinFilters.end())
+                {
+                       
+                    MBLSP::Diagnostic NewDiagnostic;
+                    NewDiagnostic.message = "Can't find filter with name \""+IdentifierToString(FuncFilter.FilterName)+"\"";
+                    NewDiagnostic.range.start.line = FuncFilter.NamePosition.Line;
+                    NewDiagnostic.range.start.character = FuncFilter.NamePosition.ByteOffset;
+                    NewDiagnostic.range.end = NewDiagnostic.range.start + IdentifierLength(FuncFilter.FilterName);
+                    OutDiagnostics.emplace_back(std::move(NewDiagnostic));
+                }
+                else
+                {
+                    MQL_IntervallExtractor NewValue;
+                    NewValue.Args = ArgumentList(FuncFilter.ArgumentList);
+                    NewValue.Filter = It->second;
+                }
+            }
+
+        }
+        else if(FilterToConvert.IsType<Filter_OperatorList>())
+        {
+            //needs to convert filter first
+            Filter_OperatorList const& OperatorList = FilterToConvert.GetType<Filter_OperatorList>();
+            if(OperatorList.Operators.size() == 0)
+            {
+                return p_ConvertFilterComponent(AssociatedModule,ParentArgList,OperatorList.Components[0],OutDiagnostics);
+            }
+            return p_ConvertFilterOperatorList(AssociatedModule,ParentArgList,OperatorList,0,OperatorList.Components.size(),OutDiagnostics);
+        }
+        return ReturnValue;
+    }
     void SpecEvaluator::p_VerifyFilterComponent(MQL_Module& AssociatedModule,Filter_Component_Func const& FilterToVerify,std::vector<MBLSP::Diagnostic>& OutDiagnostics)
     {
         if(FilterToVerify.FilterName.Parts.size() != 0)
