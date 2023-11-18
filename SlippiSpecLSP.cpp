@@ -15,7 +15,7 @@ namespace MBSlippi
 
     void SlippiLSP::p_ExtractTokens(std::vector<MBLSP::SemanticToken>& OutTokens, Filter const& FilterToExamine)
     {
-        if(FilterToExamine.Component.FilterName.Parts.size() != 0 || FilterToExamine.Component.ExtraTerms.size() != 0)
+        if(!FilterToExamine.Component.IsEmpty())
         {
             OutTokens.push_back(MBLSP::SemanticToken(MBLSP::TokenType::Keyword,
                         h_Convert(FilterToExamine.FilterPosition),6));
@@ -24,31 +24,42 @@ namespace MBSlippi
     }
     void SlippiLSP::p_ExtractTokens(std::vector<MBLSP::SemanticToken>& OutTokens,Filter_Component const& ComponentToExamine)
     {
-        if(ComponentToExamine.FilterName.Parts.size() != 0)
+        if(ComponentToExamine.IsType<Filter_Component_Func>())
         {
+            auto const& Func = ComponentToExamine.GetType<Filter_Component_Func>();
+            if(Func.FilterName.Parts.size() != 0)
+            {
 
-            for(int i = 0; i < ComponentToExamine.FilterName.Parts.size();i++)
-            {
-                auto const& CurrentPart = ComponentToExamine.FilterName.Parts[i];
-                if(i + 1 < ComponentToExamine.FilterName.Parts.size())
+                for(int i = 0; i < Func.FilterName.Parts.size();i++)
                 {
-                    OutTokens.push_back(MBLSP::SemanticToken(MBLSP::TokenType::Namespace,
-                                h_Convert(CurrentPart.Position),CurrentPart.Value.size()));
+                    auto const& CurrentPart = Func.FilterName.Parts[i];
+                    if(i + 1 < Func.FilterName.Parts.size())
+                    {
+                        OutTokens.push_back(MBLSP::SemanticToken(MBLSP::TokenType::Namespace,
+                                    h_Convert(CurrentPart.Position),CurrentPart.Value.size()));
+                    }
+                    else
+                    {
+                        OutTokens.push_back(MBLSP::SemanticToken(MBLSP::TokenType::Function,
+                                    h_Convert(CurrentPart.Position),CurrentPart.Value.size()));
+                    }
                 }
-                else
+                if(Func.ArgumentList.Arguments.size() != 0)
                 {
-                    OutTokens.push_back(MBLSP::SemanticToken(MBLSP::TokenType::Function,
-                                h_Convert(CurrentPart.Position),CurrentPart.Value.size()));
+                    p_ExtractTokens(OutTokens,Func.ArgumentList);
                 }
-            }
-            if(ComponentToExamine.ArgumentList.Arguments.size() != 0)
-            {
-                p_ExtractTokens(OutTokens,ComponentToExamine.ArgumentList);
             }
         }
-        for(auto const& SubComponent : ComponentToExamine.ExtraTerms)
+        else if(ComponentToExamine.IsType<Filter_OperatorList>())
         {
-            p_ExtractTokens(OutTokens,SubComponent);
+            for(auto const& SubFilter : ComponentToExamine.GetType<Filter_OperatorList>().Components)
+            {
+                p_ExtractTokens(OutTokens,ComponentToExamine);
+            }
+        }
+        else if(ComponentToExamine.IsType<Filter_Component_Literal>())
+        {
+            OutTokens.push_back(GetToken(ComponentToExamine.GetType<Filter_Component_Literal>().Value));
         }
     }
     MBLSP::SemanticToken SlippiLSP::GetToken(Literal const& LiteralToConvert)
@@ -63,6 +74,11 @@ namespace MBSlippi
         {
             auto const& Literal = LiteralToConvert.GetType<Literal_Symbol>();
             ReturnValue = MBLSP::SemanticToken(MBLSP::TokenType::Property,h_Convert(Literal.ValuePosition),Literal.Value.size());
+        }
+        else if(LiteralToConvert.IsType<Literal_Number>())
+        {
+            auto const& Literal = LiteralToConvert.GetType<Literal_Number>();
+            ReturnValue = MBLSP::SemanticToken(MBLSP::TokenType::Number,h_Convert(Literal.ValuePosition),std::to_string(Literal.Value).size());
         }
         else
         {

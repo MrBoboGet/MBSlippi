@@ -14,6 +14,7 @@
 #include <MBUnicode/MBUnicode.h>
 #include <MBUtility/MBFiles.h>
 #include <cmath>
+#include <functional>
 namespace MBSlippi
 {
     
@@ -508,20 +509,125 @@ namespace MBSlippi
             p_VerifyGameInfoPredicate(AssociatedModule,SubPredicate,IsPlayerAssignment,OutDiagnostics);
         }
     }
+    MBLSP::Position SpecEvaluator::p_GetBegin(Literal const& Component)
+    {
+        MBLSP::Position ReturnValue;
+        ReturnValue.line = Component.GetBase().ValuePosition.Line;
+        ReturnValue.character = Component.GetBase().ValuePosition.ByteOffset;
+        return ReturnValue;
+    }
+    MBLSP::Position SpecEvaluator::p_GetEnd(Literal const& Component)
+    {
+        MBLSP::Position ReturnValue = p_GetBegin(Component);
+        if(Component.IsType<Literal_String>())
+        {
+            ReturnValue = ReturnValue + Component.GetType<Literal_String>().Value.size()+2;
+        }
+        else if(Component.IsType<Literal_Number>())
+        {
+            ReturnValue = ReturnValue + std::to_string(Component.GetType<Literal_Number>().Value).size();
+        }
+        else if(Component.IsType<Literal_Symbol>())
+        {
+            ReturnValue = ReturnValue + Component.GetType<Literal_Symbol>().Value.size();
+        }
+        return ReturnValue;
+    }
+    MBLSP::Position SpecEvaluator::p_GetBegin(Filter_Component const& Component)
+    {
+        MBLSP::Position ReturnValue;
+        if(Component.IsType<Filter_Component_Func>())
+        {
+            auto const& Func = Component.GetType<Filter_Component_Func>();
+            ReturnValue.line = Func.FilterName.Parts.front().Position.Line;
+            ReturnValue.character = Func.FilterName.Parts.front().Position.ByteOffset;
+        }
+        else if(Component.IsType<Filter_Component_Literal>())
+        {
+            return p_GetBegin(Component.GetType<Filter_Component_Literal>().Value);
+        }
+        else if(Component.IsType<Filter_OperatorList>())
+        {
+            return p_GetBegin(Component.GetType<Filter_OperatorList>().Components.front());
+        }
+        return ReturnValue;
+    }
+    MBLSP::Position SpecEvaluator::p_GetEnd(Filter_Component const& Component)
+    {
+        MBLSP::Position ReturnValue;
+        if(Component.IsType<Filter_Component_Func>())
+        {
+            auto const& Func = Component.GetType<Filter_Component_Func>();
+            ReturnValue.line = Func.FilterName.Parts.back().Position.Line;
+            ReturnValue.character = Func.FilterName.Parts.back().Position.ByteOffset+Func.FilterName.Parts.back().Value.size();
+        }
+        else if(Component.IsType<Filter_Component_Literal>())
+        {
+            return p_GetEnd(Component.GetType<Filter_Component_Literal>().Value);
+        }
+        else if(Component.IsType<Filter_OperatorList>())
+        {
+            return p_GetEnd(Component.GetType<Filter_OperatorList>().Components.back());
+        }
+        return ReturnValue;
+    }
     void SpecEvaluator::p_AddDiagnostic(std::vector<MBLSP::Diagnostic>& OutDiagnostics,Literal const& ErrorLiteral,std::string_view Message)
     {
         MBLSP::Diagnostic NewDiagnostic;
         NewDiagnostic.message = Message;
-        //NewDiagnostic.range.start.line = ErrorLiteral. .Line;
-        //NewDiagnostic.range.start.character = FilterToVerify.NamePosition.ByteOffset;
-        //NewDiagnostic.range.end = NewDiagnostic.range.start + IdentifierLength(FilterToVerify.FilterName);
+        NewDiagnostic.range.start = p_GetBegin(ErrorLiteral);
+        NewDiagnostic.range.end = p_GetEnd(ErrorLiteral);
+        OutDiagnostics.emplace_back(std::move(NewDiagnostic));
+    }
+    void SpecEvaluator::p_AddDiagnostic(std::vector<MBLSP::Diagnostic>& OutDiagnostics,Identifier const& ErrorIdentifier,std::string_view Message)
+    {
+        MBLSP::Diagnostic NewDiagnostic;
+        NewDiagnostic.message = Message;
+        NewDiagnostic.range.start.line = ErrorIdentifier.Parts.front().Position.Line;
+        NewDiagnostic.range.start.character = ErrorIdentifier.Parts.front().Position.ByteOffset;
+        NewDiagnostic.range.end = NewDiagnostic.range.start + IdentifierLength(ErrorIdentifier);
+        OutDiagnostics.emplace_back(std::move(NewDiagnostic));
+    }
+    void SpecEvaluator::p_AddDiagnostic(std::vector<MBLSP::Diagnostic>& OutDiagnostics,Filter_OperatorList const& ErrorList,int Begin,int End,std::string_view Message)
+    {
+        Filter_Component const& BeginError = ErrorList.Components[Begin];
+        Filter_Component const& EndError = ErrorList.Components[End-1];
+        MBLSP::Diagnostic NewDiagnostic;
+        NewDiagnostic.message = Message;
+        NewDiagnostic.range.start = p_GetBegin(ErrorList.Components[Begin]);
+        NewDiagnostic.range.end = p_GetEnd(ErrorList.Components[End-1]);
         OutDiagnostics.emplace_back(std::move(NewDiagnostic));
     }
     SpecEvaluator::PrecedenceInfo SpecEvaluator::p_GetPrecedenceInfo(std::vector<std::string> const& Operators,int BeginIndex,int EndIndex)
     {
         PrecedenceInfo ReturnValue;
-
-
+        assert(EndIndex-BeginIndex != 1);
+        int OperatorIndex = BeginIndex;
+        auto CurrentOperator = m_Operators.find(Operators[OperatorIndex]);
+        ReturnValue.OperatorPositions.push_back(OperatorIndex+1);
+        OperatorIndex += 1;
+        ReturnValue.Operator = CurrentOperator->second.ResultOperator;
+        assert(CurrentOperator != m_Operators.end());
+        while(OperatorIndex < EndIndex && OperatorIndex < Operators.size())
+        {
+            auto NewOperator = m_Operators.find(Operators[OperatorIndex]);
+            assert(NewOperator != m_Operators.end());
+            if(NewOperator->second.Precedence > CurrentOperator->second.Precedence)
+            {
+                CurrentOperator = NewOperator;
+                ReturnValue.Operator = NewOperator->second.ResultOperator;
+                ReturnValue.OperatorPositions.clear();
+                ReturnValue.OperatorPositions.push_back(OperatorIndex+1);
+            }
+            else if(NewOperator->second.ResultOperator == CurrentOperator->second.ResultOperator)
+            {
+                if(!NewOperator->second.Binary)
+                {
+                    ReturnValue.OperatorPositions.push_back(OperatorIndex+1);
+                }
+            }
+            OperatorIndex += 1;
+        }
         return ReturnValue;
     }
     MQL_Filter SpecEvaluator::p_ConvertMetricOperatorList(MQL_Module& AssociatedModule,ArgumentList& ParentArgList,
@@ -544,6 +650,7 @@ namespace MBSlippi
             if(ResultType == typeid(nullptr))
             {
                 ResultType = NewType;
+                ReturnValue.OperandTypes = ResultType;
             }
             else if(ResultType != NewType)
             {
@@ -633,9 +740,10 @@ namespace MBSlippi
             Filter_OperatorList const& FilterToConvert,int BeginIndex,int EndIndex,std::vector<MBLSP::Diagnostic>& OutDiagnostics)
     {
         MQL_FilterCombiner ReturnValue;
+        ReturnValue.Negated = FilterToConvert.Negated;
         if(EndIndex-BeginIndex == 1)
         {
-            return p_ConvertFilterComponent(AssociatedModule,ParentArgList,FilterToConvert,OutDiagnostics);
+            return p_ConvertFilterComponent(AssociatedModule,ParentArgList,FilterToConvert.Components[BeginIndex],OutDiagnostics);
         }
         PrecedenceInfo OperatorInfo = p_GetPrecedenceInfo(FilterToConvert.Operators,BeginIndex,EndIndex);
         ReturnValue.Type = OperatorInfo.Operator;
@@ -691,6 +799,8 @@ namespace MBSlippi
                 {
                     MQL_FilterReference NewValue;
                     NewValue.Filter = std::get<std::shared_ptr<MQL_FilterDefinition>>(Variable.Data);
+                    NewValue.Negated = FuncFilter.Negated;
+                    NewValue.Args = FuncFilter.ArgumentList;
                     return NewValue;
                 }
             }
@@ -712,6 +822,8 @@ namespace MBSlippi
                     MQL_IntervallExtractor NewValue;
                     NewValue.Args = ArgumentList(FuncFilter.ArgumentList);
                     NewValue.Filter = It->second;
+                    NewValue.Negated = FuncFilter.Negated;
+                    return NewValue;
                 }
             }
 
@@ -728,42 +840,15 @@ namespace MBSlippi
         }
         return ReturnValue;
     }
-    void SpecEvaluator::p_VerifyFilterComponent(MQL_Module& AssociatedModule,Filter_Component_Func const& FilterToVerify,std::vector<MBLSP::Diagnostic>& OutDiagnostics)
+    void SpecEvaluator::p_VerifyFilterComponent(MQL_Module& AssociatedModule,Filter_Component const& FilterToVerify,std::vector<MBLSP::Diagnostic>& OutDiagnostics)
     {
-        if(FilterToVerify.FilterName.Parts.size() != 0)
-        {
-            if(AssociatedModule.ModuleScope.HasVariable(FilterToVerify.FilterName))
-            {
-                auto const& Variable = AssociatedModule.ModuleScope.GetVariable(FilterToVerify.FilterName);   
-                if(!std::holds_alternative<MQL_FilterDefinition>(Variable.Data))
-                {
-                    MBLSP::Diagnostic NewDiagnostic;
-                    NewDiagnostic.message = "Variable isn't of type Filter";
-                    NewDiagnostic.range.start.line = FilterToVerify.NamePosition.Line;
-                    NewDiagnostic.range.start.character = FilterToVerify.NamePosition.ByteOffset;
-                    NewDiagnostic.range.end = NewDiagnostic.range.start + IdentifierLength(FilterToVerify.FilterName);
-                    OutDiagnostics.emplace_back(std::move(NewDiagnostic));
-                }
-            }
-            else if( FilterToVerify.FilterName.Parts.size() > 1 || (m_BuiltinFilters.find(FilterToVerify.FilterName.Parts[0].Value) == m_BuiltinFilters.end() &&
-                    m_FilterToServer.find(FilterToVerify.FilterName.Parts[0].Value) == m_FilterToServer.end()))
-            {
-                MBLSP::Diagnostic NewDiagnostic;
-                NewDiagnostic.message = "Can't find filter with name \""+IdentifierToString(FilterToVerify.FilterName)+"\"";
-                NewDiagnostic.range.start.line = FilterToVerify.NamePosition.Line;
-                NewDiagnostic.range.start.character = FilterToVerify.NamePosition.ByteOffset;
-                NewDiagnostic.range.end = NewDiagnostic.range.start + IdentifierLength(FilterToVerify.FilterName);
-                OutDiagnostics.emplace_back(std::move(NewDiagnostic));
-            }
-        }
-        for(auto const& Filter : FilterToVerify.ExtraTerms)
-        {
-            p_VerifyFilterComponent(AssociatedModule,Filter,OutDiagnostics);   
-        }
+        ArgumentList ParentArgList;
+        p_ConvertFilterComponent(AssociatedModule,ParentArgList,FilterToVerify,OutDiagnostics);
     }
     void SpecEvaluator::p_VerifyFilter(MQL_Module& AssociatedModule,Filter const& FilterToVerify,std::vector<MBLSP::Diagnostic>& OutDiagnostics)
     {
-        p_VerifyFilterComponent(AssociatedModule,FilterToVerify.Component,OutDiagnostics);
+        ArgumentList ParentArgList;
+        p_ConvertFilterComponent(AssociatedModule,ParentArgList,FilterToVerify.Component,OutDiagnostics);
     }
     bool SpecEvaluator::p_EvaluateImport(MQL_Module& AssociatedModule,Import& ImportStatement,std::vector<MBLSP::Diagnostic>& OutDiagnostics)
     {
@@ -890,7 +975,7 @@ namespace MBSlippi
             if(UpdateState && !VariableExists)
             {
                 MQL_Variable TemporaryVariable;
-                MQL_FilterDefinition NewDefinition = MQL_FilterDefinition();
+                std::shared_ptr<MQL_FilterDefinition> NewDefinition = std::make_shared<MQL_FilterDefinition>();
                 TemporaryVariable.Data = std::move(NewDefinition);
                 AssociatedModule.ModuleScope.AddVariable(VariableBase.Name,std::move(TemporaryVariable));
             }
@@ -1444,90 +1529,302 @@ namespace MBSlippi
         }
         IntervallsToNormalize = std::move(Result);
     }
-    std::vector<GameIntervall> SpecEvaluator::p_EvaluateGameIntervalls(MQL_Module& AssociatedModule,ArgumentList& ParentArgList,Filter_Component_Func const& FilterToUse,
-            std::vector<GameIntervall> const& InputIntervalls,MeleeGame const& GameToFilter)
+    //std::vector<GameIntervall> SpecEvaluator::p_EvaluateGameIntervalls(MQL_Module& AssociatedModule,ArgumentList& ParentArgList,Filter_Component const& FilterToUse,
+    //        std::vector<GameIntervall> const& InputIntervalls,MeleeGame const& GameToFilter)
+    //{
+    //    std::vector<GameIntervall> ReturnValue;
+    //    if(FilterToUse.FilterName.Parts.size() != 0)
+    //    {
+    //        //temporery until filters are properly vectorized
+    //        if(FilterToUse.FilterName.Parts.size() == 1)
+    //        {
+    //            if(auto BuiltinFilter = m_BuiltinFilters.find(FilterToUse.FilterName.Parts[0].Value); 
+    //                    BuiltinFilter != m_BuiltinFilters.end())
+    //            {
+    //                for(auto const& Intervall : InputIntervalls)
+    //                {
+    //                    ArgumentList Arguments(FilterToUse.ArgumentList);
+    //                    Arguments.SetParentArgList(&ParentArgList);
+    //                    auto NewIntervalls = BuiltinFilter->second(GameToFilter,Arguments,Intervall);
+    //                    ReturnValue.insert(ReturnValue.end(),NewIntervalls.begin(),NewIntervalls.end());
+    //                }
+    //            }
+    //            else if(auto ServerIndex = m_FilterToServer.find(FilterToUse.FilterName.Parts[0].Value);
+    //                    ServerIndex != m_FilterToServer.end())
+    //            {
+    //                for(auto const& Intervall : InputIntervalls)
+    //                {
+    //                    auto NewIntervalls = m_SpecServers[ServerIndex->second].ExecuteFilter(FilterToUse.FilterName.Parts[0].Value,GameToFilter,Intervall);
+    //                    ReturnValue.insert(ReturnValue.end(),NewIntervalls.begin(),NewIntervalls.end());
+    //                }
+    //            }
+    //        }
+    //        if(ReturnValue.size() == 0 && AssociatedModule.ModuleScope.HasVariable(FilterToUse.FilterName))
+    //        {
+    //            MQL_FilterDefinition const& DerferencedFilter = std::get<MQL_FilterDefinition>(
+    //                    AssociatedModule.ModuleScope.GetVariable(FilterToUse.FilterName).Data);
+    //            ArgumentList FilterArgument(FilterToUse.ArgumentList);
+    //            FilterArgument.SetParentArgList(&ParentArgList);
+    //            ArgumentList ParentEnvironment(DerferencedFilter.Arguments,FilterArgument);
+    //            auto NewIntervalls = p_EvaluateGameIntervalls(AssociatedModule,ParentEnvironment,DerferencedFilter.Component,InputIntervalls,GameToFilter);
+    //            ReturnValue.insert(ReturnValue.end(),NewIntervalls.begin(),NewIntervalls.end());
+    //        }
+    //        std::sort(ReturnValue.begin(),ReturnValue.end());
+    //    }
+    //    else if(FilterToUse.Operator == "|")
+    //    {
+    //        ReturnValue =  InputIntervalls;
+    //    }
+    //    //special case becuase the filter is always present, but doesn't neccesarially contain anything
+    //    if(FilterToUse.FilterName.Parts.size()  == 0 && FilterToUse.ExtraTerms.size() == 0)
+    //    {
+    //        ReturnValue = InputIntervalls;
+    //        return(ReturnValue);
+    //    }
+    //    //only present if not term
+    //    for(auto const& ExtraFilter : FilterToUse.ExtraTerms)
+    //    {
+    //        if(FilterToUse.Operator == "&")
+    //        {
+    //            std::vector<GameIntervall> NewSituations = p_EvaluateGameIntervalls(AssociatedModule,
+    //                    ParentArgList,ExtraFilter,InputIntervalls,GameToFilter); 
+    //            std::vector<GameIntervall> NewReturnValue;
+    //            NewReturnValue.resize(NewSituations.size()+ReturnValue.size());
+    //            std::merge(NewSituations.begin(),NewSituations.end(),ReturnValue.begin(),ReturnValue.end(),NewReturnValue.begin());
+    //            ReturnValue = std::move(NewReturnValue);
+    //        }       
+    //        else if(FilterToUse.Operator == "|")
+    //        {
+    //            std::vector<GameIntervall> NewIntervalls;
+    //            NewIntervalls = p_EvaluateGameIntervalls(AssociatedModule,ParentArgList,ExtraFilter,ReturnValue,GameToFilter);
+    //            std::swap(ReturnValue,NewIntervalls);
+    //        }
+    //        else if(FilterToUse.Operator == "+")
+    //        {
+    //               
+    //        }
+    //        else
+    //        {
+    //            assert(false  && "Trying to evaluate filter with extra terms and no valid operator");
+    //        }
+    //    }
+    //    if(FilterToUse.Negated)
+    //    {
+    //        ReturnValue = h_GetNegatedIntervalls(InputIntervalls,ReturnValue);
+    //    }
+    //    return(ReturnValue);
+    //}
+    std::vector<GameIntervall> SpecEvaluator::p_EvaluateGameIntervalls(
+            MQL_Module& AssociatedModule,
+            MeleeGame const& InputGame,
+            std::vector<GameIntervall> const& InputIntervalls,
+            ArgumentList& ArgList,
+            MQL_Filter const& Filter)
     {
         std::vector<GameIntervall> ReturnValue;
-        if(FilterToUse.FilterName.Parts.size() != 0)
+        bool Negated = false;
+        if(Filter.IsType<MQL_IntervallExtractor>())
         {
-            //temporery until filters are properly vectorized
-            if(FilterToUse.FilterName.Parts.size() == 1)
+            auto const& IntervallExtractor = Filter.GetType<MQL_IntervallExtractor>();
+            Negated = IntervallExtractor.Negated;
+            ArgumentList Arguments(IntervallExtractor.Args);
+            Arguments.SetParentArgList(&ArgList);
+            for(auto const& Intervall : InputIntervalls)
             {
-                if(auto BuiltinFilter = m_BuiltinFilters.find(FilterToUse.FilterName.Parts[0].Value); 
-                        BuiltinFilter != m_BuiltinFilters.end())
-                {
-                    for(auto const& Intervall : InputIntervalls)
-                    {
-                        ArgumentList Arguments(FilterToUse.ArgumentList);
-                        Arguments.SetParentArgList(&ParentArgList);
-                        auto NewIntervalls = BuiltinFilter->second(GameToFilter,Arguments,Intervall);
-                        ReturnValue.insert(ReturnValue.end(),NewIntervalls.begin(),NewIntervalls.end());
-                    }
-                }
-                else if(auto ServerIndex = m_FilterToServer.find(FilterToUse.FilterName.Parts[0].Value);
-                        ServerIndex != m_FilterToServer.end())
-                {
-                    for(auto const& Intervall : InputIntervalls)
-                    {
-                        auto NewIntervalls = m_SpecServers[ServerIndex->second].ExecuteFilter(FilterToUse.FilterName.Parts[0].Value,GameToFilter,Intervall);
-                        ReturnValue.insert(ReturnValue.end(),NewIntervalls.begin(),NewIntervalls.end());
-                    }
-                }
-            }
-            if(ReturnValue.size() == 0 && AssociatedModule.ModuleScope.HasVariable(FilterToUse.FilterName))
-            {
-                MQL_FilterDefinition const& DerferencedFilter = std::get<MQL_FilterDefinition>(
-                        AssociatedModule.ModuleScope.GetVariable(FilterToUse.FilterName).Data);
-                ArgumentList FilterArgument(FilterToUse.ArgumentList);
-                FilterArgument.SetParentArgList(&ParentArgList);
-                ArgumentList ParentEnvironment(DerferencedFilter.Arguments,FilterArgument);
-                auto NewIntervalls = p_EvaluateGameIntervalls(AssociatedModule,ParentEnvironment,DerferencedFilter.Component,InputIntervalls,GameToFilter);
+                auto NewIntervalls = IntervallExtractor.Filter(InputGame,Arguments,Intervall);
                 ReturnValue.insert(ReturnValue.end(),NewIntervalls.begin(),NewIntervalls.end());
             }
-            std::sort(ReturnValue.begin(),ReturnValue.end());
         }
-        else if(FilterToUse.Operator == "|")
+        else if(Filter.IsType<MQL_FilterReference>())
         {
-            ReturnValue =  InputIntervalls;
+            auto const& FilterRef = Filter.GetType<MQL_FilterReference>();
+            std::shared_ptr<MQL_FilterDefinition> DerferencedFilter = FilterRef.Filter;
+            Negated = FilterRef.Negated;
+            ArgumentList FilterArgument(FilterRef.Args);
+            FilterArgument.SetParentArgList(&ArgList);
+            ArgumentList ParentEnvironment(DerferencedFilter->Arguments,FilterArgument);
+            auto NewIntervalls = p_EvaluateGameIntervalls(AssociatedModule,InputGame,InputIntervalls,ParentEnvironment,*DerferencedFilter->Component);
+            ReturnValue.insert(ReturnValue.end(),NewIntervalls.begin(),NewIntervalls.end());
         }
-        //special case becuase the filter is always present, but doesn't neccesarially contain anything
-        if(FilterToUse.FilterName.Parts.size()  == 0 && FilterToUse.ExtraTerms.size() == 0)
+        else if(Filter.IsType<MQL_FilterCombiner>())
         {
-            ReturnValue = InputIntervalls;
-            return(ReturnValue);
-        }
-        //only present if not term
-        for(auto const& ExtraFilter : FilterToUse.ExtraTerms)
-        {
-            if(FilterToUse.Operator == "&")
+            auto const& Combiner = Filter.GetType<MQL_FilterCombiner>();
+            Negated = Combiner.Negated;
+            if(Combiner.Type == OperatorType::Add)
             {
-                std::vector<GameIntervall> NewSituations = p_EvaluateGameIntervalls(AssociatedModule,
-                        ParentArgList,ExtraFilter,InputIntervalls,GameToFilter); 
-                std::vector<GameIntervall> NewReturnValue;
-                NewReturnValue.resize(NewSituations.size()+ReturnValue.size());
-                std::merge(NewSituations.begin(),NewSituations.end(),ReturnValue.begin(),ReturnValue.end(),NewReturnValue.begin());
-                ReturnValue = std::move(NewReturnValue);
-            }       
-            else if(FilterToUse.Operator == "|")
-            {
-                std::vector<GameIntervall> NewIntervalls;
-                NewIntervalls = p_EvaluateGameIntervalls(AssociatedModule,ParentArgList,ExtraFilter,ReturnValue,GameToFilter);
-                std::swap(ReturnValue,NewIntervalls);
+                ReturnValue = InputIntervalls;
+                for(auto const& SubFilter : Combiner.Operands)
+                {
+                    std::vector<GameIntervall> NewSituations = p_EvaluateGameIntervalls(AssociatedModule,InputGame,ReturnValue,ArgList,SubFilter);
+                    std::vector<GameIntervall> NewReturnValue;
+                    NewReturnValue.resize(NewSituations.size()+ReturnValue.size());
+                    std::merge(NewSituations.begin(),NewSituations.end(),ReturnValue.begin(),ReturnValue.end(),NewReturnValue.begin());
+                    ReturnValue = std::move(NewReturnValue);
+                }
             }
-            else if(FilterToUse.Operator == "+")
+            else if(Combiner.Type == OperatorType::Pipe)
             {
-                   
+                ReturnValue = InputIntervalls;
+                std::vector<GameIntervall> NewIntervalls;
+                for(auto const& SubFilter : Combiner.Operands)
+                {
+                    NewIntervalls = p_EvaluateGameIntervalls(AssociatedModule,InputGame,ReturnValue,ArgList,SubFilter);
+                    std::swap(ReturnValue,NewIntervalls);
+                }
             }
             else
             {
-                assert(false  && "Trying to evaluate filter with extra terms and no valid operator");
+                assert(false && "Filter combiner doesnt cover all operator types");   
             }
         }
-        if(FilterToUse.Negated)
+        else if(Filter.IsType<MQL_MetricCombiner>())
+        {
+            auto const& Combiner = Filter.GetType<MQL_FilterCombiner>();
+            Negated = Combiner.Negated;
+        }
+        else
+        {
+            assert(false && "Execute Filter doesn't cover all cases");   
+        }
+        if(Negated)
         {
             ReturnValue = h_GetNegatedIntervalls(InputIntervalls,ReturnValue);
         }
-        return(ReturnValue);
+        return ReturnValue;
+    }
+
+
+
+    template<typename ValueType,typename FuncType>
+    inline std::vector<MQL_MetricVariable> h_CombineValues(FuncType Func,std::vector<MQL_MetricVariable> const& Lhs,std::vector<MQL_MetricVariable> const& Rhs)
+    {
+        assert(Lhs.size() != 0 && Rhs.size() != 0);
+        std::vector<MQL_MetricVariable> ReturnValue;
+        size_t ResultSize = std::max(Lhs.size(),Rhs.size());
+        size_t LhsIndex = 0;
+        size_t RhsIndex = 0;
+        size_t IterationCount = 0;
+        while(IterationCount < ResultSize)
+        {
+            ReturnValue.push_back(Func(std::get<ValueType>(Lhs[LhsIndex].Data),std::get<ValueType>(Rhs[RhsIndex].Data)));
+            LhsIndex += 1;
+            RhsIndex += 1;
+            LhsIndex = LhsIndex % Lhs.size();
+            RhsIndex = RhsIndex % Rhs.size();
+            IterationCount += 1;
+        }
+        return ReturnValue;
+    }
+
+    std::vector<MQL_MetricVariable> SpecEvaluator::p_EvaluateMetric(
+            MeleeGame const& InputGame,
+            std::vector<GameIntervall> const& InputIntervalls,
+            ArgumentList& ArgList,
+            MQL_Filter const& Filter)
+    {
+
+        std::vector<MQL_MetricVariable> ReturnValue;
+        if(Filter.IsType<MQL_Filter_Literal>())
+        {
+            auto const& Literal = Filter.GetType<MQL_Filter_Literal>();
+            if(Literal.Value.IsType<Literal_String>())
+            {
+                ReturnValue = {Literal.Value.GetType<Literal_String>().Value};   
+            }
+            else if(Literal.Value.IsType<Literal_Number>())
+            {
+                ReturnValue = {Literal.Value.GetType<Literal_Number>().Value};
+            }
+            else if(Literal.Value.IsType<Literal_Symbol>())
+            {
+                std::string const& SymbolValue = ArgList.GetNamedVariableString(Literal.Value.GetType<Literal_Symbol>().Value);
+                ReturnValue = {SymbolValue};
+            }
+        }
+        else if(Filter.IsType<MQL_Metric>())
+        {
+            auto const& Metric = Filter.GetType<MQL_Metric>();
+            assert(Metric.Metric != nullptr);
+            ReturnValue = Metric.Metric(InputGame,ArgList,InputIntervalls);
+        }
+        else if(Filter.IsType<MQL_MetricCombiner>())
+        {
+            auto const& Combiner = Filter.GetType<MQL_MetricCombiner>();
+            assert(Combiner.Operands.size() == 2);
+            std::vector<MQL_MetricVariable> Lhs = p_EvaluateMetric(InputGame,InputIntervalls,ArgList,Combiner.Operands[0]);
+            std::vector<MQL_MetricVariable> Rhs = p_EvaluateMetric(InputGame,InputIntervalls,ArgList,Combiner.Operands[1]);
+            if(Combiner.OperandTypes == typeid(std::string))
+            {
+                if(Combiner.Type == OperatorType::Plus)
+                {
+                    ReturnValue = h_CombineValues<std::string>(std::plus<std::string>(),Lhs,Rhs);
+                }
+                else if(Combiner.Type == OperatorType::eq)
+                {
+                    ReturnValue = h_CombineValues<std::string>(std::equal_to<std::string>(),Lhs,Rhs);
+                }
+                else if(Combiner.Type == OperatorType::le)
+                {
+                    ReturnValue = h_CombineValues<std::string>(std::less<std::string>(),Lhs,Rhs);
+                }
+                else if(Combiner.Type == OperatorType::leq)
+                {
+                    ReturnValue = h_CombineValues<std::string>(std::less_equal<std::string>(),Lhs,Rhs);
+                }
+                else if(Combiner.Type == OperatorType::ge)
+                {
+                    ReturnValue = h_CombineValues<std::string>(std::greater<std::string>(),Lhs,Rhs);
+                }
+                else if(Combiner.Type == OperatorType::geq)
+                {
+                    ReturnValue = h_CombineValues<std::string>(std::greater_equal<std::string>(),Lhs,Rhs);
+                }
+                else
+                {
+                    assert(false && "MetricCombiner for string doesnt cover all operator types");   
+                }
+            }
+            else if(Combiner.OperandTypes == typeid(float))
+            {
+                if(Combiner.Type == OperatorType::Plus)
+                {
+                    ReturnValue = h_CombineValues<float>(std::plus<float>(),Lhs,Rhs);
+                }
+                else if(Combiner.Type == OperatorType::eq)
+                {
+                    ReturnValue = h_CombineValues<float>(std::equal_to<float>(),Lhs,Rhs);
+                }
+                else if(Combiner.Type == OperatorType::le)
+                {
+                    ReturnValue = h_CombineValues<float>(std::less<float>(),Lhs,Rhs);
+                }
+                else if(Combiner.Type == OperatorType::leq)
+                {
+                    ReturnValue = h_CombineValues<float>(std::less_equal<float>(),Lhs,Rhs);
+                }
+                else if(Combiner.Type == OperatorType::ge)
+                {
+                    ReturnValue = h_CombineValues<float>(std::greater<float>(),Lhs,Rhs);
+                }
+                else if(Combiner.Type == OperatorType::geq)
+                {
+                    ReturnValue = h_CombineValues<float>(std::greater_equal<float>(),Lhs,Rhs);
+                }
+                else
+                {
+                    assert(false && "MetricCombiner for string doesnt cover all operator types");   
+                }
+            }
+            else
+            {
+                assert(false && "MetricCombiner should only be able to combine strings and floats");
+            }
+        }
+        else
+        {
+            assert(false && "p_EvaluateMetric doesn't cover all cases");   
+        }
+        return ReturnValue;
     }
     void SpecEvaluator::EvaluateSelection(MQL_Module& AssociatedModule,Selection& SpecToEvaluate,std::vector<MBLSP::Diagnostic>& OutDiagnostics)
     {       
@@ -1549,10 +1846,13 @@ namespace MBSlippi
 
         std::vector<RecordingInfo> GamesToRecord;
         ArgumentList TempList;
+        MQL_Filter Filter = p_ConvertFilterComponent(AssociatedModule,TempList,SpecToEvaluate.SituationFilter.Component,OutDiagnostics);
+        assert(OutDiagnostics.size() == 0);
         for(auto& Game : GamesToInspect)
         {
             //assumes are sorted
-            auto Intervalls = p_EvaluateGameIntervalls(AssociatedModule,TempList,SpecToEvaluate.SituationFilter.Component,{GameIntervall(0,Game.Frames.size()-1)},Game);
+            auto Intervalls = 
+                p_EvaluateGameIntervalls(AssociatedModule,Game,{GameIntervall(0,Game.Frames.size()-1)},TempList,Filter);
             h_NormalizeIntervalls(Intervalls);
             if(Intervalls.size() != 0)
             {
@@ -1674,9 +1974,10 @@ namespace MBSlippi
         {
             MQL_Variable NewVariable;
             auto const& FilterDefinition = SpecToEvaluate.GetType<VariableDeclaration_Filter>();
-            MQL_FilterDefinition NewVariableData;
-            NewVariableData.Arguments = FilterDefinition.Arguments;
-            NewVariableData.Component = FilterDefinition.Component;
+            std::shared_ptr<MQL_FilterDefinition> NewVariableData = std::make_shared<MQL_FilterDefinition>();
+            NewVariableData->Arguments = FilterDefinition.Arguments;
+            ArgumentList List;
+            NewVariableData->Component = std::make_shared<MQL_Filter>(p_ConvertFilterComponent(AssociatedModule,List,FilterDefinition.Component,OutDiagnostics));
             NewVariable.Data = std::move(NewVariableData);
             AssociatedModule.ModuleScope.AddVariable(SpecToEvaluate.GetType<VariableDeclaration_Base>().Name, std::move(NewVariable));
         }
@@ -2194,6 +2495,16 @@ namespace MBSlippi
                     return false;
                 });
         return(ReturnValue);
+    }
+    std::vector<MQL_MetricVariable> SpecEvaluator::Percent(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,std::vector<GameIntervall> const& IntervallToInspect)
+    {
+        std::vector<MQL_MetricVariable> ReturnValue;
+        int PlayerIndex = GetPlayerIndex(ExtraArguments);
+        for(auto const& Intervall : IntervallToInspect)
+        {
+            ReturnValue.push_back(GameToInspect.Frames[Intervall.FirstFrame].PlayerInfo[PlayerIndex].Percent);   
+        }
+        return ReturnValue;
     }
     std::vector<GameIntervall> SpecEvaluator::PlayerFlags(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,GameIntervall IntervallToInspect)
     {

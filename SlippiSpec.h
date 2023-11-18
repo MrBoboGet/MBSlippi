@@ -137,15 +137,32 @@ namespace MBSlippi
         bool IsPlayerAssignment = false;
         GameInfoPredicate Predicate;
     };
+    class MQL_Filter;
     struct MQL_FilterDefinition
     {
-        Filter_Component Component;
+        std::shared_ptr<MQL_Filter> Component;
         Filter_ArgList Arguments;
     };
     class MQL_Variable
     {
     public:
         std::variant<MQL_LazyGameList,MQL_Variable_GameInfoPredicate,std::shared_ptr<MQL_FilterDefinition>>  Data;
+    };
+    class MQL_MetricVariable
+    {
+    public:
+        std::variant<std::string,float,bool> Data;
+
+        MQL_MetricVariable(){};
+        MQL_MetricVariable(int Number)
+        {
+            Data = float(Number);   
+        }
+        template<typename T>
+        MQL_MetricVariable(T&& Data)
+        {
+            this->Data = std::forward<T>(Data);
+        }
     };
     class MQL_Module;
     class MQL_Scope
@@ -298,7 +315,7 @@ namespace MBSlippi
 
     };
     typedef std::vector<GameIntervall> (* BuiltinFilterType)(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,GameIntervall IntervallToInspect);
-    typedef std::vector<GameIntervall> (* MetricFuncType)(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,GameIntervall IntervallToInspect);
+    typedef std::vector<MQL_MetricVariable> (* MetricFuncType)(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,std::vector<GameIntervall> const&  IntervallToInspect);
     enum class OperatorType
     {
         Add,
@@ -319,13 +336,16 @@ namespace MBSlippi
     class MQL_Filter;
     struct MQL_FilterCombiner
     {
+        bool Negated = false;
         OperatorType Type = OperatorType::Null;
         std::vector<MQL_Filter> Operands;
     };
     struct MQL_MetricCombiner
     {
-        OperatorType Type = OperatorType::Null;
         std::vector<MQL_Filter> Operands;
+        std::type_index OperandTypes = typeid(nullptr);
+        OperatorType Type = OperatorType::Null;
+        bool Negated = false;
     };
     struct MQL_Filter_Literal
     {
@@ -333,10 +353,13 @@ namespace MBSlippi
     };
     struct MQL_FilterReference
     {
+        bool Negated = false;
         std::shared_ptr<MQL_FilterDefinition> Filter;
+        ArgumentList Args;
     };
     struct MQL_IntervallExtractor
     {
+        bool Negated = false;
         ArgumentList Args;
         BuiltinFilterType Filter;
     };
@@ -350,18 +373,17 @@ namespace MBSlippi
 
     class MQL_Filter
     {
-        std::variant<MQL_FilterCombiner,MQL_MetricCombiner,MQL_IntervallExtractor,MQL_Metric> m_Data;
+        std::variant<MQL_FilterCombiner, MQL_FilterReference,MQL_Filter_Literal,MQL_MetricCombiner,MQL_IntervallExtractor,MQL_Metric> m_Data;
         public:
 
-        template<typename T>
-        MQL_Filter(T const& Data)
-        {
-            m_Data = Data;
-        }
+        MQL_Filter(MQL_Filter const&) = default;
+        MQL_Filter(MQL_Filter&&) noexcept = default;
+        MQL_Filter& operator=(MQL_Filter const&) = default;
+        MQL_Filter& operator=(MQL_Filter&&) = default;
         template<typename T>
         MQL_Filter(T&& Data)
         {
-            m_Data = std::move(Data);
+            m_Data = std::forward<T>(Data);
         }
         MQL_Filter(){};
         
@@ -426,9 +448,12 @@ namespace MBSlippi
             MetricFuncType Func = nullptr;
             std::type_index ResultType;
         };
+
+        //Metrics
+        static std::vector<MQL_MetricVariable> Percent(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,std::vector<GameIntervall> const& IntervallToInspect);
         std::unordered_map<std::string,BuiltinMetric> m_BuiltinMetrics = 
         {
-               
+            {"Percent",{Percent,typeid(float)}}
         };
 
         std::vector<SpecServer> m_SpecServers;
@@ -446,8 +471,8 @@ namespace MBSlippi
         MeleeGameRecorder* m_Recorder = nullptr;
 
         void p_VerifyAttribute(std::vector<std::string> const& Attribute,bool IsPlayerAssignment,std::vector<MBLSP::Diagnostic>& OutDiagnostics);
-        //void p_VerifyFilterComponent(MQL_Module& AssociatedModule,Filter_Component_Func const& FilterToVerify,std::vector<MBLSP::Diagnostic>& OutDiagnostics);
-        //void p_VerifyFilter(MQL_Module& AssociatedModule,Filter const& FilterToVerify,std::vector<MBLSP::Diagnostic>& OutDiagnostics);
+        void p_VerifyFilterComponent(MQL_Module& AssociatedModule,Filter_Component const& FilterToVerify,std::vector<MBLSP::Diagnostic>& OutDiagnostics);
+        void p_VerifyFilter(MQL_Module& AssociatedModule,Filter const& FilterToVerify,std::vector<MBLSP::Diagnostic>& OutDiagnostics);
         void p_VerifyGameInfoPredicate_Direct(MQL_Module& AssociatedModule,Identifier const& Attribute,GameInfoPredicate_Direct& PredicateToVerify,
                 bool IsPlayerAssignment,std::vector<MBLSP::Diagnostic>& OutDiagnostics);
         void p_VerifyGameInfoPredicate(MQL_Module& AssociatedModule,GameInfoPredicate& PredicateToVerify,bool IsPlayerAssignment,std::vector<MBLSP::Diagnostic>& OutDiagnostics);
@@ -460,11 +485,17 @@ namespace MBSlippi
         void p_ApplyAssignment(MeleeGame& GameToModify,char InAssignments[4]);
 
         std::vector<MeleeGame> p_RetrieveSpecGames(MQL_Module& AssociatedModule,GameSelection const& GameSelection);
-        std::vector<GameIntervall> p_EvaluateGameIntervalls(MQL_Module& AssociatedModule,ArgumentList& ParentArgList,Filter_Component_Func const& FilterToUse,
-                std::vector<GameIntervall> const& InputIntervalls,MeleeGame const& GameToFilter);
+        //std::vector<GameIntervall> p_EvaluateGameIntervalls(MQL_Module& AssociatedModule,ArgumentList& ParentArgList,Filter_Component const& FilterToUse,
+        //        std::vector<GameIntervall> const& InputIntervalls,MeleeGame const& GameToFilter);
 
         
-        static std::vector<GameIntervall> p_EvaluateGameIntervalls(
+        std::vector<GameIntervall> p_EvaluateGameIntervalls(
+                MQL_Module& AssociatedModule,
+                MeleeGame const& InputGame,
+                std::vector<GameIntervall> const& InputIntervalls,
+                ArgumentList& ArgList,
+                MQL_Filter const& Filter);
+        std::vector<MQL_MetricVariable> p_EvaluateMetric(
                 MeleeGame const& InputGame,
                 std::vector<GameIntervall> const& InputIntervalls,
                 ArgumentList& ArgList,
@@ -476,6 +507,26 @@ namespace MBSlippi
             OperatorType Operator;
             std::vector<int> OperatorPositions;
         };
+
+        struct OperatorPrecedence
+        {
+            int Precedence = -1;
+            OperatorType ResultOperator;
+            bool Binary = true;
+        };
+        std::unordered_map<std::string,OperatorPrecedence> m_Operators = 
+        {
+            {"&",{10,OperatorType::Add,false}},
+            {"|",{9,OperatorType::Pipe,false}},
+            {"<",{8,OperatorType::le,true}},
+            {"<=",{8,OperatorType::leq,true}},
+            {">",{8,OperatorType::ge,true}},
+            {">=",{8,OperatorType::geq,true}},
+            {"*",{7,OperatorType::Times,true}},
+            {"+",{6,OperatorType::Plus,true}},
+            {"-",{6,OperatorType::Minus,true}},
+        };
+        
         PrecedenceInfo p_GetPrecedenceInfo(std::vector<std::string> const& Operators,int BeginIndex,int EndIndex);
         MQL_Filter p_ConvertMetricOperatorList(MQL_Module& AssociatedModule,ArgumentList& ParentArgList,
                 Filter_OperatorList const& FilterToConvert,int BeginIndex,int EndIndex,
@@ -488,10 +539,13 @@ namespace MBSlippi
                 Filter_Component const& FilterToConvert,std::vector<MBLSP::Diagnostic>& OutDiagnostics);
 
       
-
+        static MBLSP::Position p_GetBegin(Literal const& Component);
+        static MBLSP::Position p_GetEnd(Literal const& Component);
+        static MBLSP::Position p_GetBegin(Filter_Component const& Component);
+        static MBLSP::Position p_GetEnd(Filter_Component const& Component);
+        
         static void p_AddDiagnostic(std::vector<MBLSP::Diagnostic>& OutDiagnostics,Literal const& ErrorLiteral,std::string_view Message);
         static void p_AddDiagnostic(std::vector<MBLSP::Diagnostic>& OutDiagnostics,Identifier const& ErrorIdentifier,std::string_view Message);
-        static void p_AddDiagnostic(std::vector<MBLSP::Diagnostic>& OutDiagnostics,Filter_Component const& ErrorComponent,std::string_view Message);
         static void p_AddDiagnostic(std::vector<MBLSP::Diagnostic>& OutDiagnostics,Filter_OperatorList const& ErrorList,int Begin,int End,std::string_view Message);
         
         void p_InitializeServers();

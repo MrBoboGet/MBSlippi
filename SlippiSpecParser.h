@@ -42,6 +42,7 @@ class Filter_Arg : public MBCC::PolyBase<Filter_Arg_Base>
 class Literal_Base :  public MBCC::AST_Base
 {
     public:
+    MBCC::TokenPosition ValuePosition;
     std::unique_ptr<AST_Base> Copy() const override{return(MBCC::CopyAST(*this));}
     
 };
@@ -170,7 +171,6 @@ class Filter_ArgList :  public MBCC::AST_Base
 class Literal_Number : public Literal_Base
 {
     public:
-    MBCC::TokenPosition ValuePosition;
     int Value;
     std::unique_ptr<AST_Base> Copy() const override{return(MBCC::CopyAST(*this));}
     
@@ -201,7 +201,6 @@ class AttributeList :  public MBCC::AST_Base
 class Literal_String : public Literal_Base
 {
     public:
-    MBCC::TokenPosition ValuePosition;
     std::string Value;
     std::unique_ptr<AST_Base> Copy() const override{return(MBCC::CopyAST(*this));}
     
@@ -232,7 +231,6 @@ class Filter :  public MBCC::AST_Base
 class Literal_Symbol : public Literal_Base
 {
     public:
-    MBCC::TokenPosition ValuePosition;
     std::string Value;
     std::unique_ptr<AST_Base> Copy() const override{return(MBCC::CopyAST(*this));}
     
@@ -588,6 +586,6 @@ Statement ParseStatement_1(MBCC::Tokenizer& Tokenizer);
 Statement ParseStatement_2(MBCC::Tokenizer& Tokenizer);
 inline MBCC::Tokenizer GetTokenizer()
 {
-    MBCC::Tokenizer ReturnValue("((( |\\t|\\n|\\r)*)|(#.*\\n))*",{"\\(","\\)","\\{","\\}","\\[","\\]","[[:digit:]]+","$\"((\\\\.|[^\"\\\\])*)\"","true|false","WITH","IMPORT","USING","AS","SELECT","RECORD","Games","GamePredicate","PlayerSelection","Filter","PRINT","$\\$([[:alnum:]_]+)","[[:alpha:]_]+[[:alnum:]_]*",";","<=","<","!",">=",">","!=","+","-","*","/",":",",","==","=","\\.","\\|\\|","\\|","&&","&","\\?",});
+    MBCC::Tokenizer ReturnValue("((( |\\t|\\n|\\r)*)|(#.*\\n))*",{"\\(","\\)","\\{","\\}","\\[","\\]","[[:digit:]]+","$\"((\\\\.|[^\"\\\\])*)\"","true|false","WITH","IMPORT","USING","AS","SELECT","RECORD","Games","GamePredicate","PlayerSelection","Filter","PRINT","$\\$([[:alnum:]_]+)","[[:alpha:]_]+[[:alnum:]_]*",";","<=","<","!",">=",">","!=","\\+","-","\\*","/",":",",","==","=","\\.","\\|\\|","\\|","&&","&","\\?",});
     return(ReturnValue);
 }

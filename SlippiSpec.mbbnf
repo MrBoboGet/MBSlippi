@@ -34,9 +34,9 @@ term geq = ">=";
 term great = ">";
 term neq = "!=";
 
-term plus = "+";
+term plus = "\+";
 term minus = "-";
-term mul = "*";
+term mul = "\*";
 term div = "/";
 
 term colon = ":";
@@ -180,21 +180,19 @@ struct Filter_Arg
 
 struct Literal
 {
+    tokenPos ValuePosition;
 }
 
 struct Literal_String : Literal
 {
-    tokenPos ValuePosition;
     string Value; 
 }
 struct Literal_Symbol : Literal
 {
-    tokenPos ValuePosition;
     string Value; 
 }
 struct Literal_Number : Literal
 {
-    tokenPos ValuePosition;
     int Value; 
 }
 
