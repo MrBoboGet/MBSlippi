@@ -608,8 +608,9 @@ namespace MBSlippi
         OperatorIndex += 1;
         ReturnValue.Operator = CurrentOperator->second.ResultOperator;
         assert(CurrentOperator != m_Operators.end());
-        while(OperatorIndex < EndIndex && OperatorIndex < Operators.size())
+        while(OperatorIndex < EndIndex - 1)
         {
+            assert(OperatorIndex < Operators.size());
             auto NewOperator = m_Operators.find(Operators[OperatorIndex]);
             assert(NewOperator != m_Operators.end());
             if(NewOperator->second.Precedence > CurrentOperator->second.Precedence)
@@ -628,6 +629,7 @@ namespace MBSlippi
             }
             OperatorIndex += 1;
         }
+        ReturnValue.OperatorPositions.push_back(EndIndex);
         return ReturnValue;
     }
     MQL_Filter SpecEvaluator::p_ConvertMetricOperatorList(MQL_Module& AssociatedModule,ArgumentList& ParentArgList,
@@ -1679,16 +1681,27 @@ namespace MBSlippi
         }
         else if(Filter.IsType<MQL_MetricCombiner>())
         {
-            auto const& Combiner = Filter.GetType<MQL_FilterCombiner>();
+            auto const& Combiner = Filter.GetType<MQL_MetricCombiner>();
             Negated = Combiner.Negated;
+            auto Results = p_EvaluateMetric(InputGame,InputIntervalls,ArgList,Filter);
+            for(size_t i = 0; i < Results.size();i++)
+            {
+                if(std::get<bool>(Results[i].Data))
+                {
+                    ReturnValue.push_back(InputIntervalls[i]);
+                }
+            }
         }
         else
         {
             assert(false && "Execute Filter doesn't cover all cases");   
         }
+        std::sort(ReturnValue.begin(),ReturnValue.end());
         if(Negated)
         {
             ReturnValue = h_GetNegatedIntervalls(InputIntervalls,ReturnValue);
+            //probably redundant
+            std::sort(ReturnValue.begin(),ReturnValue.end());
         }
         return ReturnValue;
     }

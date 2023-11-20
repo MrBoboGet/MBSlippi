@@ -54,7 +54,7 @@ namespace MBSlippi
         {
             for(auto const& SubFilter : ComponentToExamine.GetType<Filter_OperatorList>().Components)
             {
-                p_ExtractTokens(OutTokens,ComponentToExamine);
+                p_ExtractTokens(OutTokens,SubFilter);
             }
         }
         else if(ComponentToExamine.IsType<Filter_Component_Literal>())

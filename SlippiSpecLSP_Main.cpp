@@ -9,5 +9,4 @@ int main(int argc,char** argv)
     std::unique_ptr<MBUtility::MBOctetOutputStream> OutStream = std::make_unique<MBUtility::TerminalOutput>();
     MBLSP::LSP_ServerHandler Handler(std::move(InputStream),std::move(OutStream),std::move(MBSpecServer));
     Handler.Run();
-
 }
