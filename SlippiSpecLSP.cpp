@@ -13,6 +13,10 @@ namespace MBSlippi
         return(ReturnValue);
     }
 
+    void SlippiLSP::p_ExtractTokens(std::vector<MBLSP::SemanticToken>& OutTokens,Literal const& LiteralToExamine)
+    {
+        OutTokens.push_back(GetToken(LiteralToExamine));
+    }
     void SlippiLSP::p_ExtractTokens(std::vector<MBLSP::SemanticToken>& OutTokens, Filter const& FilterToExamine)
     {
         if(!FilterToExamine.Component.IsEmpty())
@@ -154,6 +158,16 @@ namespace MBSlippi
             p_ExtractTokens(OutTokens,AssignmentToExamine.PlayerCondition);
         }
     }
+    void SlippiLSP::p_ExtractTokens(std::vector<MBLSP::SemanticToken>& OutTokens,ColumnSpec const& ColumnToExamine)
+    {
+        if(ColumnToExamine.Name.Value != "")
+        {
+            OutTokens.push_back(MBLSP::SemanticToken(MBLSP::TokenType::Property,
+                        MBLSP::Position{ColumnToExamine.Name.Position.Line,ColumnToExamine.Name.Position.ByteOffset},
+                        ColumnToExamine.Name.Value.size()));
+        }
+        p_ExtractTokens(OutTokens,ColumnToExamine.Metric);
+    }
     void SlippiLSP::p_ExtractTokens(std::vector<MBLSP::SemanticToken>& OutTokens,Result const& ResultToExamine)
     {
         if(ResultToExamine.IsType<Result_Record>())
@@ -165,6 +179,27 @@ namespace MBSlippi
             OutTokens.push_back(MBLSP::SemanticToken(MBLSP::TokenType::String,
                         MBLSP::Position{RecordResult.FilePosition.Line,RecordResult.FilePosition.ByteOffset},
                         RecordResult.OutFile.size()+2));
+        }
+        else if(ResultToExamine.IsType<Result_Tabulate>())
+        {
+            auto const& TabulateResult = ResultToExamine.GetType<Result_Tabulate>();
+            OutTokens.push_back(MBLSP::SemanticToken(MBLSP::TokenType::Keyword,
+                        MBLSP::Position{TabulateResult.TabulatePos.Line,TabulateResult.TabulatePos.ByteOffset},
+                        8));
+            for(auto const& Column : TabulateResult.Columns)
+            {
+                p_ExtractTokens(OutTokens,Column);
+            }
+            if(TabulateResult.OutFile.Value != "")
+            {
+                OutTokens.push_back(MBLSP::SemanticToken(MBLSP::TokenType::Keyword,
+                            MBLSP::Position{TabulateResult.IntoPos.Line,TabulateResult.IntoPos.ByteOffset},
+                            4));
+                OutTokens.push_back(MBLSP::SemanticToken(MBLSP::TokenType::String,
+                            MBLSP::Position{TabulateResult.OutFile.ValuePosition.Line,TabulateResult.OutFile.ValuePosition.ByteOffset},
+                            TabulateResult.OutFile.Value.size()+2));
+
+            }
         }
     }
     void SlippiLSP::p_ExtractTokens(std::vector<MBLSP::SemanticToken>& OutTokens,Statement const& StatementToExamine)

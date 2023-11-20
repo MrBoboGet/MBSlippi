@@ -661,6 +661,11 @@ namespace MBSlippi
             }
             PrevIndex = Index;
         }
+        if(ReturnValue.Type == OperatorType::Add || ReturnValue.Type == OperatorType::Pipe)
+        {
+            p_AddDiagnostic(OutDiagnostics,FilterToConvert,BeginIndex,EndIndex,"Invalid operator for metric filter");
+        }
+
         if(ReturnValue.Type == OperatorType::eq ||
            ReturnValue.Type == OperatorType::leq || 
            ReturnValue.Type == OperatorType::le || 
@@ -1058,6 +1063,18 @@ namespace MBSlippi
         p_VerifyPlayerAssignment(AssociatedModule,SelectionToVerify.Assignment,OutDiagnostics);
         p_VerifyGameInfoPredicate(AssociatedModule,SelectionToVerify.GameCondition,false,OutDiagnostics);
     }
+    void SpecEvaluator::p_VerifyResult(MQL_Module& AssociatedModule,Result& ResultToVerify,std::vector<MBLSP::Diagnostic>& OutDiagnostics)
+    {
+        if(ResultToVerify.IsType<Result_Tabulate>())
+        {
+            for(auto const& Column : ResultToVerify.GetType<Result_Tabulate>().Columns)
+            {
+                ArgumentList ArgList;
+                std::type_index OutType = typeid(nullptr);
+                p_ConvertMetricComponent(AssociatedModule,ArgList,Column.Metric,OutDiagnostics,OutType);
+            }
+        }
+    }
     bool SpecEvaluator::VerifySelection(MQL_Module& AssociatedModule,Selection& SpecToVerify,std::vector<MBLSP::Diagnostic>& OutDiagnostics)
     {
         bool ReturnValue = true;
@@ -1077,6 +1094,7 @@ namespace MBSlippi
         p_VerifyPlayerAssignment(AssociatedModule,SpecToVerify.Games.Assignment,Diagnostics);
         p_VerifyGameInfoPredicate(AssociatedModule,SpecToVerify.Games.GameCondition,false,Diagnostics);
         p_VerifyFilter(AssociatedModule,SpecToVerify.SituationFilter,Diagnostics);
+        p_VerifyResult(AssociatedModule,SpecToVerify.Output,OutDiagnostics);
         if(Diagnostics.size() > 0)
         {
             ReturnValue = false;
@@ -1758,7 +1776,7 @@ namespace MBSlippi
         {
             auto const& Metric = Filter.GetType<MQL_Metric>();
             assert(Metric.Metric != nullptr);
-            ReturnValue = Metric.Metric(InputGame,ArgList,InputIntervalls);
+            ReturnValue = Metric.Metric(InputGame,Metric.Args,InputIntervalls);
         }
         else if(Filter.IsType<MQL_MetricCombiner>())
         {
@@ -1876,7 +1894,87 @@ namespace MBSlippi
                 GamesToRecord.push_back(std::move(NewRecording));
             }
         }
-        m_Recorder->RecordGames(GamesToRecord,SpecToEvaluate.Output.GetType<Result_Record>().OutFile);
+        if(SpecToEvaluate.Output.IsType<Result_Record>())
+        {
+            m_Recorder->RecordGames(GamesToRecord,SpecToEvaluate.Output.GetType<Result_Record>().OutFile);
+        }
+        else if(SpecToEvaluate.Output.IsType<Result_Tabulate>())
+        {
+            p_EvaluateTabulate(AssociatedModule,GamesToRecord,SpecToEvaluate.Output.GetType<Result_Tabulate>());
+        }
+    }
+    std::string SpecEvaluator::p_MetricToName(Filter_Component const& FilterToConvert)
+    {
+        std::string ReturnValue = "";
+        if(FilterToConvert.IsType<Filter_OperatorList>())
+        {
+            return p_MetricToName(FilterToConvert.GetType<Filter_OperatorList>().Components[0]);   
+        }
+        else if(FilterToConvert.IsType<Filter_Component_Func>())
+        {
+            return FilterToConvert.GetType<Filter_Component_Func>().FilterName.Parts.back().Value;
+        }
+        else
+        {
+            return "-";   
+        }
+
+
+        return ReturnValue;
+    }
+    void SpecEvaluator::p_EvaluateTabulate(MQL_Module& AssociatedModule,std::vector<RecordingInfo> const& FilterResult,Result_Tabulate const& TabulateInfo)
+    {
+        std::unique_ptr<MBUtility::MBOctetOutputStream> OutStream = std::make_unique<MBUtility::TerminalOutput>();
+        if(TabulateInfo.OutFile.Value != "")
+        {
+            OutStream = std::make_unique<MBUtility::MBFileOutputStream>(TabulateInfo.OutFile.Value);
+        }
+        std::vector<MQL_Filter> Columns;
+        for(auto const& Column : TabulateInfo.Columns)
+        {
+            std::vector<MBLSP::Diagnostic> Diagnostics;
+            ArgumentList ArgList;
+            std::type_index Type = typeid(nullptr);
+            MQL_Filter NewFilter = p_ConvertMetricComponent(AssociatedModule,ArgList,Column.Metric,Diagnostics,Type);
+            assert(Diagnostics.size() == 0 && "Diagnostics in p_EvaluateTabulate should be zero");
+            if(Columns.size() != 0)
+            {
+                *OutStream<<",";   
+            }
+            if(Column.Name.Value != "")
+            {
+                *OutStream<<Column.Name.Value;
+            }
+            else
+            {
+                *OutStream<<p_MetricToName(Column.Metric);
+            }
+            Columns.push_back(std::move(NewFilter));
+        }
+        *OutStream<<"\n";
+        ArgumentList ArgList;
+        for(auto const& Game : FilterResult)
+        {
+            std::vector<std::vector<MQL_MetricVariable>> Values;
+            for(auto const& Metric : Columns)
+            {
+                Values.push_back(p_EvaluateMetric(Game.GameData,Game.IntervallsToRecord,ArgList,Metric));
+            }
+            for(size_t i = 0; i < Game.IntervallsToRecord.size();i++)
+            {
+                for(size_t j = 0; j < Values.size();j++)
+                {
+                    if(j != 0)
+                    {
+                        *OutStream<<",";
+                    }
+                    size_t Index = std::min(i,Values[j].size()-1);
+                    *OutStream<<Values[j][Index];
+                }
+                *OutStream<<"\n";
+            }
+        }
+        OutStream->Flush();
     }
     void SpecEvaluator::EvaluateStatement(MQL_Module& AssociatedModule,Statement& StatementToEvaluate,std::vector<MBLSP::Diagnostic>& OutDiagnostics)
     {       

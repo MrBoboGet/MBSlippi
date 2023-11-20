@@ -21,6 +21,8 @@ term GamePredicate = "GamePredicate";
 term PlayerSelection = "PlayerSelection";
 term FILTER = "Filter";
 term PRINT = "PRINT";
+term TABULATE = "TABULATE";
+term INTO = "INTO";
 
 
 term variable = "$\$([[:alnum:]_]+)";
@@ -248,10 +250,17 @@ struct Result_Print : Result
 {
     tokenPos PrintPosition;
 }
-
+struct ColumnSpec
+{
+    Token Name;
+    Filter_Component Metric;
+}
 struct Result_Tabulate : Result
 {
-        
+    tokenPos TabulatePos;
+    List<ColumnSpec> Columns;
+    tokenPos IntoPos;
+    Literal_String OutFile;
 }
 
 struct  ImportBinding
@@ -280,7 +289,7 @@ def Comparator=Operator;
 def Combinator=Operator;
 def ExprOperator=Operator;
 
-Comparator = Op=less|Op=add|Op=great | Op=eqq | Op=leq | Op=geq | Op=neq;
+Comparator = Op=less|Op=add|Op=great | Op=eq | Op=leq | Op=geq | Op=neq;
 ExprOperator = Op=plus | 
                Op=minus | 
                Op=mul | 
@@ -366,7 +375,9 @@ PlayerAssignment =  WithPosition = TOKEN.Position
                     PlayerCondition=GameInfoPredicate;
 Result_Record = RecordPosition = TOKEN.Position RECORD  FilePosition = TOKEN.Position OutFile=string;
 Result_Print = PrintPosition = TOKEN.Position PRINT;
-Result = this=Result_Record | this=Result_Print;
+ColumnSpec = (Name=Token eq)? Metric=Filter_Component;
+Result_Tabulate = TabulatePos = TOKEN.Position TABULATE Columns=ColumnSpec (comma Columns=ColumnSpec)* (IntoPos=TOKEN.Position INTO OutFile=Literal_String)?;
+Result = this=Result_Record | this=Result_Print | this=Result_Tabulate;
 
 Selection =  Games=GameSelection SituationFilter=Filter? Output=Result semi;
 

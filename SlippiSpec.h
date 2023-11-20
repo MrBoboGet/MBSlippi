@@ -1,4 +1,5 @@
 #pragma once
+#include "MBUtility/MBInterfaces.h"
 #include "SlippiSpecParser.h"
 #include <MBLSP/MBLSP.h>
 #include "MBMeleeID.h"
@@ -164,6 +165,29 @@ namespace MBSlippi
             this->Data = std::forward<T>(Data);
         }
     };
+    inline MBUtility::MBOctetOutputStream& operator<<(MBUtility::MBOctetOutputStream& OutStream,MQL_MetricVariable const& Rhs)
+    {
+        if(std::holds_alternative<std::string>(Rhs.Data))
+        {
+            OutStream<<std::get<std::string>(Rhs.Data);
+        }
+        else if(std::holds_alternative<float>(Rhs.Data))
+        {
+            OutStream<<std::to_string(std::get<float>(Rhs.Data));
+        }
+        else if(std::holds_alternative<bool>(Rhs.Data))
+        {
+            if(std::get<bool>(Rhs.Data))
+            {
+                OutStream<<"true";   
+            }
+            else
+            {
+                OutStream<<"false";   
+            }
+        }
+        return OutStream;
+    }
     class MQL_Module;
     class MQL_Scope
     {
@@ -478,11 +502,14 @@ namespace MBSlippi
         void p_VerifyGameInfoPredicate(MQL_Module& AssociatedModule,GameInfoPredicate& PredicateToVerify,bool IsPlayerAssignment,std::vector<MBLSP::Diagnostic>& OutDiagnostics);
         void p_VerifyPlayerAssignment(MQL_Module& AssociatedModule,PlayerAssignment& AssignmentToVerify,std::vector<MBLSP::Diagnostic>& OutDiagnostics);
         void p_VerifyGameSelection(MQL_Module& AssociatedModule,GameSelection& SelectionToVerify,std::vector<MBLSP::Diagnostic>& OutDiagnostics);
+        void p_VerifyResult(MQL_Module& AssociatedModule,Result& ResultToVerify,std::vector<MBLSP::Diagnostic>& OutDiagnostics);
 
         bool p_SatisfiesPlayerAssignment(MQL_Module& AssociatedModule,SlippiGamePlayerInfo const& PlayerInfo,GameInfoPredicate const& PredicateToEvaluate);
         bool p_EvaluateGameSelection(MQL_Module& AssociatedModule,SlippiGameInfo const& GameInfo,char InAssignment[4],GameInfoPredicate const& PredicateToEvaluate);
         bool p_GetPlayerAssignments(MQL_Module& AssociatedModule,SlippiGameInfo const& GameInfo,PlayerAssignment const& AssignemntToApply,char OutAssignemnts[4]);
         void p_ApplyAssignment(MeleeGame& GameToModify,char InAssignments[4]);
+        void p_EvaluateTabulate(MQL_Module& AssociatedModule ,std::vector<RecordingInfo> const& FilterResult,Result_Tabulate const& TabulateInfo);
+        std::string p_MetricToName(Filter_Component const& FilterToConvert);
 
         std::vector<MeleeGame> p_RetrieveSpecGames(MQL_Module& AssociatedModule,GameSelection const& GameSelection);
         //std::vector<GameIntervall> p_EvaluateGameIntervalls(MQL_Module& AssociatedModule,ArgumentList& ParentArgList,Filter_Component const& FilterToUse,
