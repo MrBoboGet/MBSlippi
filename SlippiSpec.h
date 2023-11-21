@@ -475,9 +475,11 @@ namespace MBSlippi
 
         //Metrics
         static std::vector<MQL_MetricVariable> Percent(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,std::vector<GameIntervall> const& IntervallToInspect);
+        static std::vector<MQL_MetricVariable> Delay(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,std::vector<GameIntervall> const& IntervallToInspect);
         std::unordered_map<std::string,BuiltinMetric> m_BuiltinMetrics = 
         {
-            {"Percent",{Percent,typeid(float)}}
+            {"Percent",{Percent,typeid(float)}},
+            {"Delay",{Delay,typeid(float)}}
         };
 
         std::vector<SpecServer> m_SpecServers;

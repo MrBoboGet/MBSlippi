@@ -2607,6 +2607,71 @@ namespace MBSlippi
                 });
         return(ReturnValue);
     }
+
+    bool h_ChangeIsPlayerInduced(MBActionState NewState)
+    {
+        bool ReturnValue = false;
+        if(NewState == MBActionState::Airdodge ||
+                NewState == MBActionState::Airdodge || 
+                NewState == MBActionState::LedgeAttack ||
+                NewState == MBActionState::LedgeJump ||
+                NewState == MBActionState::LedgeRegular ||
+                NewState == MBActionState::LedgeRoll || 
+                NewState == MBActionState::Roll || 
+                NewState == MBActionState::SpotDodge)
+        {
+            ReturnValue = true;   
+        }
+
+        return ReturnValue;
+    }
+    
+    std::vector<MQL_MetricVariable> SpecEvaluator::Delay(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,std::vector<GameIntervall> const& IntervallToInspect)
+    {
+        std::vector<MQL_MetricVariable> ReturnValue;
+        int PlayerIndex = GetPlayerIndex(ExtraArguments);
+        for(auto const& Intervall : IntervallToInspect)
+        {
+            float Delay = -1;
+            if(Intervall.LastFrame == Intervall.FirstFrame)
+            {
+                ReturnValue.push_back(float(-1));   
+                continue;
+            }
+            MBActionState PreviousState = GameToInspect.Frames[Intervall.FirstFrame].PlayerInfo[PlayerIndex].ActionState;
+            for(int i = Intervall.FirstFrame+1; i <= Intervall.LastFrame;i++)
+            {
+                auto const& CurrentInfo = GameToInspect.Frames[i].PlayerInfo[PlayerIndex];
+                if(Delay == -1)
+                {
+                    if(PreviousState != CurrentInfo.ActionState)
+                    {
+                        if(!StateIsActionable(CurrentInfo.ActionState) && 
+                                !(PreviousState == MBActionState::ShieldStun && CurrentInfo.ActionState == MBActionState::Shielding))
+                        {
+                            Delay = 0;
+                            break;
+                        }
+                        if(StateIsActionable(CurrentInfo.ActionState))
+                        {
+                            Delay = 1;
+                        }
+                    }
+                }
+                else
+                {
+                    if(!StateIsActionable(CurrentInfo.ActionState))
+                    {
+                        break;   
+                    }
+                    Delay += 1;
+                }
+                PreviousState = GameToInspect.Frames[i].PlayerInfo[PlayerIndex].ActionState;
+            }
+            ReturnValue.push_back(Delay);
+        }
+        return ReturnValue;
+    }
     std::vector<MQL_MetricVariable> SpecEvaluator::Percent(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,std::vector<GameIntervall> const& IntervallToInspect)
     {
         std::vector<MQL_MetricVariable> ReturnValue;
