@@ -1721,6 +1721,7 @@ namespace MBSlippi
             //probably redundant
             std::sort(ReturnValue.begin(),ReturnValue.end());
         }
+        h_NormalizeIntervalls(ReturnValue);
         return ReturnValue;
     }
 
@@ -2608,7 +2609,7 @@ namespace MBSlippi
         return(ReturnValue);
     }
 
-    bool h_ChangeIsPlayerInduced(MBActionState NewState)
+    bool h_ChangeIsPlayerInduced(MBActionState PreviousState,MBActionState NewState)
     {
         bool ReturnValue = false;
         if(NewState == MBActionState::Airdodge ||
@@ -2618,11 +2619,18 @@ namespace MBSlippi
                 NewState == MBActionState::LedgeRegular ||
                 NewState == MBActionState::LedgeRoll || 
                 NewState == MBActionState::Roll || 
-                NewState == MBActionState::SpotDodge)
+                NewState == MBActionState::SpotDodge || 
+                NewState == MBActionState::Jump || 
+                NewState == MBActionState::DoubleJump || 
+                NewState == MBActionState::Attacking)
         {
             ReturnValue = true;   
         }
-
+        else if( (PreviousState == MBActionState::None || PreviousState == MBActionState::Null) && (NewState == MBActionState::Walking || NewState == MBActionState::Running || 
+                    NewState == MBActionState::Dashing))
+        {
+            ReturnValue = true;
+        }
         return ReturnValue;
     }
     
@@ -2632,41 +2640,36 @@ namespace MBSlippi
         int PlayerIndex = GetPlayerIndex(ExtraArguments);
         for(auto const& Intervall : IntervallToInspect)
         {
-            float Delay = -1;
+            float Delay = 0;
             if(Intervall.LastFrame == Intervall.FirstFrame)
             {
                 ReturnValue.push_back(float(-1));   
                 continue;
             }
             MBActionState PreviousState = GameToInspect.Frames[Intervall.FirstFrame].PlayerInfo[PlayerIndex].ActionState;
+            int ActionIndex = -1;
             for(int i = Intervall.FirstFrame+1; i <= Intervall.LastFrame;i++)
             {
                 auto const& CurrentInfo = GameToInspect.Frames[i].PlayerInfo[PlayerIndex];
-                if(Delay == -1)
+                if(h_ChangeIsPlayerInduced(PreviousState,CurrentInfo.ActionState))
                 {
-                    if(PreviousState != CurrentInfo.ActionState)
-                    {
-                        if(!StateIsActionable(CurrentInfo.ActionState) && 
-                                !(PreviousState == MBActionState::ShieldStun && CurrentInfo.ActionState == MBActionState::Shielding))
-                        {
-                            Delay = 0;
-                            break;
-                        }
-                        if(StateIsActionable(CurrentInfo.ActionState))
-                        {
-                            Delay = 1;
-                        }
-                    }
-                }
-                else
-                {
-                    if(!StateIsActionable(CurrentInfo.ActionState))
-                    {
-                        break;   
-                    }
-                    Delay += 1;
+                    ActionIndex = i-1;
+                    break;
                 }
                 PreviousState = GameToInspect.Frames[i].PlayerInfo[PlayerIndex].ActionState;
+            }
+            if(ActionIndex == -1)
+            {
+                ReturnValue.push_back(float(-1));   
+                continue;
+            }
+            for(int i = ActionIndex; i >= Intervall.FirstFrame;i--)
+            {
+                if(!StateIsActionable(GameToInspect.Frames[i].PlayerInfo[PlayerIndex].ActionState))
+                {
+                    break;
+                }
+                Delay += 1;
             }
             ReturnValue.push_back(Delay);
         }
