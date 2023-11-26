@@ -152,13 +152,9 @@ namespace MBSlippi
     class MQL_MetricVariable
     {
     public:
-        std::variant<std::string,float,bool> Data;
+        std::variant<std::string,float,int,bool> Data;
 
         MQL_MetricVariable(){};
-        MQL_MetricVariable(int Number)
-        {
-            Data = float(Number);   
-        }
         template<typename T>
         MQL_MetricVariable(T&& Data)
         {
@@ -174,6 +170,10 @@ namespace MBSlippi
         else if(std::holds_alternative<float>(Rhs.Data))
         {
             OutStream<<std::to_string(std::get<float>(Rhs.Data));
+        }
+        else if(std::holds_alternative<int>(Rhs.Data))
+        {
+            OutStream<<std::to_string(std::get<int>(Rhs.Data));
         }
         else if(std::holds_alternative<bool>(Rhs.Data))
         {
@@ -367,7 +367,8 @@ namespace MBSlippi
     struct MQL_MetricCombiner
     {
         std::vector<MQL_Filter> Operands;
-        std::type_index OperandTypes = typeid(nullptr);
+        std::type_index LhsType = typeid(nullptr);
+        std::type_index RhsType = typeid(nullptr);
         OperatorType Type = OperatorType::Null;
         bool Negated = false;
     };
@@ -476,10 +477,16 @@ namespace MBSlippi
         //Metrics
         static std::vector<MQL_MetricVariable> Percent(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,std::vector<GameIntervall> const& IntervallToInspect);
         static std::vector<MQL_MetricVariable> Delay(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,std::vector<GameIntervall> const& IntervallToInspect);
+        static std::vector<MQL_MetricVariable> Begin(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,std::vector<GameIntervall> const& IntervallToInspect);
+        static std::vector<MQL_MetricVariable> End(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,std::vector<GameIntervall> const& IntervallToInspect);
+        static std::vector<MQL_MetricVariable> File(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,std::vector<GameIntervall> const& IntervallToInspect);
         std::unordered_map<std::string,BuiltinMetric> m_BuiltinMetrics = 
         {
             {"Percent",{Percent,typeid(float)}},
-            {"Delay",{Delay,typeid(float)}}
+            {"Delay",{Delay,typeid(int)}},
+            {"End",{End,typeid(int)}},
+            {"Begin",{Begin,typeid(int)}},
+            {"File",{File,typeid(std::string)}},
         };
 
         std::vector<SpecServer> m_SpecServers;
@@ -524,6 +531,7 @@ namespace MBSlippi
                 std::vector<GameIntervall> const& InputIntervalls,
                 ArgumentList& ArgList,
                 MQL_Filter const& Filter);
+
         std::vector<MQL_MetricVariable> p_EvaluateMetric(
                 MeleeGame const& InputGame,
                 std::vector<GameIntervall> const& InputIntervalls,
@@ -557,6 +565,8 @@ namespace MBSlippi
         };
         
         PrecedenceInfo p_GetPrecedenceInfo(std::vector<std::string> const& Operators,int BeginIndex,int EndIndex);
+
+        bool p_OperatorIsValid(OperatorType Op,std::type_index Lhs,std::type_index Rhs,std::type_index& OutType);
         MQL_Filter p_ConvertMetricOperatorList(MQL_Module& AssociatedModule,ArgumentList& ParentArgList,
                 Filter_OperatorList const& FilterToConvert,int BeginIndex,int EndIndex,
                 std::vector<MBLSP::Diagnostic>& OutDiagnostics,std::type_index& OutType);

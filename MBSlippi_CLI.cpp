@@ -20,6 +20,10 @@
 
 #include <MBSystem/MBSystem.h>
 #include <MBUtility/MBFunctional.h>
+
+#include <MBUtility/StreamReader.h>
+#include <MBUtility/FileStreams.h>
+
 namespace MBSlippi
 {
     void MQLServer::SendMessage(MBUtility::MBOctetOutputStream& OutStream,MBParsing::JSONObject const& ObjectToSend)
@@ -639,6 +643,89 @@ namespace MBSlippi
             std::exit(1);
         }
     }
+    void MBSlippiCLIHandler::p_Handle_Record(MBCLI::ProcessedCLInput const& Input)
+    {
+        if(Input.TopCommandArguments.size() != 2)
+        {
+            m_Terminal.PrintLine("record requires exactly 2 arguments: the input filepath, and the output filepath");   
+            std::exit(1);
+        }
+        std::filesystem::path InputPath = Input.TopCommandArguments[0];
+        std::filesystem::path OutputPath = Input.TopCommandArguments[1];
+        if(!std::filesystem::exists(InputPath))
+        {
+            m_Terminal.PrintLine("cannot find input file \""+Input.TopCommandArguments[0]+"\"");
+            std::exit(1);
+        }
+        MBUtility::StreamReader Reader = MBUtility::StreamReader(std::make_unique<MBUtility::InputFileStream>(InputPath));
+        MBParsing::CSVFile File = MBParsing::CSVFile::ParseCSVFile(Reader);
+        Vec<MBParsing::CsvIntType>* Begin = nullptr;
+        Vec<MBParsing::CsvIntType>* End = nullptr;
+        Vec<MBParsing::CsvStringType>* Paths = nullptr;
+        if(!File.HasColName("Begin"))
+        {
+            throw std::runtime_error("CSV file need to have a column named Begin");
+            auto& Col = File["Begin"];
+            if(!Col.IsType<MBParsing::CsvIntType>())
+            {
+                throw std::runtime_error("Begin column must be of type integer");
+            }
+        }
+        Begin = &File["Begin"].GetType<MBParsing::CsvIntType>();
+        if(!File.HasColName("End"))
+        {
+            throw std::runtime_error("CSV file need to have a column named End");
+            auto& Col = File["End"];
+            if(!Col.IsType<MBParsing::CsvIntType>())
+            {
+                throw std::runtime_error("End column must be of type integer");
+            }
+        }
+        End = &File["End"].GetType<MBParsing::CsvIntType>();
+        if(!File.HasColName("File"))
+        {
+            throw std::runtime_error("CSV file need to have a column named File");
+            auto& Col = File["File"];
+            if(!Col.IsType<MBParsing::CsvStringType>())
+            {
+                throw std::runtime_error("End column must be of type string");
+            }
+        }
+        Paths = &File["File"].GetType<MBParsing::CsvStringType>();
+        p_Record(*Paths,*Begin,*End,OutputPath);
+    }
+    void MBSlippiCLIHandler::p_Record(Vec<MBParsing::CsvStringType> const& Path, Vec<MBParsing::CsvIntType> const& Begin,Vec<MBParsing::CsvIntType> const& End, std::filesystem::path const& OutPath)
+    {
+        std::unordered_map<std::string,RecordingInfo> Recordings;
+        for(size_t i = 0; i < Path.size();i++)
+        {
+            RecordingInfo& Recording = Recordings[Path[i]];
+            if(Recording.GamePath == "")
+            {
+                if(!std::filesystem::exists(Path[i]))
+                {
+                    throw std::runtime_error("Filepath in File column doesnt exist: \""+Path[i]+"\"");
+                }
+                Recording.GamePath = Path[i];
+                MBUtility::MBFileInputStream InputStream(Path[i]);
+                MBError Result = MeleeGame::ParseSlippiGame(InputStream,Recording.GameData);
+                if(!Result)
+                {
+                    throw std::runtime_error("Error parsing slippi game at path \""+Path[i]+"\": "+Result.ErrorMessage);   
+                }
+            }
+            GameIntervall NewIntervall;
+            NewIntervall.FirstFrame = Begin[i];
+            NewIntervall.LastFrame = End[i];
+            Recording.IntervallsToRecord.push_back(NewIntervall);
+        }
+        std::vector<RecordingInfo> GamesToRecord;
+        for(auto& Game : Recordings)
+        {
+            GamesToRecord.push_back(std::move(Game.second));   
+        }
+        RecordGames(GamesToRecord,OutPath);
+    }
     int MBSlippiCLIHandler::p_HandleServer(MBCLI::ProcessedCLInput const& Input)
     {
         std::unique_ptr<MBUtility::IndeterminateInputStream> InputStream = 
@@ -761,6 +848,10 @@ namespace MBSlippi
             else if (Input.TopCommand == "execute")
             {
                 p_Handle_Execute(Input);
+            }
+            else if (Input.TopCommand == "record")
+            {
+                p_Handle_Record(Input);
             }
             else if(Input.TopCommand == "server")
             {

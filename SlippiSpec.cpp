@@ -632,6 +632,85 @@ namespace MBSlippi
         ReturnValue.OperatorPositions.push_back(EndIndex);
         return ReturnValue;
     }
+
+    bool h_IsArithmeticOp(OperatorType Op)
+    {
+        bool ReturnValue = true;   
+        if(!(Op == OperatorType::Plus || 
+                    Op == OperatorType::Minus || 
+                    Op == OperatorType::Times || 
+                    Op == OperatorType::eq || 
+                    Op == OperatorType::ge || 
+                    Op == OperatorType::geq || 
+                    Op == OperatorType::le || 
+                    Op == OperatorType::leq ))
+        {
+            ReturnValue = false;
+        }
+        return ReturnValue;
+    }
+    bool SpecEvaluator::p_OperatorIsValid(OperatorType Op,std::type_index Lhs,std::type_index Rhs,std::type_index& OutType)
+    {
+        bool ReturnValue = true;
+        if(Lhs == typeid(bool))
+        {
+            return false;   
+        }
+        else if(Lhs == typeid(int))
+        {
+            if(Rhs == typeid(float))
+            {
+                OutType = typeid(float);
+            }
+            else if(Rhs == typeid(int))
+            {
+                OutType = typeid(int);   
+            }
+            else 
+            {
+                ReturnValue = false;   
+            }
+            if(!h_IsArithmeticOp(Op))
+            {
+                ReturnValue = false;   
+            }
+        }
+        else if(Lhs == typeid(float))
+        {
+            if(Rhs == typeid(int) || Rhs == typeid(float))
+            {
+                OutType = typeid(float);
+            }
+            else
+            {
+                ReturnValue = false;   
+            }
+            if(!h_IsArithmeticOp(Op))
+            {
+                ReturnValue = false;   
+            }
+        }
+        else if(Lhs == typeid(std::string))
+        {
+            if(Rhs != typeid(std::string))
+            {
+                ReturnValue = false;   
+            }
+            if(!(Op == OperatorType::Plus || 
+                 Op == OperatorType::Minus || 
+                 Op == OperatorType::eq || 
+                 Op == OperatorType::leq || 
+                 Op == OperatorType::le || 
+                 Op == OperatorType::ge || 
+                 Op == OperatorType::geq
+                ))
+            {
+                ReturnValue = false;
+            }
+        }
+
+        return ReturnValue;
+    }
     MQL_Filter SpecEvaluator::p_ConvertMetricOperatorList(MQL_Module& AssociatedModule,ArgumentList& ParentArgList,
             Filter_OperatorList const& FilterToConvert,int BeginIndex,int EndIndex,std::vector<MBLSP::Diagnostic>& OutDiagnostics,std::type_index& OutType)
     {
@@ -643,41 +722,41 @@ namespace MBSlippi
         PrecedenceInfo PartOperator = p_GetPrecedenceInfo(FilterToConvert.Operators,BeginIndex,EndIndex);
         ReturnValue.Type = PartOperator.Operator;
         int PrevIndex = BeginIndex;
-        std::type_index ResultType = typeid(nullptr);
+        std::type_index Lhs = typeid(nullptr);
+        std::type_index Rhs = typeid(nullptr);
         std::type_index NewType = typeid(nullptr);
         for(auto Index : PartOperator.OperatorPositions)
         {
             ReturnValue.Operands.push_back(p_ConvertMetricOperatorList(AssociatedModule,
                         ParentArgList,FilterToConvert,PrevIndex,Index,OutDiagnostics,NewType));
-            if(ResultType == typeid(nullptr))
+            if(Lhs == typeid(nullptr))
             {
-                ResultType = NewType;
-                ReturnValue.OperandTypes = ResultType;
+                Lhs = NewType;
             }
-            else if(ResultType != NewType)
+            else if(Rhs == typeid(nullptr))
             {
-                p_AddDiagnostic(OutDiagnostics,FilterToConvert,PrevIndex,Index,
-                        "Invalid type of expression: lhs has type "+std::string(ResultType.name())+" and rhs has type "+NewType.name());
+                Rhs = NewType;   
             }
+            //else if(ResultType != NewType)
+            //{
+            //    p_AddDiagnostic(OutDiagnostics,FilterToConvert,PrevIndex,Index,
+            //            "Invalid type of expression: lhs has type "+std::string(ResultType.name())+" and rhs has type "+NewType.name());
+            //}
             PrevIndex = Index;
         }
+        ReturnValue.LhsType = Lhs;
+        ReturnValue.RhsType = Rhs;
         if(ReturnValue.Type == OperatorType::Add || ReturnValue.Type == OperatorType::Pipe)
         {
             p_AddDiagnostic(OutDiagnostics,FilterToConvert,BeginIndex,EndIndex,"Invalid operator for metric filter");
         }
-
-        if(ReturnValue.Type == OperatorType::eq ||
-           ReturnValue.Type == OperatorType::leq || 
-           ReturnValue.Type == OperatorType::le || 
-           ReturnValue.Type == OperatorType::ge || 
-           ReturnValue.Type == OperatorType::geq
-                )
-        {
-            OutType = typeid(bool);
-        }
         else
         {
-            OutType = ResultType;
+            if(!p_OperatorIsValid(ReturnValue.Type,Lhs,Rhs,OutType))
+            {
+                p_AddDiagnostic(OutDiagnostics,FilterToConvert,BeginIndex,EndIndex,
+                        "Invalid operator with lhs of type "+std::string(Lhs.name())+" and rhs of type "+ Rhs.name());
+            }
         }
         return ReturnValue;
     }
@@ -1727,7 +1806,7 @@ namespace MBSlippi
 
 
 
-    template<typename ValueType,typename FuncType>
+    template<typename LhsType,typename RhsType=LhsType,typename FuncType>
     inline std::vector<MQL_MetricVariable> h_CombineValues(FuncType Func,std::vector<MQL_MetricVariable> const& Lhs,std::vector<MQL_MetricVariable> const& Rhs)
     {
         assert(Lhs.size() != 0 && Rhs.size() != 0);
@@ -1738,7 +1817,7 @@ namespace MBSlippi
         size_t IterationCount = 0;
         while(IterationCount < ResultSize)
         {
-            ReturnValue.push_back(Func(std::get<ValueType>(Lhs[LhsIndex].Data),std::get<ValueType>(Rhs[RhsIndex].Data)));
+            ReturnValue.push_back(Func(std::get<LhsType>(Lhs[LhsIndex].Data),std::get<RhsType>(Rhs[RhsIndex].Data)));
             LhsIndex += 1;
             RhsIndex += 1;
             LhsIndex = LhsIndex % Lhs.size();
@@ -1748,6 +1827,58 @@ namespace MBSlippi
         return ReturnValue;
     }
 
+    class i_plus { public: template<typename L,typename R> auto operator() (L const& Lhs,R const& Rhs) const {return Lhs+Rhs;}};
+    class i_equal {public: template<typename L,typename R> auto operator() (L const& Lhs,R const& Rhs) const {return Lhs==Rhs;}};
+    class i_less { public:template<typename L,typename R> auto operator() (L const& Lhs,R const& Rhs) const {return Lhs<Rhs;}};
+    class i_less_eq { public:template<typename L,typename R> auto operator() (L const& Lhs,R const& Rhs) const {return Lhs<=Rhs;}};
+    class i_greater { public:template<typename L,typename R> auto operator() (L const& Lhs,R const& Rhs) const {return Lhs>Rhs;}};
+    class i_greater_eq { public:template<typename L,typename R> auto operator() (L const& Lhs,R const& Rhs) const {return Lhs>=Rhs;}};
+    class i_minus { public:template<typename L,typename R> auto operator() (L const& Lhs,R const& Rhs) const {return Lhs-Rhs;}};
+    class i_times { public:template<typename L,typename R> auto operator() (L const& Lhs,R const& Rhs) const {return Lhs*Rhs;}};
+    
+    template<typename LhsType,typename RhsType>
+    std::vector<MQL_MetricVariable> h_EvaluateArithmeticExpression(OperatorType Op,std::vector<MQL_MetricVariable> const& Lhs,std::vector<MQL_MetricVariable> const& Rhs)
+    {
+        std::vector<MQL_MetricVariable> ReturnValue;
+        if(Op == OperatorType::Plus)
+        {
+            ReturnValue = h_CombineValues<LhsType,RhsType>(i_plus(),Lhs,Rhs);
+        }
+        else if(Op == OperatorType::eq)
+        {
+            ReturnValue = h_CombineValues<LhsType,RhsType>(i_equal(),Lhs,Rhs);
+        }
+        else if(Op == OperatorType::le)
+        {
+            ReturnValue = h_CombineValues<LhsType,RhsType>(i_less(),Lhs,Rhs);
+        }
+        else if(Op == OperatorType::leq)
+        {
+            ReturnValue = h_CombineValues<LhsType,RhsType>(i_less_eq(),Lhs,Rhs);
+        }
+        else if(Op == OperatorType::ge)
+        {
+            ReturnValue = h_CombineValues<LhsType,RhsType>(i_greater(),Lhs,Rhs);
+        }
+        else if(Op == OperatorType::geq)
+        {
+            ReturnValue = h_CombineValues<LhsType,RhsType>(i_greater_eq(),Lhs,Rhs);
+        }
+        else if(Op == OperatorType::Minus)
+        {
+            ReturnValue = h_CombineValues<LhsType,RhsType>(i_minus(),Lhs,Rhs);
+        }
+        else if(Op == OperatorType::Times)
+        {
+            ReturnValue = h_CombineValues<LhsType,RhsType>(i_times(),Lhs,Rhs);
+        }
+        else
+        {
+            assert(false && "MetricCombiner for string doesnt cover all operator types");   
+        }
+
+        return ReturnValue;
+    }
     std::vector<MQL_MetricVariable> SpecEvaluator::p_EvaluateMetric(
             MeleeGame const& InputGame,
             std::vector<GameIntervall> const& InputIntervalls,
@@ -1785,7 +1916,7 @@ namespace MBSlippi
             assert(Combiner.Operands.size() == 2);
             std::vector<MQL_MetricVariable> Lhs = p_EvaluateMetric(InputGame,InputIntervalls,ArgList,Combiner.Operands[0]);
             std::vector<MQL_MetricVariable> Rhs = p_EvaluateMetric(InputGame,InputIntervalls,ArgList,Combiner.Operands[1]);
-            if(Combiner.OperandTypes == typeid(std::string))
+            if(Combiner.LhsType == typeid(std::string))
             {
                 if(Combiner.Type == OperatorType::Plus)
                 {
@@ -1816,35 +1947,26 @@ namespace MBSlippi
                     assert(false && "MetricCombiner for string doesnt cover all operator types");   
                 }
             }
-            else if(Combiner.OperandTypes == typeid(float))
+            else if(Combiner.LhsType == typeid(float))
             {
-                if(Combiner.Type == OperatorType::Plus)
+                if(Combiner.RhsType == typeid(float))
                 {
-                    ReturnValue = h_CombineValues<float>(std::plus<float>(),Lhs,Rhs);
+                    ReturnValue = h_EvaluateArithmeticExpression<float,float>(Combiner.Type,Lhs,Rhs);   
                 }
-                else if(Combiner.Type == OperatorType::eq)
+                else if(Combiner.RhsType == typeid(int))
                 {
-                    ReturnValue = h_CombineValues<float>(std::equal_to<float>(),Lhs,Rhs);
+                    ReturnValue = h_EvaluateArithmeticExpression<float,int>(Combiner.Type,Lhs,Rhs);   
                 }
-                else if(Combiner.Type == OperatorType::le)
+            }
+            else if(Combiner.LhsType == typeid(int))
+            {
+                if(Combiner.RhsType == typeid(float))
                 {
-                    ReturnValue = h_CombineValues<float>(std::less<float>(),Lhs,Rhs);
+                    ReturnValue = h_EvaluateArithmeticExpression<int,float>(Combiner.Type,Lhs,Rhs);   
                 }
-                else if(Combiner.Type == OperatorType::leq)
+                else if(Combiner.RhsType == typeid(int))
                 {
-                    ReturnValue = h_CombineValues<float>(std::less_equal<float>(),Lhs,Rhs);
-                }
-                else if(Combiner.Type == OperatorType::ge)
-                {
-                    ReturnValue = h_CombineValues<float>(std::greater<float>(),Lhs,Rhs);
-                }
-                else if(Combiner.Type == OperatorType::geq)
-                {
-                    ReturnValue = h_CombineValues<float>(std::greater_equal<float>(),Lhs,Rhs);
-                }
-                else
-                {
-                    assert(false && "MetricCombiner for string doesnt cover all operator types");   
+                    ReturnValue = h_EvaluateArithmeticExpression<int,int>(Combiner.Type,Lhs,Rhs);   
                 }
             }
             else
@@ -2640,10 +2762,10 @@ namespace MBSlippi
         int PlayerIndex = GetPlayerIndex(ExtraArguments);
         for(auto const& Intervall : IntervallToInspect)
         {
-            float Delay = 0;
+            int Delay = 0;
             if(Intervall.LastFrame == Intervall.FirstFrame)
             {
-                ReturnValue.push_back(float(-1));   
+                ReturnValue.push_back(int(-1));
                 continue;
             }
             MBActionState PreviousState = GameToInspect.Frames[Intervall.FirstFrame].PlayerInfo[PlayerIndex].ActionState;
@@ -2660,7 +2782,7 @@ namespace MBSlippi
             }
             if(ActionIndex == -1)
             {
-                ReturnValue.push_back(float(-1));   
+                ReturnValue.push_back(int(-1));   
                 continue;
             }
             for(int i = ActionIndex; i >= Intervall.FirstFrame;i--)
@@ -2675,6 +2797,24 @@ namespace MBSlippi
         }
         return ReturnValue;
     }
+    std::vector<MQL_MetricVariable> SpecEvaluator::Begin(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,std::vector<GameIntervall> const& IntervallToInspect)
+    {
+        std::vector<MQL_MetricVariable> ReturnValue;
+        for(auto const& Intervall : IntervallToInspect)
+        {
+            ReturnValue.push_back(int(Intervall.FirstFrame));   
+        }
+        return ReturnValue;
+    }
+    std::vector<MQL_MetricVariable> SpecEvaluator::End(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,std::vector<GameIntervall> const& IntervallToInspect)
+    {
+        std::vector<MQL_MetricVariable> ReturnValue;
+        for(auto const& Intervall : IntervallToInspect)
+        {
+            ReturnValue.push_back(int(Intervall.LastFrame));   
+        }
+        return ReturnValue;
+    }
     std::vector<MQL_MetricVariable> SpecEvaluator::Percent(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,std::vector<GameIntervall> const& IntervallToInspect)
     {
         std::vector<MQL_MetricVariable> ReturnValue;
@@ -2682,6 +2822,16 @@ namespace MBSlippi
         for(auto const& Intervall : IntervallToInspect)
         {
             ReturnValue.push_back(GameToInspect.Frames[Intervall.FirstFrame].PlayerInfo[PlayerIndex].Percent);   
+        }
+        return ReturnValue;
+    }
+    std::vector<MQL_MetricVariable> SpecEvaluator::File(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,std::vector<GameIntervall> const& IntervallToInspect)
+    {
+        std::vector<MQL_MetricVariable> ReturnValue;
+        int PlayerIndex = GetPlayerIndex(ExtraArguments);
+        for(auto const& Intervall : IntervallToInspect)
+        {
+            ReturnValue.push_back(GameToInspect.Metadata.GamePath);
         }
         return ReturnValue;
     }

@@ -8,6 +8,7 @@
 
 #include <MrBoboDatabase/MrBoboDatabase.h>
 
+#include <MBParsing/Csv.h>
 
 namespace MBSlippi
 {
@@ -64,6 +65,8 @@ namespace MBSlippi
         }
     };
 
+    template<typename T>
+    using Vec = MBParsing::Column::VecType<T>;
 	class MBSlippiCLIHandler : public MeleeGameRecorder,public MeleeGameDBAdapter
 	{
 	private:
@@ -87,9 +90,13 @@ namespace MBSlippi
 		void p_UpdateGameSQLDatabase(MBDB::MrBoboDatabase& DatabaseToUpdate,std::filesystem::path const& ReplayDirectory,
                 std::vector<std::string> const& NewFiles);
 
-		void p_Handle_UpdateIndex(MBCLI::ProcessedCLInput const& Input);
+        void p_Record(Vec<MBParsing::CsvStringType> const& Path, Vec<MBParsing::CsvIntType> const& Begin,Vec<MBParsing::CsvIntType> const& End,
+                std::filesystem::path const& OutPath);
+
+        void p_Handle_UpdateIndex(MBCLI::ProcessedCLInput const& Input);
 		void p_Handle_Execute_Legacy(MBCLI::ProcessedCLInput const& Input);
 		void p_Handle_Execute(MBCLI::ProcessedCLInput const& Input);
+		void p_Handle_Record(MBCLI::ProcessedCLInput const& Input);
         int p_HandleServer(MBCLI::ProcessedCLInput const& Input);
 		void p_Handle_Play(MBCLI::ProcessedCLInput const& Input);
 		void p_Handle_Query(MBCLI::ProcessedCLInput const& Input);
