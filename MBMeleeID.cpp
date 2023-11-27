@@ -282,6 +282,11 @@ namespace MBSlippi
             MBAttackID  Options[] = { MBAttackID::Nair,MBAttackID::Fair,MBAttackID::Bair,MBAttackID::Uair,MBAttackID::Dair };
             ReturnValue = Options[ActionStateNumber - 65];
         }
+        else if(ActionStateNumber >= 344 && ActionStateNumber <= 348)
+        {
+            MBAttackID  Options[] = { MBAttackID::Nair,MBAttackID::Fair,MBAttackID::Bair,MBAttackID::Uair,MBAttackID::Dair };
+            ReturnValue = Options[ActionStateNumber - 344];
+        }
         else if(ActionStateNumber == 50)
         {
             ReturnValue = MBAttackID::DashAttack;
@@ -346,7 +351,7 @@ namespace MBSlippi
         {
             ReturnValue = MBAttackID::UpSmash;
         }
-        else if (ActionStateNumber == 64)
+        else if (AssociatedState.ActionStateID == ActionState::AttackLw4)
         {
             ReturnValue = MBAttackID::DownSmash;
         }

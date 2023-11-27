@@ -708,6 +708,14 @@ namespace MBSlippi
                 ReturnValue = false;
             }
         }
+        if( Op == OperatorType::eq || 
+                 Op == OperatorType::leq || 
+                 Op == OperatorType::le || 
+                 Op == OperatorType::ge || 
+                 Op == OperatorType::geq)
+        {
+            OutType = typeid(bool);   
+        }
 
         return ReturnValue;
     }
@@ -775,7 +783,7 @@ namespace MBSlippi
             }
             else if(Literal.Value.IsType<Literal_Number>())
             {
-                OutType = typeid(float);
+                OutType = typeid(int);
             }
             else if(Literal.Value.IsType<Literal_Symbol>())
             {
@@ -1447,15 +1455,18 @@ namespace MBSlippi
             }
         }
         //assigns player 2
-        for(int i = 0; i < 4;i++)
+        if(GameInfo.PlayerInfo[OutAssignemnts[1]].Character == "")
         {
-            if(i == OutAssignemnts[0])
+            for(int i = 0; i < 4;i++)
             {
-                continue;
-            }
-            if(GameInfo.PlayerInfo[i].Character != "")
-            {
-                std::swap(OutAssignemnts[i],OutAssignemnts[1]);   
+                if(i == OutAssignemnts[0])
+                {
+                    continue;
+                }
+                if(GameInfo.PlayerInfo[i].Character != "")
+                {
+                    std::swap(OutAssignemnts[i],OutAssignemnts[1]);   
+                }
             }
         }
         return(PlayerWasAssigned);
@@ -1769,6 +1780,10 @@ namespace MBSlippi
                 {
                     NewIntervalls = p_EvaluateGameIntervalls(AssociatedModule,InputGame,ReturnValue,ArgList,SubFilter);
                     std::swap(ReturnValue,NewIntervalls);
+                    if(ReturnValue.size() == 0)
+                    {
+                        break;   
+                    }
                 }
             }
             else
@@ -1800,7 +1815,6 @@ namespace MBSlippi
             //probably redundant
             std::sort(ReturnValue.begin(),ReturnValue.end());
         }
-        h_NormalizeIntervalls(ReturnValue);
         return ReturnValue;
     }
 
@@ -1887,6 +1901,10 @@ namespace MBSlippi
     {
 
         std::vector<MQL_MetricVariable> ReturnValue;
+        if(InputIntervalls.size() == 0)
+        {
+            return ReturnValue;
+        }
         if(Filter.IsType<MQL_Filter_Literal>())
         {
             auto const& Literal = Filter.GetType<MQL_Filter_Literal>();
@@ -2336,7 +2354,7 @@ namespace MBSlippi
         float PercentThreshold = 40;
         int PunisherIndex = GetPlayerIndex(ExtraArguments);
         int PunisheeIndex = PunisherIndex == 1 ? 0 : 1;
-        float ExtractCount = 10;
+        float ExtractCount = -1;
         if( ExtraArguments.HasNamedVariable("Percent"))
         {
             PercentThreshold = h_ParseFloat(ExtraArguments.GetNamedVariableString("Percent"));
@@ -2348,7 +2366,7 @@ namespace MBSlippi
         std::vector<i_PunishInfo> Punishes = h_ExtractPunishes2(GameToInspect,PunisherIndex,PunisheeIndex,PercentThreshold);
         std::sort(Punishes.begin(),Punishes.end(),
                 [](i_PunishInfo const& lhs,i_PunishInfo const& rhs){return(lhs.TotalRecievedPercent >= rhs.TotalRecievedPercent);});
-        if(Punishes.size() > ExtractCount)
+        if(Punishes.size() > ExtractCount && ExtractCount != -1)
         {
             Punishes.resize(ExtractCount);
         }
@@ -2558,7 +2576,7 @@ namespace MBSlippi
         }
         if(RightExpand == -1)
         {
-            IntervallToInspect.LastFrame = GameToInspect.Frames.size();
+            IntervallToInspect.LastFrame = GameToInspect.Frames.size()-1;
         }
         else
         {
@@ -2822,6 +2840,26 @@ namespace MBSlippi
         for(auto const& Intervall : IntervallToInspect)
         {
             ReturnValue.push_back(GameToInspect.Frames[Intervall.FirstFrame].PlayerInfo[PlayerIndex].Percent);   
+        }
+        return ReturnValue;
+    }
+    std::vector<MQL_MetricVariable> SpecEvaluator::MoveName(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,std::vector<GameIntervall> const& IntervallToInspect)
+    {
+        std::vector<MQL_MetricVariable> ReturnValue;
+        int PlayerIndex = GetPlayerIndex(ExtraArguments);
+        for(auto const& Intervall : IntervallToInspect)
+        {
+            ReturnValue.push_back(MBAttackIDToString(GameToInspect.Frames[Intervall.FirstFrame].PlayerInfo[PlayerIndex].ActiveAttack));
+        }
+        return ReturnValue;
+    }
+    std::vector<MQL_MetricVariable> SpecEvaluator::PercentDiff(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,std::vector<GameIntervall> const& IntervallToInspect)
+    {
+        std::vector<MQL_MetricVariable> ReturnValue;
+        int PlayerIndex = GetPlayerIndex(ExtraArguments);
+        for(auto const& Intervall : IntervallToInspect)
+        {
+            ReturnValue.push_back(GameToInspect.Frames[Intervall.LastFrame].PlayerInfo[PlayerIndex].Percent-GameToInspect.Frames[Intervall.FirstFrame].PlayerInfo[PlayerIndex].Percent);
         }
         return ReturnValue;
     }

@@ -697,6 +697,7 @@ namespace MBSlippi
     void MBSlippiCLIHandler::p_Record(Vec<MBParsing::CsvStringType> const& Path, Vec<MBParsing::CsvIntType> const& Begin,Vec<MBParsing::CsvIntType> const& End, std::filesystem::path const& OutPath)
     {
         std::unordered_map<std::string,RecordingInfo> Recordings;
+        std::vector<std::string> FileOrder;
         for(size_t i = 0; i < Path.size();i++)
         {
             RecordingInfo& Recording = Recordings[Path[i]];
@@ -706,6 +707,7 @@ namespace MBSlippi
                 {
                     throw std::runtime_error("Filepath in File column doesnt exist: \""+Path[i]+"\"");
                 }
+                FileOrder.push_back(Path[i]);
                 Recording.GamePath = Path[i];
                 MBUtility::MBFileInputStream InputStream(Path[i]);
                 MBError Result = MeleeGame::ParseSlippiGame(InputStream,Recording.GameData);
@@ -720,9 +722,9 @@ namespace MBSlippi
             Recording.IntervallsToRecord.push_back(NewIntervall);
         }
         std::vector<RecordingInfo> GamesToRecord;
-        for(auto& Game : Recordings)
+        for(auto& File : FileOrder)
         {
-            GamesToRecord.push_back(std::move(Game.second));   
+            GamesToRecord.push_back(std::move(Recordings[File]));
         }
         RecordGames(GamesToRecord,OutPath);
     }

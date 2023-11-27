@@ -480,6 +480,8 @@ namespace MBSlippi
         static std::vector<MQL_MetricVariable> Begin(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,std::vector<GameIntervall> const& IntervallToInspect);
         static std::vector<MQL_MetricVariable> End(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,std::vector<GameIntervall> const& IntervallToInspect);
         static std::vector<MQL_MetricVariable> File(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,std::vector<GameIntervall> const& IntervallToInspect);
+        static std::vector<MQL_MetricVariable> MoveName(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,std::vector<GameIntervall> const& IntervallToInspect);
+        static std::vector<MQL_MetricVariable> PercentDiff(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,std::vector<GameIntervall> const& IntervallToInspect);
         std::unordered_map<std::string,BuiltinMetric> m_BuiltinMetrics = 
         {
             {"Percent",{Percent,typeid(float)}},
@@ -487,6 +489,8 @@ namespace MBSlippi
             {"End",{End,typeid(int)}},
             {"Begin",{Begin,typeid(int)}},
             {"File",{File,typeid(std::string)}},
+            {"MoveName",{MoveName,typeid(std::string)}},
+            {"PercentDiff",{PercentDiff,typeid(float)}},
         };
 
         std::vector<SpecServer> m_SpecServers;
