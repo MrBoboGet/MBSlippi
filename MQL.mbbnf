@@ -200,13 +200,13 @@ struct Literal_Number : Literal
 
 struct Filter_Arg_Positional : Filter_Arg
 {
-    Literal Argument;
+    Filter_Component Argument;
 }
 struct Filter_Arg_Named : Filter_Arg
 {
     tokenPos NamePosition;
     string Name;
-    Literal Argument;
+    Filter_Component Argument;
 }
 struct AttributeList
 {
@@ -306,8 +306,8 @@ ExprOperator = Op=plus |
 Combinator = Op=pipe | Op=AND | Op = OR;
 
 Filter_Arg = this=Filter_Arg_Named | this=Filter_Arg_Positional;
-Filter_Arg_Named = NamePosition = TOKEN.Position Name=idf eq Argument=Literal;
-Filter_Arg_Positional = Argument=Literal;
+Filter_Arg_Named = NamePosition = TOKEN.Position Name=idf eq Argument=Filter_Component;
+Filter_Arg_Positional = Argument=Filter_Component;
 Filter_ArgList = lpar (Arguments=Filter_Arg (comma Arguments=Filter_Arg)*)? rpar;
 
 

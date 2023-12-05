@@ -178,7 +178,7 @@ class Literal_Number : public Literal_Base
 class Filter_Arg_Positional : public Filter_Arg_Base
 {
     public:
-    Literal Argument;
+    Filter_Component Argument;
     std::unique_ptr<AST_Base> Copy() const override{return(MBCC::CopyAST(*this));}
     
 };
@@ -187,7 +187,7 @@ class Filter_Arg_Named : public Filter_Arg_Base
     public:
     MBCC::TokenPosition NamePosition;
     std::string Name;
-    Literal Argument;
+    Filter_Component Argument;
     std::unique_ptr<AST_Base> Copy() const override{return(MBCC::CopyAST(*this));}
     
 };

@@ -27,12 +27,12 @@ namespace MBSlippi
         std::atomic<bool> m_IsRunning{true};
 
         std::mutex m_EvaluatorMutex;
-        SpecEvaluator* m_Evaluator = nullptr;
+        MQLEvaluator* m_Evaluator = nullptr;
         
         void p_EvaluatorThread();
         void p_ExecuteAsync(Statement StatementToExecute);
     public:
-        MQLServer(SpecEvaluator* Evalator)
+        MQLServer(MQLEvaluator* Evalator)
         {
             m_Evaluator = Evalator;   
             m_EvaluatorThread = std::thread(&MQLServer::p_EvaluatorThread,this);

@@ -6,8 +6,28 @@
 #include <MBSystem/BiDirectionalSubProcess.h>
 #include <MBSystem/MBSystem.h>
 #include <typeindex>
+#include <type_traits>
 namespace MBSlippi
 {
+    class MQL_Filter;
+    class ArgumentList
+    {
+        ArgumentList const* m_ParentArgList = nullptr;
+        std::vector<MQL_Filter>  m_PositionalArguments;
+        std::vector<MQL_Filter> m_KeyArgs;
+        std::unordered_map<std::string,size_t> m_KeyPositions;
+    public:
+        ArgumentList() = default;
+
+        void SetParentArgList(ArgumentList const* ParentList);
+        ArgumentList(Filter_ArgList const& ListToConvert);
+        //includes parent scope
+        ArgumentList(ArgumentList const& DefinitionBindings,ArgumentList const& SuppliedArguments);
+        bool HasNamedVariable(std::string const& VariableToCheck) const;
+        std::string GetNamedVariableString(std::string const& VariableName) const;
+        std::string GetPositionalArgumentString(int Index) const;
+        size_t PositionalCount() const;
+    };
     inline std::string IdentifierToString(Identifier const& Idf)
     {
         std::string ReturnValue = "";   
@@ -99,10 +119,11 @@ namespace MBSlippi
         std::vector<std::string> ExecutableArguments;
     };
 
+    
+    
     template <typename PredType>
-    std::vector<GameIntervall> ExtractSequences(MeleeGame const& GameToInspect, GameIntervall IntervallToInspect,PredType Predicate)
+    void ExtractSequences(MeleeGame const& GameToInspect, GameIntervall IntervallToInspect,PredType Predicate,std::vector<GameIntervall>& OutIntervalls)
     {
-        std::vector<GameIntervall> ReturnValue;
         bool WasTrue = false;
         int FirstTrue = IntervallToInspect.FirstFrame;
         for(int i = IntervallToInspect.FirstFrame; i < IntervallToInspect.LastFrame;i++)
@@ -119,10 +140,26 @@ namespace MBSlippi
             {
                 if(WasTrue)
                 {
-                    ReturnValue.push_back(GameIntervall(FirstTrue,i));   
+                    OutIntervalls.push_back(GameIntervall(FirstTrue,i));   
                 }
                 WasTrue = false;
             }
+        }
+    }
+    template <typename PredType>
+    std::vector<GameIntervall> ExtractSequences(MeleeGame const& GameToInspect, GameIntervall IntervallToInspect,PredType Predicate)
+    {
+        std::vector<GameIntervall> ReturnValue;
+        ExtractSequences(GameToInspect,IntervallToInspect,Predicate,ReturnValue);
+        return(ReturnValue);
+    }
+    template <typename PredType>
+    std::vector<GameIntervall> ExtractSequences(MeleeGame const& GameToInspect, std::vector<GameIntervall> const& IntervallsToInspect,PredType Predicate)
+    {
+        std::vector<GameIntervall> ReturnValue;
+        for(auto const& Intervall : IntervallsToInspect)
+        {
+            ExtractSequences(GameToInspect,Intervall,Predicate,ReturnValue);
         }
         return(ReturnValue);
     }
@@ -232,113 +269,10 @@ namespace MBSlippi
             LoadErrors.clear();
         }
     };
-    class ArgumentList
-    {
-        ArgumentList* m_ParentArgList = nullptr;
-        std::vector<Literal>  m_PositionalArguments;
-        std::unordered_map<std::string,Literal> m_KeyArguments;
-    public:
 
-        void SetParentArgList(ArgumentList* ParentList)
-        {
-            m_ParentArgList = ParentList;
-        }
-        ArgumentList() = default;
-        ArgumentList(Filter_ArgList const& ListToConvert)
-        {
-            for(auto const& Argument : ListToConvert.Arguments)
-            {
-                if(Argument.IsType<Filter_Arg_Positional>())
-                {
-                    m_PositionalArguments.push_back(Argument.GetType<Filter_Arg_Positional>().Argument);
-                }
-                else if(Argument.IsType<Filter_Arg_Named>())
-                {
-                    auto const& KeyArgument = Argument.GetType<Filter_Arg_Named>();
-                    m_KeyArguments[KeyArgument.Name] = KeyArgument.Argument;
-                }
-            }   
-        }
-        //includes parent scope
-        ArgumentList(Filter_ArgList const& DefinitionBindings,ArgumentList const& SuppliedArguments)
-        {
-            int CurrentArgumentIndex = 0;
-            for(auto const& Argument : DefinitionBindings.Arguments)
-            {
-                if(Argument.IsType<Filter_Arg_Positional>())
-                {
-                    Literal_String NewLiteral;
-                    NewLiteral.Value  = SuppliedArguments.GetPositionalArgumentString(CurrentArgumentIndex);
-                    CurrentArgumentIndex++;
-                    m_PositionalArguments.push_back(std::move(NewLiteral));
-                }
-                else if(Argument.IsType<Filter_Arg_Named>())
-                {
-                    auto const& NamedArgument = Argument.GetType<Filter_Arg_Named>();
-                    Literal_String NewLiteral;
-                    NewLiteral.Value = SuppliedArguments.GetNamedVariableString(NamedArgument.Name);
-                    m_KeyArguments[NamedArgument.Name] = std::move(NewLiteral);
-                }
-            }
-        }
 
-        bool HasNamedVariable(std::string const& VariableToCheck) const
-        {
-            return(m_KeyArguments.find(VariableToCheck) != m_KeyArguments.end());
-        }
-        std::string GetNamedVariableString(std::string const& VariableName) const
-        {
-            std::string ReturnValue;
-            auto VarIt = m_KeyArguments.find(VariableName);
-            if(VarIt == m_KeyArguments.end())
-            {
-                throw std::runtime_error("Can't find variable with name"+VariableName+ " in argument list");   
-            }
-            if(VarIt->second.IsType<Literal_String>())
-            {
-                ReturnValue = VarIt->second.GetType<Literal_String>().Value;
-            }
-            else if(VarIt->second.IsType<Literal_Symbol>())
-            {
-                //look for symbol in partent scope
-                if(m_ParentArgList == nullptr)
-                {
-                    throw std::runtime_error("Symbol lookup requires parent ArgList");
-                }
-                ReturnValue = m_ParentArgList->GetNamedVariableString(VarIt->second.GetType<Literal_Symbol>().Value);
-            }
-            return ReturnValue;
-        }
-        std::string GetPositionalArgumentString(int Index) const
-        {
-            std::string ReturnValue;
-            if(Index > m_PositionalArguments.size())
-            {
-                throw std::runtime_error("Index out of range in Positional argument access");   
-            }
-            auto const& Literal = m_PositionalArguments[Index];
-            if(Literal.IsType<Literal_String>())
-            {
-                ReturnValue = Literal.GetType<Literal_String>().Value;
-            }
-            else if(Literal.IsType<Literal_Symbol>())
-            {
-                //look for symbol in partent scope
-                if(m_ParentArgList == nullptr)
-                {
-                    throw std::runtime_error("Symbol lookup requires parent ArgList");
-                }
-                ReturnValue = m_ParentArgList->GetNamedVariableString(Literal.GetType<Literal_Symbol>().Value);
-            }
-            return ReturnValue;
-        }
-        size_t PositionalCount() const
-        {
-            return(m_PositionalArguments.size());
-        }
-
-    };
-    typedef std::vector<GameIntervall> (* BuiltinFilterType)(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,GameIntervall IntervallToInspect);
+    class CallContext;
+    typedef std::vector<GameIntervall> (* BuiltinFilterType)(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,std::vector<GameIntervall> const& IntervallsToInspect,CallContext& Context);
     typedef std::vector<MQL_MetricVariable> (* MetricFuncType)(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,std::vector<GameIntervall> const&  IntervallToInspect);
     enum class OperatorType
     {
@@ -399,13 +333,14 @@ namespace MBSlippi
     class MQL_Filter
     {
         std::variant<MQL_FilterCombiner, MQL_FilterReference,MQL_Filter_Literal,MQL_MetricCombiner,MQL_IntervallExtractor,MQL_Metric> m_Data;
+        typedef decltype(m_Data) VariantType;
         public:
 
         MQL_Filter(MQL_Filter const&) = default;
         MQL_Filter(MQL_Filter&&) noexcept = default;
         MQL_Filter& operator=(MQL_Filter const&) = default;
         MQL_Filter& operator=(MQL_Filter&&) = default;
-        template<typename T>
+        template<typename T,typename = std::enable_if_t<std::is_constructible_v<VariantType,T>>>
         MQL_Filter(T&& Data)
         {
             m_Data = std::forward<T>(Data);
@@ -429,43 +364,58 @@ namespace MBSlippi
         }
     };
 
+    #define FILTER_ARGLIST (MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,std::vector<GameIntervall> const& IntervallsToInspect,CallContext& Context)
+    #define METRIC_ARGLIST (MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,std::vector<GameIntervall> const& IntervallToInspect)
+   
+
+    class CallContext
+    {
+        MQL_Module& m_Module;
+    public:
+        CallContext(MQL_Module& AssociatedModule) : m_Module(AssociatedModule)
+        {
+
+        }
+        MQL_Module& GetModule()
+        {
+            return m_Module;   
+        }
+    };
     class MQLEvaluator
     {
     private:
 
         static int GetPlayerIndex(ArgumentList const& ExtraArguments);
     
-        static std::vector<GameIntervall> BiggestPunishes(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,GameIntervall IntervallToInspect);
-        static std::vector<GameIntervall> HasMove(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,GameIntervall IntervallToInspect);
-        static std::vector<GameIntervall> Move(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,GameIntervall IntervallToInspect);
-        static std::vector<GameIntervall> InShield(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,GameIntervall IntervallToInspect);
-        static std::vector<GameIntervall> Expand(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,GameIntervall IntervallToInspect);
-        static std::vector<GameIntervall> ActionState(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,GameIntervall IntervallToInspect);
-        static std::vector<GameIntervall> HasState(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,GameIntervall IntervallToInspect);
-        static std::vector<GameIntervall> Until(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,GameIntervall IntervallToInspect);
-        static std::vector<GameIntervall> PlayerFlags(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,GameIntervall IntervallToInspect);
-        static std::vector<GameIntervall> HasProjectile(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,GameIntervall IntervallToInspect);
-        static std::vector<GameIntervall> HitBy(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,GameIntervall IntervallToInspect);
-        static std::vector<GameIntervall> HasHitBy(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,GameIntervall IntervallToInspect);
-        static std::vector<GameIntervall> Offstage(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,GameIntervall IntervallToInspect);
-        static std::vector<GameIntervall> Length(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,GameIntervall IntervallToInspect);
-        static std::vector<GameIntervall> Cornered(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,GameIntervall IntervallToInspect);
+        //static std::vector<GameIntervall> HasMove(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,GameIntervall IntervallToInspect);
+        //static std::vector<GameIntervall> HasState(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,GameIntervall IntervallToInspect);
+        //static std::vector<GameIntervall> HasProjectile(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,GameIntervall IntervallToInspect);
+        //static std::vector<GameIntervall> HasHitBy(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,GameIntervall IntervallToInspect);
+        static std::vector<GameIntervall> BiggestPunishes FILTER_ARGLIST;
+        static std::vector<GameIntervall> Move FILTER_ARGLIST;
+        static std::vector<GameIntervall> InShield FILTER_ARGLIST;
+        static std::vector<GameIntervall> Expand FILTER_ARGLIST;
+        static std::vector<GameIntervall> ActionState FILTER_ARGLIST;
+        static std::vector<GameIntervall> Until FILTER_ARGLIST;
+        static std::vector<GameIntervall> PlayerFlags FILTER_ARGLIST;
+        static std::vector<GameIntervall> HitBy FILTER_ARGLIST;
+        static std::vector<GameIntervall> Offstage FILTER_ARGLIST;
+        static std::vector<GameIntervall> Cornered FILTER_ARGLIST;
         std::unordered_map<std::string,BuiltinFilterType> m_BuiltinFilters = 
         {
+            //{"HasMove",HasMove},
+            //{"HasHitBy",HasHitBy},
+            //{"HasProjectile",HasProjectile},
+            //{"HasState",HasState},
             {"Punishes",BiggestPunishes},
-            {"HasMove",HasMove},
             {"Move",Move},
             {"InShield",InShield},
             {"Expand",Expand},
             {"HitBy",HitBy},
-            {"HasHitBy",HasHitBy},
             {"PlayerFlags",PlayerFlags},
-            {"HasProjectile",HasProjectile},
             {"ActionState",ActionState},
-            {"HasState",HasState},
             {"Until",Until},
             {"Offstage",Offstage},
-            {"Length",Length},
             {"Cornered",Cornered},
         };
         struct BuiltinMetric
@@ -475,13 +425,14 @@ namespace MBSlippi
         };
 
         //Metrics
-        static std::vector<MQL_MetricVariable> Percent(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,std::vector<GameIntervall> const& IntervallToInspect);
-        static std::vector<MQL_MetricVariable> Delay(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,std::vector<GameIntervall> const& IntervallToInspect);
-        static std::vector<MQL_MetricVariable> Begin(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,std::vector<GameIntervall> const& IntervallToInspect);
-        static std::vector<MQL_MetricVariable> End(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,std::vector<GameIntervall> const& IntervallToInspect);
-        static std::vector<MQL_MetricVariable> File(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,std::vector<GameIntervall> const& IntervallToInspect);
-        static std::vector<MQL_MetricVariable> MoveName(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,std::vector<GameIntervall> const& IntervallToInspect);
-        static std::vector<MQL_MetricVariable> PercentDiff(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,std::vector<GameIntervall> const& IntervallToInspect);
+        static std::vector<MQL_MetricVariable> Percent METRIC_ARGLIST;
+        static std::vector<MQL_MetricVariable> Delay METRIC_ARGLIST;
+        static std::vector<MQL_MetricVariable> Begin METRIC_ARGLIST;
+        static std::vector<MQL_MetricVariable> End METRIC_ARGLIST;
+        static std::vector<MQL_MetricVariable> File METRIC_ARGLIST;
+        static std::vector<MQL_MetricVariable> MoveName METRIC_ARGLIST;
+        static std::vector<MQL_MetricVariable> PercentDiff METRIC_ARGLIST;
+        static std::vector<MQL_MetricVariable> Length METRIC_ARGLIST;
         std::unordered_map<std::string,BuiltinMetric> m_BuiltinMetrics = 
         {
             {"Percent",{Percent,typeid(float)}},
@@ -491,6 +442,7 @@ namespace MBSlippi
             {"File",{File,typeid(std::string)}},
             {"MoveName",{MoveName,typeid(std::string)}},
             {"PercentDiff",{PercentDiff,typeid(float)}},
+            {"Length",{Length,typeid(int)}},
         };
 
         std::vector<SpecServer> m_SpecServers;
@@ -533,13 +485,13 @@ namespace MBSlippi
                 MQL_Module& AssociatedModule,
                 MeleeGame const& InputGame,
                 std::vector<GameIntervall> const& InputIntervalls,
-                ArgumentList& ArgList,
+                ArgumentList const& ArgList,
                 MQL_Filter const& Filter);
 
         std::vector<MQL_MetricVariable> p_EvaluateMetric(
                 MeleeGame const& InputGame,
                 std::vector<GameIntervall> const& InputIntervalls,
-                ArgumentList& ArgList,
+                ArgumentList const& ArgList,
                 MQL_Filter const& Filter);
         
         //converts and verifies

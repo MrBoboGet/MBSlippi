@@ -98,12 +98,12 @@ namespace MBSlippi
             {
                 auto const& NamedArg = Arg.GetType<Filter_Arg_Named>();
                 OutTokens.push_back(MBLSP::SemanticToken(MBLSP::TokenType::Property,h_Convert(NamedArg.NamePosition),NamedArg.Name.size()));
-                OutTokens.push_back(GetToken(NamedArg.Argument));
+                p_ExtractTokens(OutTokens,NamedArg.Argument);
             }   
             else if(Arg.IsType<Filter_Arg_Positional>())
             {
                 auto const& PositionalArg  = Arg.GetType<Filter_Arg_Positional>();
-                OutTokens.push_back(GetToken(PositionalArg.Argument));
+                p_ExtractTokens(OutTokens,PositionalArg.Argument);
             }
             else
             {
@@ -286,7 +286,7 @@ namespace MBSlippi
             ReturnValue.ParsedModule = ParseModule(m_Tokenizer);
             ReturnValue.Tokens = p_ExtractTokens(ReturnValue.ParsedModule);
             ReturnValue.SemanticTokens = MBLSP::CalculateSemanticTokens(ReturnValue.Tokens);
-            SpecEvaluator Evaluator;
+            MQLEvaluator Evaluator;
             Evaluator.SetDBAdapter(&m_TempHandler);
             Evaluator.SetRecorder(&m_TempHandler);
             MQL_Module TempModule;
