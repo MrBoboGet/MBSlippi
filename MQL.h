@@ -1,6 +1,6 @@
 #pragma once
 #include "MBUtility/MBInterfaces.h"
-#include "SlippiSpecParser.h"
+#include "MQLParser.h"
 #include <MBLSP/MBLSP.h>
 #include "MBMeleeID.h"
 #include <MBSystem/BiDirectionalSubProcess.h>
@@ -429,7 +429,7 @@ namespace MBSlippi
         }
     };
 
-    class SpecEvaluator
+    class MQLEvaluator
     {
     private:
 

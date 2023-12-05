@@ -1,7 +1,7 @@
-#include "SlippiSpecLSP.h"
+#include "MQL_LSP.h"
 #include "MBLSP/LSP_Structs.h"
-#include "SlippiSpecParser.h"
-#include "SlippiSpec.h"
+#include "MQLParser.h"
+#include "MQL.h"
 #include <assert.h>
 namespace MBSlippi
 {

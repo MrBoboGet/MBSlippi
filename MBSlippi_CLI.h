@@ -4,7 +4,7 @@
 #include <MBCLI/MBCLI.h>
 #include <MBPacketManager/MB_PacketProtocol.h>
 #include <deque>
-#include "SlippiSpec.h"
+#include "MQL.h"
 
 #include <MrBoboDatabase/MrBoboDatabase.h>
 

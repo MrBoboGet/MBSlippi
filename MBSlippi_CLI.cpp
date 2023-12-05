@@ -15,8 +15,8 @@
 #include <iomanip>
 
 
-#include "SlippiSpecParser.h"
-#include "SlippiSpec.h"
+#include "MQLParser.h"
+#include "MQL.h"
 
 #include <MBSystem/MBSystem.h>
 #include <MBUtility/MBFunctional.h>

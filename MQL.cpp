@@ -1,7 +1,7 @@
-#include "SlippiSpec.h"
+#include "MQL.h"
 #include "MBMeleeID.h"
 #include "MeleeID.h"
-#include "SlippiSpecParser.h"
+#include "MQLParser.h"
 #include <memory>
 #include <MBUtility/Merge.h>
 #include <assert.h>
@@ -337,10 +337,10 @@ namespace MBSlippi
 
 
     
-    void SpecEvaluator::p_VerifyAttribute(std::vector<std::string> const& Attribute,bool IsPlayerAssignment,std::vector<MBLSP::Diagnostic>& OutDiagnostics)
+    void MQLEvaluator::p_VerifyAttribute(std::vector<std::string> const& Attribute,bool IsPlayerAssignment,std::vector<MBLSP::Diagnostic>& OutDiagnostics)
     {
     }
-    void SpecEvaluator::p_VerifyGameInfoPredicate_Direct(MQL_Module& AssociatedModule,Identifier const& Idf,GameInfoPredicate_Direct& PredicateToVerify,
+    void MQLEvaluator::p_VerifyGameInfoPredicate_Direct(MQL_Module& AssociatedModule,Identifier const& Idf,GameInfoPredicate_Direct& PredicateToVerify,
             bool IsPlayerAssignment,std::vector<MBLSP::Diagnostic>& OutDiagnostics)
     {
         auto const& Attribute = Idf.Parts;
@@ -438,7 +438,7 @@ namespace MBSlippi
             }
         }
     }
-    void SpecEvaluator::p_VerifyGameInfoPredicate(MQL_Module& AssociatedModule,GameInfoPredicate& PredicateToVerify,bool IsPlayerAssignment,std::vector<MBLSP::Diagnostic>& OutDiagnostics)
+    void MQLEvaluator::p_VerifyGameInfoPredicate(MQL_Module& AssociatedModule,GameInfoPredicate& PredicateToVerify,bool IsPlayerAssignment,std::vector<MBLSP::Diagnostic>& OutDiagnostics)
     {
         if(PredicateToVerify.Data.IsType<GameInfoPredicate_Direct>())
         {
@@ -509,14 +509,14 @@ namespace MBSlippi
             p_VerifyGameInfoPredicate(AssociatedModule,SubPredicate,IsPlayerAssignment,OutDiagnostics);
         }
     }
-    MBLSP::Position SpecEvaluator::p_GetBegin(Literal const& Component)
+    MBLSP::Position MQLEvaluator::p_GetBegin(Literal const& Component)
     {
         MBLSP::Position ReturnValue;
         ReturnValue.line = Component.GetBase().ValuePosition.Line;
         ReturnValue.character = Component.GetBase().ValuePosition.ByteOffset;
         return ReturnValue;
     }
-    MBLSP::Position SpecEvaluator::p_GetEnd(Literal const& Component)
+    MBLSP::Position MQLEvaluator::p_GetEnd(Literal const& Component)
     {
         MBLSP::Position ReturnValue = p_GetBegin(Component);
         if(Component.IsType<Literal_String>())
@@ -533,7 +533,7 @@ namespace MBSlippi
         }
         return ReturnValue;
     }
-    MBLSP::Position SpecEvaluator::p_GetBegin(Filter_Component const& Component)
+    MBLSP::Position MQLEvaluator::p_GetBegin(Filter_Component const& Component)
     {
         MBLSP::Position ReturnValue;
         if(Component.IsType<Filter_Component_Func>())
@@ -552,7 +552,7 @@ namespace MBSlippi
         }
         return ReturnValue;
     }
-    MBLSP::Position SpecEvaluator::p_GetEnd(Filter_Component const& Component)
+    MBLSP::Position MQLEvaluator::p_GetEnd(Filter_Component const& Component)
     {
         MBLSP::Position ReturnValue;
         if(Component.IsType<Filter_Component_Func>())
@@ -571,7 +571,7 @@ namespace MBSlippi
         }
         return ReturnValue;
     }
-    void SpecEvaluator::p_AddDiagnostic(std::vector<MBLSP::Diagnostic>& OutDiagnostics,Literal const& ErrorLiteral,std::string_view Message)
+    void MQLEvaluator::p_AddDiagnostic(std::vector<MBLSP::Diagnostic>& OutDiagnostics,Literal const& ErrorLiteral,std::string_view Message)
     {
         MBLSP::Diagnostic NewDiagnostic;
         NewDiagnostic.message = Message;
@@ -579,7 +579,7 @@ namespace MBSlippi
         NewDiagnostic.range.end = p_GetEnd(ErrorLiteral);
         OutDiagnostics.emplace_back(std::move(NewDiagnostic));
     }
-    void SpecEvaluator::p_AddDiagnostic(std::vector<MBLSP::Diagnostic>& OutDiagnostics,Identifier const& ErrorIdentifier,std::string_view Message)
+    void MQLEvaluator::p_AddDiagnostic(std::vector<MBLSP::Diagnostic>& OutDiagnostics,Identifier const& ErrorIdentifier,std::string_view Message)
     {
         MBLSP::Diagnostic NewDiagnostic;
         NewDiagnostic.message = Message;
@@ -588,7 +588,7 @@ namespace MBSlippi
         NewDiagnostic.range.end = NewDiagnostic.range.start + IdentifierLength(ErrorIdentifier);
         OutDiagnostics.emplace_back(std::move(NewDiagnostic));
     }
-    void SpecEvaluator::p_AddDiagnostic(std::vector<MBLSP::Diagnostic>& OutDiagnostics,Filter_OperatorList const& ErrorList,int Begin,int End,std::string_view Message)
+    void MQLEvaluator::p_AddDiagnostic(std::vector<MBLSP::Diagnostic>& OutDiagnostics,Filter_OperatorList const& ErrorList,int Begin,int End,std::string_view Message)
     {
         Filter_Component const& BeginError = ErrorList.Components[Begin];
         Filter_Component const& EndError = ErrorList.Components[End-1];
@@ -598,7 +598,7 @@ namespace MBSlippi
         NewDiagnostic.range.end = p_GetEnd(ErrorList.Components[End-1]);
         OutDiagnostics.emplace_back(std::move(NewDiagnostic));
     }
-    SpecEvaluator::PrecedenceInfo SpecEvaluator::p_GetPrecedenceInfo(std::vector<std::string> const& Operators,int BeginIndex,int EndIndex)
+    MQLEvaluator::PrecedenceInfo MQLEvaluator::p_GetPrecedenceInfo(std::vector<std::string> const& Operators,int BeginIndex,int EndIndex)
     {
         PrecedenceInfo ReturnValue;
         assert(EndIndex-BeginIndex != 1);
@@ -649,7 +649,7 @@ namespace MBSlippi
         }
         return ReturnValue;
     }
-    bool SpecEvaluator::p_OperatorIsValid(OperatorType Op,std::type_index Lhs,std::type_index Rhs,std::type_index& OutType)
+    bool MQLEvaluator::p_OperatorIsValid(OperatorType Op,std::type_index Lhs,std::type_index Rhs,std::type_index& OutType)
     {
         bool ReturnValue = true;
         if(Lhs == typeid(bool))
@@ -719,7 +719,7 @@ namespace MBSlippi
 
         return ReturnValue;
     }
-    MQL_Filter SpecEvaluator::p_ConvertMetricOperatorList(MQL_Module& AssociatedModule,ArgumentList& ParentArgList,
+    MQL_Filter MQLEvaluator::p_ConvertMetricOperatorList(MQL_Module& AssociatedModule,ArgumentList& ParentArgList,
             Filter_OperatorList const& FilterToConvert,int BeginIndex,int EndIndex,std::vector<MBLSP::Diagnostic>& OutDiagnostics,std::type_index& OutType)
     {
         MQL_MetricCombiner ReturnValue;
@@ -768,7 +768,7 @@ namespace MBSlippi
         }
         return ReturnValue;
     }
-    MQL_Filter SpecEvaluator::p_ConvertMetricComponent(MQL_Module& AssociatedModule,ArgumentList& ParentArgList,
+    MQL_Filter MQLEvaluator::p_ConvertMetricComponent(MQL_Module& AssociatedModule,ArgumentList& ParentArgList,
             Filter_Component const& FilterToConvert,std::vector<MBLSP::Diagnostic>& OutDiagnostics,std::type_index& OutType)
     {
         MQL_Filter ReturnValue;
@@ -830,7 +830,7 @@ namespace MBSlippi
         }
         return ReturnValue;
     }
-    MQL_Filter SpecEvaluator::p_ConvertFilterOperatorList(MQL_Module& AssociatedModule,ArgumentList& ParentArgList,
+    MQL_Filter MQLEvaluator::p_ConvertFilterOperatorList(MQL_Module& AssociatedModule,ArgumentList& ParentArgList,
             Filter_OperatorList const& FilterToConvert,int BeginIndex,int EndIndex,std::vector<MBLSP::Diagnostic>& OutDiagnostics)
     {
         MQL_FilterCombiner ReturnValue;
@@ -863,7 +863,7 @@ namespace MBSlippi
         }
         return ReturnValue;
     }
-    MQL_Filter SpecEvaluator::p_ConvertFilterComponent(MQL_Module& AssociatedModule,ArgumentList& ParentArgList,
+    MQL_Filter MQLEvaluator::p_ConvertFilterComponent(MQL_Module& AssociatedModule,ArgumentList& ParentArgList,
             Filter_Component const& FilterToConvert,std::vector<MBLSP::Diagnostic>& OutDiagnostics)
     {
         MQL_Filter ReturnValue;
@@ -934,17 +934,17 @@ namespace MBSlippi
         }
         return ReturnValue;
     }
-    void SpecEvaluator::p_VerifyFilterComponent(MQL_Module& AssociatedModule,Filter_Component const& FilterToVerify,std::vector<MBLSP::Diagnostic>& OutDiagnostics)
+    void MQLEvaluator::p_VerifyFilterComponent(MQL_Module& AssociatedModule,Filter_Component const& FilterToVerify,std::vector<MBLSP::Diagnostic>& OutDiagnostics)
     {
         ArgumentList ParentArgList;
         p_ConvertFilterComponent(AssociatedModule,ParentArgList,FilterToVerify,OutDiagnostics);
     }
-    void SpecEvaluator::p_VerifyFilter(MQL_Module& AssociatedModule,Filter const& FilterToVerify,std::vector<MBLSP::Diagnostic>& OutDiagnostics)
+    void MQLEvaluator::p_VerifyFilter(MQL_Module& AssociatedModule,Filter const& FilterToVerify,std::vector<MBLSP::Diagnostic>& OutDiagnostics)
     {
         ArgumentList ParentArgList;
         p_ConvertFilterComponent(AssociatedModule,ParentArgList,FilterToVerify.Component,OutDiagnostics);
     }
-    bool SpecEvaluator::p_EvaluateImport(MQL_Module& AssociatedModule,Import& ImportStatement,std::vector<MBLSP::Diagnostic>& OutDiagnostics)
+    bool MQLEvaluator::p_EvaluateImport(MQL_Module& AssociatedModule,Import& ImportStatement,std::vector<MBLSP::Diagnostic>& OutDiagnostics)
     {
         bool ReturnValue = true;
         std::filesystem::path ModuleDirectory = AssociatedModule.ModulePath.parent_path();
@@ -1043,7 +1043,7 @@ namespace MBSlippi
         }
         return ReturnValue;
     }
-    bool SpecEvaluator::VerifyVariableDeclaration(MQL_Module& AssociatedModule,Statement& DeclarationToVerify,std::vector<MBLSP::Diagnostic>& OutDiagnostics,bool UpdateState)
+    bool MQLEvaluator::VerifyVariableDeclaration(MQL_Module& AssociatedModule,Statement& DeclarationToVerify,std::vector<MBLSP::Diagnostic>& OutDiagnostics,bool UpdateState)
     {
         bool ReturnValue = true;
         std::vector<MBLSP::Diagnostic> Diagnostics;
@@ -1128,7 +1128,7 @@ namespace MBSlippi
         }
         return(ReturnValue);
     }
-    void SpecEvaluator::p_VerifyPlayerAssignment(MQL_Module& AssociatedModule,PlayerAssignment& AssignmentToVerify,std::vector<MBLSP::Diagnostic>& OutDiagnostics)
+    void MQLEvaluator::p_VerifyPlayerAssignment(MQL_Module& AssociatedModule,PlayerAssignment& AssignmentToVerify,std::vector<MBLSP::Diagnostic>& OutDiagnostics)
     {
         if(AssignmentToVerify.AffectedPlayer != "")
         {
@@ -1145,12 +1145,12 @@ namespace MBSlippi
             p_VerifyGameInfoPredicate(AssociatedModule,AssignmentToVerify.PlayerCondition,true,OutDiagnostics);
         } 
     }
-    void SpecEvaluator::p_VerifyGameSelection(MQL_Module& AssociatedModule,GameSelection& SelectionToVerify,std::vector<MBLSP::Diagnostic>& OutDiagnostics)
+    void MQLEvaluator::p_VerifyGameSelection(MQL_Module& AssociatedModule,GameSelection& SelectionToVerify,std::vector<MBLSP::Diagnostic>& OutDiagnostics)
     {
         p_VerifyPlayerAssignment(AssociatedModule,SelectionToVerify.Assignment,OutDiagnostics);
         p_VerifyGameInfoPredicate(AssociatedModule,SelectionToVerify.GameCondition,false,OutDiagnostics);
     }
-    void SpecEvaluator::p_VerifyResult(MQL_Module& AssociatedModule,Result& ResultToVerify,std::vector<MBLSP::Diagnostic>& OutDiagnostics)
+    void MQLEvaluator::p_VerifyResult(MQL_Module& AssociatedModule,Result& ResultToVerify,std::vector<MBLSP::Diagnostic>& OutDiagnostics)
     {
         if(ResultToVerify.IsType<Result_Tabulate>())
         {
@@ -1162,7 +1162,7 @@ namespace MBSlippi
             }
         }
     }
-    bool SpecEvaluator::VerifySelection(MQL_Module& AssociatedModule,Selection& SpecToVerify,std::vector<MBLSP::Diagnostic>& OutDiagnostics)
+    bool MQLEvaluator::VerifySelection(MQL_Module& AssociatedModule,Selection& SpecToVerify,std::vector<MBLSP::Diagnostic>& OutDiagnostics)
     {
         bool ReturnValue = true;
         std::vector<MBLSP::Diagnostic> Diagnostics;
@@ -1192,7 +1192,7 @@ namespace MBSlippi
         }
         return(ReturnValue);
     }
-    bool SpecEvaluator::VerifyStatement(MQL_Module& AssociatedModule,Statement& SpecToVerify,std::vector<MBLSP::Diagnostic>& OutDiagnostics)
+    bool MQLEvaluator::VerifyStatement(MQL_Module& AssociatedModule,Statement& SpecToVerify,std::vector<MBLSP::Diagnostic>& OutDiagnostics)
     {
         bool ReturnValue = true;
         if(SpecToVerify.IsType<Selection>())
@@ -1217,7 +1217,7 @@ namespace MBSlippi
         }
         return(ReturnValue);
     }
-    bool SpecEvaluator::VerifyModule(MQL_Module& AssociatedModule,Module& SpecToVerify,std::vector<MBLSP::Diagnostic>& OutDiagnostics)
+    bool MQLEvaluator::VerifyModule(MQL_Module& AssociatedModule,Module& SpecToVerify,std::vector<MBLSP::Diagnostic>& OutDiagnostics)
     {
         bool ReturnValue = true;
         //ensures that the top scope isn't modified after the verification,
@@ -1237,7 +1237,7 @@ namespace MBSlippi
         }
         return(ReturnValue);
     }
-    bool SpecEvaluator::p_EvaluateGameSelection(MQL_Module& AssociatedModule,SlippiGameInfo const& GameInfo,char InAssignment[4],GameInfoPredicate const& PredicateToEvaluate)
+    bool MQLEvaluator::p_EvaluateGameSelection(MQL_Module& AssociatedModule,SlippiGameInfo const& GameInfo,char InAssignment[4],GameInfoPredicate const& PredicateToEvaluate)
     {
         bool ReturnValue = true;
         int TermOffset = 0;
@@ -1370,7 +1370,7 @@ namespace MBSlippi
         }
         return(ReturnValue);
     }
-    bool SpecEvaluator::p_SatisfiesPlayerAssignment(MQL_Module& AssociatedModule,SlippiGamePlayerInfo const& PlayerInfo,GameInfoPredicate const& PredicateToEvaluate)
+    bool MQLEvaluator::p_SatisfiesPlayerAssignment(MQL_Module& AssociatedModule,SlippiGamePlayerInfo const& PlayerInfo,GameInfoPredicate const& PredicateToEvaluate)
     {
         bool ReturnValue = true;
 
@@ -1434,7 +1434,7 @@ namespace MBSlippi
         }
         return(ReturnValue);
     }
-    bool SpecEvaluator::p_GetPlayerAssignments(MQL_Module& AssociatedModule,SlippiGameInfo const& GameInfo,PlayerAssignment const& AssignemntToApply,char OutAssignemnts[4])
+    bool MQLEvaluator::p_GetPlayerAssignments(MQL_Module& AssociatedModule,SlippiGameInfo const& GameInfo,PlayerAssignment const& AssignemntToApply,char OutAssignemnts[4])
     {
         //TODO Slow implementation, partly because of frame structure
         //Starts with determining which player is 1, then 2, etc
@@ -1471,7 +1471,7 @@ namespace MBSlippi
         }
         return(PlayerWasAssigned);
     }
-    void SpecEvaluator::p_ApplyAssignment(MeleeGame& GameToModify,char InAssignments[4])
+    void MQLEvaluator::p_ApplyAssignment(MeleeGame& GameToModify,char InAssignments[4])
     {
         for(auto& Frames : GameToModify.Frames)
         {
@@ -1483,11 +1483,11 @@ namespace MBSlippi
             }
         }
     }
-    void SpecEvaluator::SetDBAdapter(MeleeGameDBAdapter* NewAdapter)
+    void MQLEvaluator::SetDBAdapter(MeleeGameDBAdapter* NewAdapter)
     {
         m_DBAdapter = std::move(NewAdapter);    
     }
-    void SpecEvaluator::InitializeServers(std::vector<ServerInitilizationData> const& ServersToInitialize)
+    void MQLEvaluator::InitializeServers(std::vector<ServerInitilizationData> const& ServersToInitialize)
     {
         for(auto const& Server : ServersToInitialize)
         {
@@ -1501,7 +1501,7 @@ namespace MBSlippi
             m_SpecServers.push_back(std::move(NewServer));
         }
     }
-    void SpecEvaluator::SetRecorder(MeleeGameRecorder* NewRecorder)
+    void MQLEvaluator::SetRecorder(MeleeGameRecorder* NewRecorder)
     {
         m_Recorder = std::move(NewRecorder);       
     }
@@ -1513,7 +1513,7 @@ namespace MBSlippi
             std::swap(Frame.PlayerInfo[0],Frame.PlayerInfo[1]);
         }
     }
-    std::vector<MeleeGame> SpecEvaluator::p_RetrieveSpecGames( MQL_Module& AssociatedModule,GameSelection const& SpecToEvalaute)
+    std::vector<MeleeGame> MQLEvaluator::p_RetrieveSpecGames( MQL_Module& AssociatedModule,GameSelection const& SpecToEvalaute)
     {
         std::vector<MeleeGame> ReturnValue;
         //TODO improve this, use SQL query so unneccesary game info doesn't need to be parsed
@@ -1724,7 +1724,7 @@ namespace MBSlippi
     //    }
     //    return(ReturnValue);
     //}
-    std::vector<GameIntervall> SpecEvaluator::p_EvaluateGameIntervalls(
+    std::vector<GameIntervall> MQLEvaluator::p_EvaluateGameIntervalls(
             MQL_Module& AssociatedModule,
             MeleeGame const& InputGame,
             std::vector<GameIntervall> const& InputIntervalls,
@@ -1893,7 +1893,7 @@ namespace MBSlippi
 
         return ReturnValue;
     }
-    std::vector<MQL_MetricVariable> SpecEvaluator::p_EvaluateMetric(
+    std::vector<MQL_MetricVariable> MQLEvaluator::p_EvaluateMetric(
             MeleeGame const& InputGame,
             std::vector<GameIntervall> const& InputIntervalls,
             ArgumentList& ArgList,
@@ -1998,7 +1998,7 @@ namespace MBSlippi
         }
         return ReturnValue;
     }
-    void SpecEvaluator::EvaluateSelection(MQL_Module& AssociatedModule,Selection& SpecToEvaluate,std::vector<MBLSP::Diagnostic>& OutDiagnostics)
+    void MQLEvaluator::EvaluateSelection(MQL_Module& AssociatedModule,Selection& SpecToEvaluate,std::vector<MBLSP::Diagnostic>& OutDiagnostics)
     {       
         if(m_DBAdapter == nullptr)
         {
@@ -2044,7 +2044,7 @@ namespace MBSlippi
             p_EvaluateTabulate(AssociatedModule,GamesToRecord,SpecToEvaluate.Output.GetType<Result_Tabulate>());
         }
     }
-    std::string SpecEvaluator::p_MetricToName(Filter_Component const& FilterToConvert)
+    std::string MQLEvaluator::p_MetricToName(Filter_Component const& FilterToConvert)
     {
         std::string ReturnValue = "";
         if(FilterToConvert.IsType<Filter_OperatorList>())
@@ -2063,7 +2063,7 @@ namespace MBSlippi
 
         return ReturnValue;
     }
-    void SpecEvaluator::p_EvaluateTabulate(MQL_Module& AssociatedModule,std::vector<RecordingInfo> const& FilterResult,Result_Tabulate const& TabulateInfo)
+    void MQLEvaluator::p_EvaluateTabulate(MQL_Module& AssociatedModule,std::vector<RecordingInfo> const& FilterResult,Result_Tabulate const& TabulateInfo)
     {
         std::unique_ptr<MBUtility::MBOctetOutputStream> OutStream = std::make_unique<MBUtility::TerminalOutput>();
         if(TabulateInfo.OutFile.Value != "")
@@ -2117,7 +2117,7 @@ namespace MBSlippi
         }
         OutStream->Flush();
     }
-    void SpecEvaluator::EvaluateStatement(MQL_Module& AssociatedModule,Statement& StatementToEvaluate,std::vector<MBLSP::Diagnostic>& OutDiagnostics)
+    void MQLEvaluator::EvaluateStatement(MQL_Module& AssociatedModule,Statement& StatementToEvaluate,std::vector<MBLSP::Diagnostic>& OutDiagnostics)
     {       
         if(StatementToEvaluate.IsType<Selection>())
         {
@@ -2140,14 +2140,14 @@ namespace MBSlippi
             assert(false && "EvaluateStatement doesn't cover all cases");
         }
     }
-    void SpecEvaluator::EvaluateImport(MQL_Module& AssociatedModule,Import& ImportToEvaluate,std::vector<MBLSP::Diagnostic>& OutDiagnostics)
+    void MQLEvaluator::EvaluateImport(MQL_Module& AssociatedModule,Import& ImportToEvaluate,std::vector<MBLSP::Diagnostic>& OutDiagnostics)
     {
         if(!p_EvaluateImport(AssociatedModule,ImportToEvaluate,OutDiagnostics))
         {
             return;
         }
     }
-    ModuleID SpecEvaluator::LoadModule(std::filesystem::path const& ModulePath)
+    ModuleID MQLEvaluator::LoadModule(std::filesystem::path const& ModulePath)
     {
         ModuleID ReturnValue = -1;
         std::string CanonicalModulePath = MBUnicode::PathToUTF8(std::filesystem::canonical(ModulePath));
@@ -2200,14 +2200,14 @@ namespace MBSlippi
         m_LoadedModules[ReturnValue] = std::make_shared<MQL_Module>(std::move(NewModule));
         return ReturnValue;
     }
-    ModuleID SpecEvaluator::LoadEmptyModule()
+    ModuleID MQLEvaluator::LoadEmptyModule()
     {
         ModuleID NewModuleID = m_CurrentModuleID;
         m_CurrentModuleID++;
         m_LoadedModules[NewModuleID] = std::make_shared<MQL_Module>();
         return(NewModuleID);
     }
-    MQL_Module& SpecEvaluator::GetModule(ModuleID ID)
+    MQL_Module& MQLEvaluator::GetModule(ModuleID ID)
     {
         auto It = m_LoadedModules.find(ID);
         if(It == m_LoadedModules.end())
@@ -2216,7 +2216,7 @@ namespace MBSlippi
         }
         return(*It->second);
     }
-    void SpecEvaluator::EvaluateVariableDeclaration(MQL_Module& AssociatedModule,Statement& SpecToEvaluate,std::vector<MBLSP::Diagnostic>& OutDiagnostics)
+    void MQLEvaluator::EvaluateVariableDeclaration(MQL_Module& AssociatedModule,Statement& SpecToEvaluate,std::vector<MBLSP::Diagnostic>& OutDiagnostics)
     {
         if(!VerifyVariableDeclaration(AssociatedModule,SpecToEvaluate,OutDiagnostics))
         {
@@ -2268,7 +2268,7 @@ namespace MBSlippi
             assert(false && "EvaluateVariableDeclaration doesn't cover all cases");   
         }
     }
-    void SpecEvaluator::EvaluateModule(MQL_Module& AssociatedModule,Module& ModuleToEvaluate,std::vector<MBLSP::Diagnostic>& OutDiagnostics)
+    void MQLEvaluator::EvaluateModule(MQL_Module& AssociatedModule,Module& ModuleToEvaluate,std::vector<MBLSP::Diagnostic>& OutDiagnostics)
     {
         if(m_DBAdapter == nullptr)
         {
@@ -2348,7 +2348,7 @@ namespace MBSlippi
     //std::vector<GameIntervall> h_GetBiggestPunishes(std::vector<i_PunishInfo> const& Punishes,int Count)
     //{
     //}
-    std::vector<GameIntervall> SpecEvaluator::BiggestPunishes(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,GameIntervall IntervallToInspect)
+    std::vector<GameIntervall> MQLEvaluator::BiggestPunishes(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,GameIntervall IntervallToInspect)
     {
         std::vector<GameIntervall> ReturnValue;
         float PercentThreshold = 40;
@@ -2376,7 +2376,7 @@ namespace MBSlippi
         }
         return(ReturnValue);
     }
-    int SpecEvaluator::GetPlayerIndex(ArgumentList const& ExtraArguments)
+    int MQLEvaluator::GetPlayerIndex(ArgumentList const& ExtraArguments)
     {
         int ReturnValue = 0;
         if(ExtraArguments.HasNamedVariable("Player"))
@@ -2397,7 +2397,7 @@ namespace MBSlippi
         }
         return(ReturnValue);
     }
-    std::vector<GameIntervall> SpecEvaluator::HasMove(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,GameIntervall IntervallToInspect)
+    std::vector<GameIntervall> MQLEvaluator::HasMove(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,GameIntervall IntervallToInspect)
     {
         std::vector<GameIntervall> ReturnValue;
         if(ExtraArguments.PositionalCount() == 0)
@@ -2416,7 +2416,7 @@ namespace MBSlippi
         }
         return(ReturnValue);
     }
-    std::vector<GameIntervall> SpecEvaluator::Move(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,GameIntervall IntervallToInspect)
+    std::vector<GameIntervall> MQLEvaluator::Move(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,GameIntervall IntervallToInspect)
     {
         std::vector<GameIntervall> ReturnValue;
         if(ExtraArguments.PositionalCount() != 1)
@@ -2432,7 +2432,7 @@ namespace MBSlippi
                 });
         return(ReturnValue);
     }
-    std::vector<GameIntervall> SpecEvaluator::InShield(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,GameIntervall IntervallToInspect)
+    std::vector<GameIntervall> MQLEvaluator::InShield(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,GameIntervall IntervallToInspect)
     {
         std::vector<GameIntervall> ReturnValue;
         int PlayerIndex = GetPlayerIndex(ExtraArguments);
@@ -2459,7 +2459,7 @@ namespace MBSlippi
                 });
         return(ReturnValue);
     }
-    std::vector<GameIntervall> SpecEvaluator::Until(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,GameIntervall IntervallToInspect)
+    std::vector<GameIntervall> MQLEvaluator::Until(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,GameIntervall IntervallToInspect)
     {
         std::vector<GameIntervall> ReturnValue;
         if(!ExtraArguments.HasNamedVariable("State") && 
@@ -2523,7 +2523,7 @@ namespace MBSlippi
         ReturnValue = {IntervallToInsert};
         return(ReturnValue);
     }
-    std::vector<GameIntervall> SpecEvaluator::ActionState(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,GameIntervall IntervallToInspect)
+    std::vector<GameIntervall> MQLEvaluator::ActionState(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,GameIntervall IntervallToInspect)
     {
         std::vector<GameIntervall> ReturnValue;
         if(ExtraArguments.PositionalCount() != 1)
@@ -2536,7 +2536,7 @@ namespace MBSlippi
                 [&](FrameInfo const& Frame){return(Frame.PlayerInfo[PlayerIndex].ActionState == StateToCheck);});
         return(ReturnValue);
     }
-    std::vector<GameIntervall> SpecEvaluator::HasState(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,GameIntervall IntervallToInspect)
+    std::vector<GameIntervall> MQLEvaluator::HasState(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,GameIntervall IntervallToInspect)
     {
         std::vector<GameIntervall> ReturnValue;
         auto Intervalls = ActionState(GameToInspect,ExtraArguments,IntervallToInspect);
@@ -2546,7 +2546,7 @@ namespace MBSlippi
         }
         return ReturnValue;
     }
-    std::vector<GameIntervall> SpecEvaluator::Expand(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,GameIntervall IntervallToInspect)
+    std::vector<GameIntervall> MQLEvaluator::Expand(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,GameIntervall IntervallToInspect)
     {
         std::vector<GameIntervall> ReturnValue;
         int LeftExpand = 0;
@@ -2597,7 +2597,7 @@ namespace MBSlippi
         return(ReturnValue);
            
     }
-    std::vector<GameIntervall> SpecEvaluator::HitBy(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,GameIntervall IntervallToInspect)
+    std::vector<GameIntervall> MQLEvaluator::HitBy(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,GameIntervall IntervallToInspect)
     {
         std::vector<GameIntervall> ReturnValue;
         int PlayerIndex = GetPlayerIndex(ExtraArguments);
@@ -2620,7 +2620,7 @@ namespace MBSlippi
                 });
         return(ReturnValue);
     }
-    std::vector<GameIntervall> SpecEvaluator::HasHitBy(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,GameIntervall IntervallToInspect)
+    std::vector<GameIntervall> MQLEvaluator::HasHitBy(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,GameIntervall IntervallToInspect)
     {
         std::vector<GameIntervall> ReturnValue;
         int PlayerIndex = GetPlayerIndex(ExtraArguments);
@@ -2667,7 +2667,7 @@ namespace MBSlippi
         }
         throw std::runtime_error("Error finding boundary info for stage with name \""+StageIDToString(IDToSearch)+"\"");
     };
-    std::vector<GameIntervall> SpecEvaluator::Offstage(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,GameIntervall IntervallToInspect)
+    std::vector<GameIntervall> MQLEvaluator::Offstage(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,GameIntervall IntervallToInspect)
     {
         std::vector<GameIntervall> ReturnValue;
         int PlayerIndex = GetPlayerIndex(ExtraArguments);
@@ -2678,7 +2678,7 @@ namespace MBSlippi
                 });
         return(ReturnValue);
     }
-    std::vector<GameIntervall> SpecEvaluator::Length(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,GameIntervall IntervallToInspect)
+    std::vector<GameIntervall> MQLEvaluator::Length(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,GameIntervall IntervallToInspect)
     {
         std::vector<GameIntervall> ReturnValue;
         if(ExtraArguments.PositionalCount() == 0)
@@ -2696,7 +2696,7 @@ namespace MBSlippi
     {
         return x <= xright && x >= xleft;
     } 
-    std::vector<GameIntervall> SpecEvaluator::Cornered(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,GameIntervall IntervallToInspect)
+    std::vector<GameIntervall> MQLEvaluator::Cornered(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,GameIntervall IntervallToInspect)
     {
         std::vector<GameIntervall> ReturnValue;
         int PlayerIndex = GetPlayerIndex(ExtraArguments);
@@ -2774,7 +2774,7 @@ namespace MBSlippi
         return ReturnValue;
     }
     
-    std::vector<MQL_MetricVariable> SpecEvaluator::Delay(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,std::vector<GameIntervall> const& IntervallToInspect)
+    std::vector<MQL_MetricVariable> MQLEvaluator::Delay(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,std::vector<GameIntervall> const& IntervallToInspect)
     {
         std::vector<MQL_MetricVariable> ReturnValue;
         int PlayerIndex = GetPlayerIndex(ExtraArguments);
@@ -2815,7 +2815,7 @@ namespace MBSlippi
         }
         return ReturnValue;
     }
-    std::vector<MQL_MetricVariable> SpecEvaluator::Begin(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,std::vector<GameIntervall> const& IntervallToInspect)
+    std::vector<MQL_MetricVariable> MQLEvaluator::Begin(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,std::vector<GameIntervall> const& IntervallToInspect)
     {
         std::vector<MQL_MetricVariable> ReturnValue;
         for(auto const& Intervall : IntervallToInspect)
@@ -2824,7 +2824,7 @@ namespace MBSlippi
         }
         return ReturnValue;
     }
-    std::vector<MQL_MetricVariable> SpecEvaluator::End(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,std::vector<GameIntervall> const& IntervallToInspect)
+    std::vector<MQL_MetricVariable> MQLEvaluator::End(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,std::vector<GameIntervall> const& IntervallToInspect)
     {
         std::vector<MQL_MetricVariable> ReturnValue;
         for(auto const& Intervall : IntervallToInspect)
@@ -2833,7 +2833,7 @@ namespace MBSlippi
         }
         return ReturnValue;
     }
-    std::vector<MQL_MetricVariable> SpecEvaluator::Percent(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,std::vector<GameIntervall> const& IntervallToInspect)
+    std::vector<MQL_MetricVariable> MQLEvaluator::Percent(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,std::vector<GameIntervall> const& IntervallToInspect)
     {
         std::vector<MQL_MetricVariable> ReturnValue;
         int PlayerIndex = GetPlayerIndex(ExtraArguments);
@@ -2843,7 +2843,7 @@ namespace MBSlippi
         }
         return ReturnValue;
     }
-    std::vector<MQL_MetricVariable> SpecEvaluator::MoveName(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,std::vector<GameIntervall> const& IntervallToInspect)
+    std::vector<MQL_MetricVariable> MQLEvaluator::MoveName(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,std::vector<GameIntervall> const& IntervallToInspect)
     {
         std::vector<MQL_MetricVariable> ReturnValue;
         int PlayerIndex = GetPlayerIndex(ExtraArguments);
@@ -2853,7 +2853,7 @@ namespace MBSlippi
         }
         return ReturnValue;
     }
-    std::vector<MQL_MetricVariable> SpecEvaluator::PercentDiff(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,std::vector<GameIntervall> const& IntervallToInspect)
+    std::vector<MQL_MetricVariable> MQLEvaluator::PercentDiff(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,std::vector<GameIntervall> const& IntervallToInspect)
     {
         std::vector<MQL_MetricVariable> ReturnValue;
         int PlayerIndex = GetPlayerIndex(ExtraArguments);
@@ -2863,7 +2863,7 @@ namespace MBSlippi
         }
         return ReturnValue;
     }
-    std::vector<MQL_MetricVariable> SpecEvaluator::File(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,std::vector<GameIntervall> const& IntervallToInspect)
+    std::vector<MQL_MetricVariable> MQLEvaluator::File(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,std::vector<GameIntervall> const& IntervallToInspect)
     {
         std::vector<MQL_MetricVariable> ReturnValue;
         int PlayerIndex = GetPlayerIndex(ExtraArguments);
@@ -2873,7 +2873,7 @@ namespace MBSlippi
         }
         return ReturnValue;
     }
-    std::vector<GameIntervall> SpecEvaluator::PlayerFlags(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,GameIntervall IntervallToInspect)
+    std::vector<GameIntervall> MQLEvaluator::PlayerFlags(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,GameIntervall IntervallToInspect)
     {
         std::vector<GameIntervall> ReturnValue;
         //ReturnValue = {IntervallToInspect};
@@ -2918,7 +2918,7 @@ namespace MBSlippi
                 });
         return(ReturnValue);
     }
-    std::vector<GameIntervall> SpecEvaluator::HasProjectile(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,GameIntervall IntervallToInspect)
+    std::vector<GameIntervall> MQLEvaluator::HasProjectile(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,GameIntervall IntervallToInspect)
     {
         std::vector<GameIntervall> ReturnValue;
         ReturnValue = {IntervallToInspect};

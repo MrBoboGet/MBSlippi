@@ -1,7 +1,7 @@
 #include <MBLSP/MBLSP.h>
 #include "MBLSP/LSP_Structs.h"
 #include "MBLSP/TextChanges.h"
-#include "SlippiSpec.h"
+#include "MQL.h"
 #include "MBSlippi_CLI.h"
 #include <MBLSP/SemanticTokens.h>
 namespace MBSlippi

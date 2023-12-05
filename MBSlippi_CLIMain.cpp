@@ -1,7 +1,7 @@
 #include "MBSlippi_CLI.h"
 #include <filesystem>
 #include "MBSlippiTest.h"
-#include "SlippiSpecParser.h"
+#include "MQLParser.h"
 #include <MBUtility/MBFiles.h>
 int main(int argc, const char** argv)
 {
