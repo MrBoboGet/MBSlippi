@@ -1,7 +1,0 @@
-QueryResult = GetGameQuery("SELECT * FROM GAMES WHERE Player2Tag LIKE \"Emanuel\"");
-print(QueryResult);
-
-for(i = 0; i < QueryResult.size; i+=1)
-{
-	print(LoadGame(QueryResult[i][0]).Path);
-}

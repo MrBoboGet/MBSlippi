@@ -1,2 +1,0 @@
-WITH Player1 (Code = "BOBO#253" || Tag="MrBoboGet") SELECT Player2.Code="AB#177" && Date > "2023" && Player2.Character
-= "Captain" FILTER HasDair RECORD "TestAbbson.mp4"
