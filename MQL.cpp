@@ -17,52 +17,95 @@
 #include <functional>
 namespace MBSlippi
 {
+    std::vector<GameIntervall> h_SplitIntervall(GameIntervall IntervallToSplit)
+    {
+        std::vector<GameIntervall> ReturnValue;
+        ReturnValue.reserve(IntervallToSplit.LastFrame-IntervallToSplit.FirstFrame+1);
+        for(int i = IntervallToSplit.FirstFrame; i <= IntervallToSplit.LastFrame;i++)
+        {
+            ReturnValue.push_back(GameIntervall(i,i));
+        }
+        return ReturnValue;
+    }
     //BEGIN ArgumentList    
     void ArgumentList::SetParentArgList(ArgumentList const* ParentList)
     {
         m_ParentArgList = ParentList;
     }
-    ArgumentList::ArgumentList(Filter_ArgList const& ListToConvert)
+    ArgumentList::ArgumentList(std::vector<MQL_Filter> PositionalArguments,std::unordered_map<std::string,MQL_Filter>& KeyArgs)
     {
-        for(auto const& Argument : ListToConvert.Arguments)
+        m_PositionalArguments = std::move(PositionalArguments);
+        for(auto& Arg : KeyArgs)
         {
-            if(Argument.IsType<Filter_Arg_Positional>())
-            {
-                m_PositionalArguments.push_back(Argument.GetType<Filter_Arg_Positional>().Argument);
-            }
-            else if(Argument.IsType<Filter_Arg_Named>())
-            {
-                auto const& KeyArgument = Argument.GetType<Filter_Arg_Named>();
-                m_KeyArguments[KeyArgument.Name] = KeyArgument.Argument;
-            }
+            m_KeyPositions[Arg.first] = m_KeyArgs.size();
+            m_KeyArgs.push_back(std::move(Arg.second));
         }   
+    }
+    void ArgumentList::p_AddKey(std::string const& Key,MQL_Filter Value)
+    {
+        size_t& Position = m_KeyPositions[Key];
+        if(Position == 0 || m_KeyArgs.size() == 0)
+        {
+            m_KeyArgs.push_back(std::move(Value));
+        }
+        else
+        {
+            m_KeyArgs[Position] = std::move(Value);
+        }
     }
     //includes parent scope
     ArgumentList::ArgumentList(ArgumentList const& DefinitionBindings,ArgumentList const& SuppliedArguments)
     {
+        //ASSUMPTION value of DefinitionBindings positional arguments are all of type symbol
         int CurrentArgumentIndex = 0;
-        for(auto const& Argument : DefinitionBindings.m_PositionalArguments)
+        for(auto const& Argument : SuppliedArguments.m_PositionalArguments)
         {
-            if(Argument.IsType<Filter_Arg_Positional>())
+            if(CurrentArgumentIndex >= DefinitionBindings.PositionalCount())
             {
-                Literal_String NewLiteral;
-                NewLiteral.Value  = SuppliedArguments.GetPositionalArgumentString(CurrentArgumentIndex);
-                CurrentArgumentIndex++;
-                m_PositionalArguments.push_back(std::move(NewLiteral));
+                break;
             }
-            else if(Argument.IsType<Filter_Arg_Named>())
-            {
-                auto const& NamedArgument = Argument.GetType<Filter_Arg_Named>();
-                Literal_String NewLiteral;
-                NewLiteral.Value = SuppliedArguments.GetNamedVariableString(NamedArgument.Name);
-                m_KeyArguments[NamedArgument.Name] = std::move(NewLiteral);
-            }
+            m_PositionalArguments.push_back(SuppliedArguments.m_PositionalArguments[CurrentArgumentIndex]);
+            p_AddKey(DefinitionBindings.m_PositionalArguments[CurrentArgumentIndex].GetType<MQL_Filter_Literal>().Value.GetType<Literal_Symbol>().Value,SuppliedArguments.m_PositionalArguments[CurrentArgumentIndex]);
+            CurrentArgumentIndex++;
+        }
+        for(auto const& Argument : SuppliedArguments.m_KeyPositions)
+        {
+            p_AddKey(Argument.first,SuppliedArguments.m_KeyArgs[Argument.second]);
         }
     }
 
     bool ArgumentList::HasNamedVariable(std::string const& VariableToCheck) const
     {
         return(m_KeyPositions.find(VariableToCheck) != m_KeyPositions.end());
+    }
+    MQL_Filter const* ArgumentList::p_GetNamedVariable(std::string const& StringToSearch) const
+    {
+        MQL_Filter const*  ReturnValue = nullptr;
+        auto VarIt = m_KeyPositions.find(StringToSearch);
+        if(VarIt == m_KeyPositions.end())
+        {
+            return ReturnValue;
+        }
+        auto const& Var = m_KeyArgs[VarIt->second];
+        if(!Var.IsType<MQL_Filter_Literal>())
+        {
+            throw std::runtime_error("Value of variable in NamedVariableString was not a string or integer");
+        }
+        auto const& Value = Var.GetType<MQL_Filter_Literal>().Value;
+        if(Value.IsType<Literal_Symbol>())
+        {
+            //look for symbol in partent scope
+            if(m_ParentArgList == nullptr)
+            {
+                throw std::runtime_error("Symbol lookup requires parent ArgList");
+            }
+            ReturnValue = m_ParentArgList->p_GetNamedVariable(Value.GetType<Literal_Symbol>().Value);
+        }
+        else
+        {
+            return &Var;
+        }
+        return ReturnValue;
     }
     std::string ArgumentList::GetNamedVariableString(std::string const& VariableName) const
     {
@@ -124,6 +167,23 @@ namespace MBSlippi
     size_t ArgumentList::PositionalCount() const
     {
         return(m_PositionalArguments.size());
+    }
+    MQL_Filter const& ArgumentList::operator[](size_t Index) const
+    {
+        if(Index >= m_PositionalArguments.size())
+        {
+            throw std::runtime_error("Variable access out of bounds in argument list");   
+        }
+        return m_PositionalArguments[Index];
+    }
+    MQL_Filter const& ArgumentList::operator[](std::string const& Name) const
+    {
+        auto VarRef = p_GetNamedVariable(Name);
+        if(VarRef == nullptr)
+        {
+            throw std::runtime_error("Unable to find variable with name \"" + Name + "\" in argument list");
+        }
+        return *VarRef;
     }
 
     //END ArgumentList    
@@ -920,7 +980,7 @@ namespace MBSlippi
                 else
                 {
                     MQL_Metric NewMetric;
-                    NewMetric.Args = ArgumentList(Func.ArgumentList);
+                    NewMetric.Args = p_ConvertArgList(AssociatedModule,ParentArgList,Func.ArgumentList,OutDiagnostics);
                     NewMetric.Metric = MetricIt->second.Func;
                     OutType = MetricIt->second.ResultType;
                     ReturnValue = std::move(NewMetric);
@@ -940,13 +1000,13 @@ namespace MBSlippi
         return ReturnValue;
     }
     MQL_Filter MQLEvaluator::p_ConvertFilterOperatorList(MQL_Module& AssociatedModule,ArgumentList& ParentArgList,
-            Filter_OperatorList const& FilterToConvert,int BeginIndex,int EndIndex,std::vector<MBLSP::Diagnostic>& OutDiagnostics)
+            Filter_OperatorList const& FilterToConvert,int BeginIndex,int EndIndex,std::vector<MBLSP::Diagnostic>& OutDiagnostics,bool AllowLiterals)
     {
         MQL_FilterCombiner ReturnValue;
         ReturnValue.Negated = FilterToConvert.Negated;
         if(EndIndex-BeginIndex == 1)
         {
-            return p_ConvertFilterComponent(AssociatedModule,ParentArgList,FilterToConvert.Components[BeginIndex],OutDiagnostics);
+            return p_ConvertFilterComponent(AssociatedModule,ParentArgList,FilterToConvert.Components[BeginIndex],OutDiagnostics,AllowLiterals);
         }
         PrecedenceInfo OperatorInfo = p_GetPrecedenceInfo(FilterToConvert.Operators,BeginIndex,EndIndex);
         ReturnValue.Type = OperatorInfo.Operator;
@@ -955,7 +1015,7 @@ namespace MBSlippi
         {
             for(auto Index : OperatorInfo.OperatorPositions)
             {
-                ReturnValue.Operands.push_back(p_ConvertFilterOperatorList(AssociatedModule,ParentArgList,FilterToConvert,PrevIndex,Index,OutDiagnostics));
+                ReturnValue.Operands.push_back(p_ConvertFilterOperatorList(AssociatedModule,ParentArgList,FilterToConvert,PrevIndex,Index,OutDiagnostics,AllowLiterals));
                 PrevIndex = Index;
             }
         }
@@ -972,14 +1032,42 @@ namespace MBSlippi
         }
         return ReturnValue;
     }
+    ArgumentList MQLEvaluator::p_ConvertArgList(MQL_Module& AssociatedModule, ArgumentList& ParentArgList,Filter_ArgList const& ArgsToConvert,std::vector<MBLSP::Diagnostic>& OutDiagnostics)
+    {
+        ArgumentList ReturnValue;
+        std::vector<MQL_Filter> PositionalArguments;
+        std::unordered_map<std::string,MQL_Filter> KeyArgs;
+        for(auto const& Arg : ArgsToConvert.Arguments)
+        {
+            if(Arg.IsType<Filter_Arg_Positional>())
+            {
+                PositionalArguments.push_back(p_ConvertFilterComponent(AssociatedModule,ParentArgList,Arg.GetType<Filter_Arg_Positional>().Argument,OutDiagnostics,true));
+            }
+            else if(Arg.IsType<Filter_Arg_Named>())
+            {
+                auto const& NewKeyArg = Arg.GetType<Filter_Arg_Named>();
+                KeyArgs[NewKeyArg.Name] = p_ConvertFilterComponent(AssociatedModule,ParentArgList,NewKeyArg.Argument,OutDiagnostics,true);
+            }
+        }
+        return ArgumentList(std::move(PositionalArguments),KeyArgs);
+    }
     MQL_Filter MQLEvaluator::p_ConvertFilterComponent(MQL_Module& AssociatedModule,ArgumentList& ParentArgList,
-            Filter_Component const& FilterToConvert,std::vector<MBLSP::Diagnostic>& OutDiagnostics)
+            Filter_Component const& FilterToConvert,std::vector<MBLSP::Diagnostic>& OutDiagnostics,bool AllowLiterals)
     {
         MQL_Filter ReturnValue;
         if(FilterToConvert.IsType<Filter_Component_Literal>())
         {
             auto& Literal = FilterToConvert.GetType<Filter_Component_Literal>();
-            p_AddDiagnostic(OutDiagnostics,Literal.Value,"Expressions in filter component must be a part of a comparison");
+            if(!AllowLiterals)
+            {
+                p_AddDiagnostic(OutDiagnostics,Literal.Value,"Expressions in filter component must be a part of a comparison");
+            }
+            else
+            {
+                MQL_Filter_Literal NewLiteral;
+                NewLiteral.Value = Literal.Value;
+                ReturnValue = NewLiteral;
+            }
         }
         else if(FilterToConvert.IsType<Filter_Component_Func>())
         {
@@ -1003,7 +1091,7 @@ namespace MBSlippi
                     MQL_FilterReference NewValue;
                     NewValue.Filter = std::get<std::shared_ptr<MQL_FilterDefinition>>(Variable.Data);
                     NewValue.Negated = FuncFilter.Negated;
-                    NewValue.Args = FuncFilter.ArgumentList;
+                    NewValue.Args = p_ConvertArgList(AssociatedModule,ParentArgList,FuncFilter.ArgumentList,OutDiagnostics);
                     return NewValue;
                 }
             }
@@ -1023,7 +1111,7 @@ namespace MBSlippi
                 else
                 {
                     MQL_IntervallExtractor NewValue;
-                    NewValue.Args = ArgumentList(FuncFilter.ArgumentList);
+                    NewValue.Args = p_ConvertArgList(AssociatedModule,ParentArgList,FuncFilter.ArgumentList,OutDiagnostics);
                     NewValue.Filter = It->second;
                     NewValue.Negated = FuncFilter.Negated;
                     return NewValue;
@@ -1037,9 +1125,9 @@ namespace MBSlippi
             Filter_OperatorList const& OperatorList = FilterToConvert.GetType<Filter_OperatorList>();
             if(OperatorList.Operators.size() == 0)
             {
-                return p_ConvertFilterComponent(AssociatedModule,ParentArgList,OperatorList.Components[0],OutDiagnostics);
+                return p_ConvertFilterComponent(AssociatedModule,ParentArgList,OperatorList.Components[0],OutDiagnostics,AllowLiterals);
             }
-            return p_ConvertFilterOperatorList(AssociatedModule,ParentArgList,OperatorList,0,OperatorList.Components.size(),OutDiagnostics);
+            return p_ConvertFilterOperatorList(AssociatedModule,ParentArgList,OperatorList,0,OperatorList.Components.size(),OutDiagnostics,AllowLiterals);
         }
         return ReturnValue;
     }
@@ -1848,7 +1936,7 @@ namespace MBSlippi
             Negated = IntervallExtractor.Negated;
             ArgumentList Arguments(IntervallExtractor.Args);
             Arguments.SetParentArgList(&ArgList);
-            CallContext Context(AssociatedModule);
+            CallContext Context(AssociatedModule,*this);
             ReturnValue = IntervallExtractor.Filter(InputGame,Arguments,InputIntervalls,Context);
         }
         else if(Filter.IsType<MQL_FilterReference>())
@@ -2333,7 +2421,11 @@ namespace MBSlippi
             MQL_Variable NewVariable;
             auto const& FilterDefinition = SpecToEvaluate.GetType<VariableDeclaration_Filter>();
             std::shared_ptr<MQL_FilterDefinition> NewVariableData = std::make_shared<MQL_FilterDefinition>();
-            NewVariableData->Arguments = FilterDefinition.Arguments;
+            ArgumentList ParentArgList;
+            for(auto const& Arg : FilterDefinition.Arguments.Arguments)
+            {
+            }
+            NewVariableData->Arguments = p_ConvertArgList(AssociatedModule,ParentArgList,FilterDefinition.Arguments,OutDiagnostics);
             ArgumentList List;
             NewVariableData->Component = std::make_shared<MQL_Filter>(p_ConvertFilterComponent(AssociatedModule,List,FilterDefinition.Component,OutDiagnostics));
             NewVariable.Data = std::move(NewVariableData);
@@ -2569,7 +2661,7 @@ namespace MBSlippi
     {
         std::vector<GameIntervall> ReturnValue;
         if(!ExtraArguments.HasNamedVariable("State") && 
-                !ExtraArguments.HasNamedVariable("Flag"))
+                !ExtraArguments.HasNamedVariable("Flag") && !ExtraArguments.HasNamedVariable("Pred"))
         {
             throw std::runtime_error("Until requires requires either 'State' key argument or 'Flag' key argument");
         }
@@ -2607,6 +2699,36 @@ namespace MBSlippi
             {
                 throw std::runtime_error("Cannot skip by negative number");   
             }
+        }
+        //overrides other options
+        if(ExtraArguments.HasNamedVariable("Pred"))
+        {
+            MQL_Filter const& Predicate = ExtraArguments["Pred"];
+            ArgumentList ArgList;
+            for(auto const& InputIntervall : IntervallsToInspect)
+            {
+                GameIntervall Intervall;
+                Intervall.FirstFrame = Skip == -1 ? InputIntervall.FirstFrame : InputIntervall.FirstFrame+Skip;
+                Intervall.LastFrame = InputIntervall.LastFrame;
+                if(Intervall.FirstFrame > Intervall.LastFrame)
+                {
+                    continue;   
+                }
+                auto MetricResults = Context.GetEvaluator().p_EvaluateMetric(GameToInspect,h_SplitIntervall(Intervall),ArgList,Predicate);
+                int IntervallEnd = Intervall.FirstFrame;
+                for(auto const& Result : MetricResults)
+                {
+                    assert(std::holds_alternative<bool>(Result.Data));
+                    if(std::get<bool>(Result.Data))
+                    {
+                        break;   
+                    }
+                    IntervallEnd++;
+                }
+                Intervall.LastFrame = IntervallEnd;
+                ReturnValue.push_back(Intervall);
+            }
+            return ReturnValue;
         }
         for(auto const& Intervall : IntervallsToInspect)
         {
@@ -2860,6 +2982,54 @@ namespace MBSlippi
                     return false;
                 });
         return(ReturnValue);
+    }
+    std::vector<GameIntervall> MQLEvaluator::Has FILTER_ARGLIST
+    {
+        std::vector<GameIntervall> ReturnValue;
+        if(ExtraArguments.PositionalCount() != 1)
+        {
+            throw std::runtime_error("Has filter requires exactly 1 argument: the filter to apply");   
+        }
+        MQL_Filter const& Filter = ExtraArguments[0];
+        if(!(Filter.IsFilter() || Filter.IsMetric()))
+        {
+            throw std::runtime_error("First argument either has to be a intervall extractor, or metric");
+        }
+        std::vector<GameIntervall> IntervallVector = {GameIntervall()};
+        ReturnValue.reserve(IntervallsToInspect.size());
+        for(auto const& Intervall : IntervallsToInspect)
+        {
+            IntervallVector[0] = Intervall;
+            ArgumentList ArgList;
+            if(Filter.IsFilter())
+            {
+                auto SubsetIntervalls = Context.GetEvaluator().p_EvaluateGameIntervalls(Context.GetModule(),GameToInspect,IntervallVector,ArgList,Filter);
+                if(SubsetIntervalls.size() > 0)
+                {
+                    ReturnValue.push_back(Intervall);   
+                }
+            }
+            else
+            {
+                auto MetricResults = Context.GetEvaluator().p_EvaluateMetric(GameToInspect,h_SplitIntervall(Intervall),ArgList,Filter);
+                for(auto const& Result : MetricResults)
+                {
+                    assert(std::holds_alternative<bool>(Result.Data));
+                    if(std::get<bool>(Result.Data))
+                    {
+                        ReturnValue.push_back(Intervall);
+                        break;
+                    }
+                }
+            }
+        }
+        return ReturnValue;
+    }
+    std::vector<GameIntervall> MQLEvaluator::Normalize FILTER_ARGLIST
+    {
+        std::vector<GameIntervall> ReturnValue = IntervallsToInspect;
+        h_NormalizeIntervalls(ReturnValue);
+        return ReturnValue;
     }
 
     bool h_ChangeIsPlayerInduced(MBActionState PreviousState,MBActionState NewState)

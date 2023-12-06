@@ -16,17 +16,24 @@ namespace MBSlippi
         std::vector<MQL_Filter>  m_PositionalArguments;
         std::vector<MQL_Filter> m_KeyArgs;
         std::unordered_map<std::string,size_t> m_KeyPositions;
+
+        void p_AddKey(std::string const& Key,MQL_Filter Value);
+
+        MQL_Filter const* p_GetNamedVariable(std::string const& StringToSearch) const; 
     public:
         ArgumentList() = default;
 
         void SetParentArgList(ArgumentList const* ParentList);
-        ArgumentList(Filter_ArgList const& ListToConvert);
+        ArgumentList(std::vector<MQL_Filter> PositionalArguments,std::unordered_map<std::string,MQL_Filter>& KeyArgs);
         //includes parent scope
         ArgumentList(ArgumentList const& DefinitionBindings,ArgumentList const& SuppliedArguments);
         bool HasNamedVariable(std::string const& VariableToCheck) const;
         std::string GetNamedVariableString(std::string const& VariableName) const;
         std::string GetPositionalArgumentString(int Index) const;
         size_t PositionalCount() const;
+
+        MQL_Filter const& operator[](size_t Index) const;
+        MQL_Filter const& operator[](std::string const& Name) const;
     };
     inline std::string IdentifierToString(Identifier const& Idf)
     {
@@ -126,7 +133,7 @@ namespace MBSlippi
     {
         bool WasTrue = false;
         int FirstTrue = IntervallToInspect.FirstFrame;
-        for(int i = IntervallToInspect.FirstFrame; i < IntervallToInspect.LastFrame;i++)
+        for(int i = IntervallToInspect.FirstFrame; i <= IntervallToInspect.LastFrame;i++)
         {
             if(Predicate(GameToInspect.Frames[i]))
             {
@@ -179,7 +186,7 @@ namespace MBSlippi
     struct MQL_FilterDefinition
     {
         std::shared_ptr<MQL_Filter> Component;
-        Filter_ArgList Arguments;
+        ArgumentList Arguments;
     };
     class MQL_Variable
     {
@@ -346,6 +353,16 @@ namespace MBSlippi
             m_Data = std::forward<T>(Data);
         }
         MQL_Filter(){};
+       
+
+        bool IsFilter() const
+        {
+            return IsType<MQL_FilterCombiner>() || IsType<MQL_FilterReference>() || IsType<MQL_IntervallExtractor>();
+        }
+        bool IsMetric() const
+        {
+            return IsType<MQL_Metric>() || IsType<MQL_MetricCombiner>() || IsType<MQL_Filter_Literal>();
+        }
         
         template<typename T>
         T const& GetType() const
@@ -357,7 +374,7 @@ namespace MBSlippi
         {
             return std::get<T>(m_Data);
         }
-        template<typename T>
+        template<typename T,typename = std::enable_if_t<std::is_constructible_v<VariantType,T>>>
         bool IsType() const
         {
             return std::holds_alternative<T>(m_Data);   
@@ -368,17 +385,23 @@ namespace MBSlippi
     #define METRIC_ARGLIST (MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,std::vector<GameIntervall> const& IntervallToInspect)
    
 
+    class MQLEvaluator;
     class CallContext
     {
         MQL_Module& m_Module;
+        MQLEvaluator& m_Evaluator;
     public:
-        CallContext(MQL_Module& AssociatedModule) : m_Module(AssociatedModule)
+        CallContext(MQL_Module& AssociatedModule,MQLEvaluator& Evaluator) : m_Module(AssociatedModule),m_Evaluator(Evaluator)
         {
 
         }
         MQL_Module& GetModule()
         {
             return m_Module;   
+        }
+        MQLEvaluator& GetEvaluator()
+        {
+            return m_Evaluator;   
         }
     };
     class MQLEvaluator
@@ -401,6 +424,8 @@ namespace MBSlippi
         static std::vector<GameIntervall> HitBy FILTER_ARGLIST;
         static std::vector<GameIntervall> Offstage FILTER_ARGLIST;
         static std::vector<GameIntervall> Cornered FILTER_ARGLIST;
+        static std::vector<GameIntervall> Has FILTER_ARGLIST;
+        static std::vector<GameIntervall> Normalize FILTER_ARGLIST;
         std::unordered_map<std::string,BuiltinFilterType> m_BuiltinFilters = 
         {
             //{"HasMove",HasMove},
@@ -417,6 +442,8 @@ namespace MBSlippi
             {"Until",Until},
             {"Offstage",Offstage},
             {"Cornered",Cornered},
+            {"Has",Has},
+            {"Normalize",Normalize},
         };
         struct BuiltinMetric
         {
@@ -529,10 +556,11 @@ namespace MBSlippi
         MQL_Filter p_ConvertMetricComponent(MQL_Module& AssociatedModule,ArgumentList& ParentArgList,
                 Filter_Component const& FilterToConvert,std::vector<MBLSP::Diagnostic>& OutDiagnostics,std::type_index& OutType);
         MQL_Filter p_ConvertFilterOperatorList(MQL_Module& AssociatedModule,ArgumentList& ParentArgList,
-                Filter_OperatorList const& FilterToConvert,int BeginIndex,int EndIndex,std::vector<MBLSP::Diagnostic>& OutDiagnostics);
+                Filter_OperatorList const& FilterToConvert,int BeginIndex,int EndIndex,std::vector<MBLSP::Diagnostic>& OutDiagnostics,bool AllowLiterals = false);
         MQL_Filter p_ConvertFilterComponent(MQL_Module& AssociatedModule,ArgumentList& ParentArgList,
-                Filter_Component const& FilterToConvert,std::vector<MBLSP::Diagnostic>& OutDiagnostics);
+                Filter_Component const& FilterToConvert,std::vector<MBLSP::Diagnostic>& OutDiagnostics,bool AllowLiterals = false);
 
+        ArgumentList p_ConvertArgList(MQL_Module& AssociatedModule, ArgumentList& ParentArgList,Filter_ArgList const& ArgsToConvert,std::vector<MBLSP::Diagnostic>& OutDiagnostics);
       
         static MBLSP::Position p_GetBegin(Literal const& Component);
         static MBLSP::Position p_GetEnd(Literal const& Component);

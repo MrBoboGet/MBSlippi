@@ -620,7 +620,7 @@ namespace MBSlippi
         }
         std::string SlippiScriptToExecute = Input.TopCommandArguments[0];
         Module ModuleToEvaluate;
-        SpecEvaluator Evaluator;
+        MQLEvaluator Evaluator;
         try
         {
             Evaluator.SetDBAdapter(this);
@@ -734,7 +734,7 @@ namespace MBSlippi
             std::unique_ptr<MBUtility::IndeterminateInputStream>(new MBUtility::NonOwningIndeterminateInputStream(&m_Terminal.GetInputStream()));
         std::unique_ptr<MBUtility::MBOctetOutputStream> OutStream = 
            std::unique_ptr<MBUtility::MBOctetOutputStream>(new MBUtility::NonOwningOutputStream(&m_Terminal.GetOutputStream()));
-        SpecEvaluator Evaluator;
+        MQLEvaluator Evaluator;
         std::unique_ptr<MBLSP::LSP_Server> Server = 
             std::unique_ptr<MBLSP::LSP_Server>( new MQLServer(&Evaluator));
         Evaluator.SetDBAdapter(this);
