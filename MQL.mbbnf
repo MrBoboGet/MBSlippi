@@ -193,6 +193,10 @@ struct Literal_Symbol : Literal
 {
     string Value; 
 }
+struct Literal_PosRef : Literal
+{
+    int Pos = 0;
+}
 struct Literal_Number : Literal
 {
     int Value; 
