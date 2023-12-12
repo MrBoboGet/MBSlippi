@@ -28,6 +28,10 @@ namespace MBSlippi
         return ReturnValue;
     }
     //BEGIN ArgumentList    
+    bool ArgumentList::Empty() const
+    {
+        return m_PositionalArguments.size() == 0 && m_KeyArgs.size() == 0;
+    }
     void ArgumentList::SetParentArgList(ArgumentList const* ParentList)
     {
         m_ParentArgList = ParentList;
@@ -43,14 +47,14 @@ namespace MBSlippi
     }
     void ArgumentList::p_AddKey(std::string const& Key,MQL_Filter Value)
     {
-        size_t& Position = m_KeyPositions[Key];
-        if(Position == 0 || m_KeyArgs.size() == 0)
+        if(auto It = m_KeyPositions.find(Key); It == m_KeyPositions.end())
         {
+            m_KeyPositions[Key] = m_KeyArgs.size();
             m_KeyArgs.push_back(std::move(Value));
         }
         else
         {
-            m_KeyArgs[Position] = std::move(Value);
+            m_KeyArgs[It->second] = std::move(Value);   
         }
     }
     //includes parent scope
@@ -88,7 +92,7 @@ namespace MBSlippi
     }
     MQL_Filter const& ArgumentList::GetRawVariable(std::string const& VariableToGet) const
     {
-        if(HasNamedVariable(VariableToGet))
+        if(!HasNamedVariable(VariableToGet))
         {
             throw std::runtime_error("Key variable with name \""+ VariableToGet+"\" not in argument list");
         }
@@ -111,9 +115,9 @@ namespace MBSlippi
             //look for symbol in partent scope
             if(m_ParentArgList == nullptr)
             {
-                throw std::runtime_error("Symbol with name \"" + Value.GetType<Literal_Symbol>().Value+"\"");
+                throw std::runtime_error("Symbol with name \"" + Literal.GetType<Literal_Symbol>().Value+"\"");
             }
-            ReturnValue = m_ParentArgList->p_GetNamedVariable(Value.GetType<Literal_Symbol>().Value);
+            ReturnValue = m_ParentArgList->p_GetNamedVariable(Literal.GetType<Literal_Symbol>().Value);
         }
         else if(Literal.IsType<Literal_PosRef>())
         {
@@ -777,7 +781,12 @@ namespace MBSlippi
     }
     void MQLEvaluator::p_AddDiagnostic(std::vector<MBLSP::Diagnostic>& OutDiagnostics,MBCC::TokenPosition Begin,int Length,std::string_view Message)
     {
-           
+        MBLSP::Diagnostic NewDiagnostic;
+        NewDiagnostic.range.start.line = Begin.Line;
+        NewDiagnostic.range.start.character = Begin.ByteOffset;
+        NewDiagnostic.range.end = NewDiagnostic.range.start + Length;
+        NewDiagnostic.message = Message;
+        OutDiagnostics.push_back(std::move(NewDiagnostic));
     }
     void MQLEvaluator::p_AddDiagnostic(std::vector<MBLSP::Diagnostic>& OutDiagnostics,Filter_Component_Func const& Func,size_t ArgIndex,std::string_view Error)
     {
@@ -804,7 +813,7 @@ namespace MBSlippi
                 auto const& KeyArg = Arg.GetType<Filter_Arg_Named>();
                 if(KeyArg.Name == Key)
                 {
-                    p_AddDiagnostic(OutDiagnostics,KeyArg.NamePosition,KeyArg.Name.size(),Error);
+                    p_AddDiagnostic(OutDiagnostics,KeyArg.Argument,Error);
                 }
             }
         }
@@ -848,7 +857,7 @@ namespace MBSlippi
         }
         else if(ErrorFilter.IsType<Filter_OperatorList>())
         {
-            p_AddDiagnostic(OutDiagnostics,ErrorFilter.GetType<Filter_OperatorList>(),0, ErrorFilter.GetType<Filter_OperatorList>().Operators.size() ,Message);
+            p_AddDiagnostic(OutDiagnostics,ErrorFilter.GetType<Filter_OperatorList>(),0, ErrorFilter.GetType<Filter_OperatorList>().Components.size() ,Message);
         }
     }
     MQLEvaluator::PrecedenceInfo MQLEvaluator::p_GetPrecedenceInfo(std::vector<std::string> const& Operators,int BeginIndex,int EndIndex)
@@ -1190,7 +1199,10 @@ namespace MBSlippi
                     NewValue.Negated = FuncFilter.Negated;
                     NewValue.Args = ArgumentList(NewValue.Filter->Arguments,p_ConvertArgList(AssociatedModule,ParentArgList,FuncFilter.ArgumentList,OutDiagnostics));
                     NewValue.Args.SetParentArgList(&ParentArgList);
-                    auto ArgErrors = p_VerifyReferenceArguments(*m_LoadedModules[NewValue.Filter->AssociatedModule],NewValue.Filter->Arguments,NewValue.Args,*NewValue.Filter->Component);
+                    auto ArgErrors = p_VerifyReferenceArguments(*m_LoadedModules[NewValue.Filter->AssociatedModule],
+                            NewValue.Filter->Arguments,
+                            NewValue.Args,
+                            *NewValue.Filter->Component);
                     NewValue.Args.SetParentArgList(nullptr);
 
                     p_AddDiagnostics(FuncFilter,ParentArgList,NewValue.Args,ArgErrors,OutDiagnostics);
@@ -1252,20 +1264,13 @@ namespace MBSlippi
     void MQLEvaluator::p_FillError(ArgumentErrors& OutError,ArgumentList const& FilterArgs, Literal_Symbol const& ErrorSym,std::string_view Message)
     {
         auto const& Literal = FilterArgs.GetRawVariable(ErrorSym.Value).GetType<MQL_Filter_Literal>();
-        if(Literal.Value.IsType<Literal_Symbol>())
-        {
-            OutError.KeyErrors[Literal.Value.GetType<Literal_Symbol>().Value] = Message;
-        }
-        else if(Literal.Value.IsType<Literal_PosRef>())
+        if(Literal.Value.IsType<Literal_PosRef>())
         {
             OutError.PositionalErrors[Literal.Value.GetType<Literal_PosRef>().Pos] = Message;
         }
         else
         {
-            if(OutError.GenericErrors.size() == 0)
-            {
-                OutError.GenericErrors.push_back("Errors in referenced filter");   
-            }   
+            OutError.KeyErrors[ErrorSym.Value] = Message;
         }
     }
     void MQLEvaluator::p_FillErrors(ArgumentErrors& OutError,ArgumentList const& ArgDef,ArgumentList const& FilterArgs ,ArgumentErrors const& InError)
@@ -1278,9 +1283,9 @@ namespace MBSlippi
         for(auto const& KeyError : InError.KeyErrors)
         {
             auto const& Var = FilterArgs.GetRawVariable(KeyError.first);
-            if(Var.IsLiteral())
+            if(Var.IsSymbol())
             {
-                p_FillError(OutError,FilterArgs,Var.GetType<MQL_Filter_Literal>().Value.GetType<Literal_Symbol>(),KeyError.second);
+                p_FillError(OutError,ArgDef,Var.GetType<MQL_Filter_Literal>().Value.GetType<Literal_Symbol>(),KeyError.second);
             }
             else if(OutError.GenericErrors.size() == 0)
             {
@@ -1290,9 +1295,9 @@ namespace MBSlippi
         for(auto const& PositionalError  : InError.PositionalErrors)
         {
             auto const& Var = FilterArgs.GetRawVariable(PositionalError.first);
-            if(Var.IsLiteral())
+            if(Var.IsSymbol())
             {
-                p_FillError(OutError,FilterArgs,Var.GetType<MQL_Filter_Literal>().Value.GetType<Literal_Symbol>(),PositionalError.second);
+                p_FillError(OutError,ArgDef,Var.GetType<MQL_Filter_Literal>().Value.GetType<Literal_Symbol>(),PositionalError.second);
             }
             else if(OutError.GenericErrors.size() == 0)
             {
@@ -1321,7 +1326,7 @@ namespace MBSlippi
             if(Extractor.Filter.ArgChecker != nullptr)
             {
                 Extractor.Args.SetParentArgList(&CalledArguments);
-                p_FillErrors(ReturnValue,ArgDef,CalledArguments,Extractor.Filter.ArgChecker(Extractor.Args));
+                p_FillErrors(ReturnValue,CalledArguments,Extractor.Args,Extractor.Filter.ArgChecker(Extractor.Args));
                 Extractor.Args.SetParentArgList(nullptr);
             }
         }
@@ -1329,7 +1334,7 @@ namespace MBSlippi
         {
             auto& Reference = FilterToVerify.GetType<MQL_FilterReference>();
             Reference.Args.SetParentArgList(&CalledArguments);
-            p_FillErrors(ReturnValue,ArgDef,CalledArguments,p_VerifyReferenceArguments(*m_LoadedModules[Reference.Filter->AssociatedModule],Reference.Filter->Arguments,Reference.Args,FilterToVerify));
+            p_FillErrors(ReturnValue,CalledArguments,Reference.Args,p_VerifyReferenceArguments(*m_LoadedModules[Reference.Filter->AssociatedModule],Reference.Filter->Arguments,Reference.Args,*Reference.Filter->Component));
             Reference.Args.SetParentArgList(nullptr);
         }
         else if(FilterToVerify.IsType<MQL_Metric>())
@@ -1338,7 +1343,7 @@ namespace MBSlippi
             if(Metric.Metric.ArgChecker != nullptr)
             {
                 Metric.Args.SetParentArgList(&CalledArguments);
-                p_FillErrors(ReturnValue,ArgDef,CalledArguments,Metric.Metric.ArgChecker(Metric.Args));
+                p_FillErrors(ReturnValue,CalledArguments,Metric.Args,Metric.Metric.ArgChecker(Metric.Args));
                 Metric.Args.SetParentArgList(nullptr);
             }
         }
@@ -1380,7 +1385,7 @@ namespace MBSlippi
         }
         for(auto const& Arg : Errors.KeyErrors)
         {
-            if(ErrorArgList.HasNamedVariable(Arg.first))
+            if(!ErrorArgList.HasNamedVariable(Arg.first))
             {
                 assert(false);
                 continue;
@@ -1522,13 +1527,16 @@ namespace MBSlippi
         if(DeclarationToVerify.IsType<VariableDeclaration_Filter>())
         {
             auto const& FilterVariable = DeclarationToVerify.GetType<VariableDeclaration_Filter>();
-            p_VerifyFilterComponent(AssociatedModule,FilterVariable.Component,Diagnostics);
+            std::shared_ptr<MQL_FilterDefinition> NewDefinition = std::make_shared<MQL_FilterDefinition>();
+            ArgumentList ParentArglist;
+            NewDefinition->AssociatedModule = AssociatedModule.ID;
+            NewDefinition->Arguments = p_ConvertArgList(AssociatedModule,ParentArglist,FilterVariable.Arguments,OutDiagnostics);
+            NewDefinition->Component = std::make_shared<MQL_Filter>(p_ConvertFilterComponent(AssociatedModule,NewDefinition->Arguments,FilterVariable.Component,OutDiagnostics));
+            //p_VerifyFilterComponent(AssociatedModule,FilterVariable.Component,Diagnostics);
             //check bindings
-            
             if(UpdateState && !VariableExists)
             {
                 MQL_Variable TemporaryVariable;
-                std::shared_ptr<MQL_FilterDefinition> NewDefinition = std::make_shared<MQL_FilterDefinition>();
                 TemporaryVariable.Data = std::move(NewDefinition);
                 AssociatedModule.ModuleScope.AddVariable(VariableBase.Name,std::move(TemporaryVariable));
             }
@@ -1583,7 +1591,8 @@ namespace MBSlippi
         if(Diagnostics.size() > 0)
         {
             ReturnValue = false;
-            OutDiagnostics = std::move(Diagnostics);
+            OutDiagnostics.insert(OutDiagnostics.end(),std::make_move_iterator(Diagnostics.begin()),std::make_move_iterator(Diagnostics.end()));
+            //OutDiagnostics = std::move(Diagnostics);
         }
         return(ReturnValue);
     }
@@ -2615,6 +2624,7 @@ namespace MBSlippi
         MQL_Module NewModule;
         NewModule.ModulePath = ModulePath;
         ReturnValue = m_CurrentModuleID;
+        NewModule.ID = m_CurrentModuleID;
         m_CurrentModuleID++;
         m_LoadedModulePaths[CanonicalModulePath] = ReturnValue;
         if(std::filesystem::exists(CanonicalModulePath))
@@ -2660,8 +2670,9 @@ namespace MBSlippi
     ModuleID MQLEvaluator::LoadEmptyModule()
     {
         ModuleID NewModuleID = m_CurrentModuleID;
-        m_CurrentModuleID++;
         m_LoadedModules[NewModuleID] = std::make_shared<MQL_Module>();
+        m_LoadedModules[NewModuleID]->ID = NewModuleID;
+        m_CurrentModuleID++;
         return(NewModuleID);
     }
     MQL_Module& MQLEvaluator::GetModule(ModuleID ID)
@@ -2690,8 +2701,7 @@ namespace MBSlippi
             }
             NewVariableData->AssociatedModule = AssociatedModule.ID;
             NewVariableData->Arguments = p_ConvertArgList(AssociatedModule,ParentArgList,FilterDefinition.Arguments,OutDiagnostics);
-            ArgumentList List;
-            NewVariableData->Component = std::make_shared<MQL_Filter>(p_ConvertFilterComponent(AssociatedModule,List,FilterDefinition.Component,OutDiagnostics));
+            NewVariableData->Component = std::make_shared<MQL_Filter>(p_ConvertFilterComponent(AssociatedModule,NewVariableData->Arguments,FilterDefinition.Component,OutDiagnostics));
             NewVariable.Data = std::move(NewVariableData);
             AssociatedModule.ModuleScope.AddVariable(SpecToEvaluate.GetType<VariableDeclaration_Base>().Name, std::move(NewVariable));
         }
@@ -2838,12 +2848,12 @@ namespace MBSlippi
         }
         return(ReturnValue);
     }
-    ArgumentErrors PlayerArgChecker(ArgumentList const& Args)
+    ArgumentErrors MQLEvaluator::PlayerArgChecker(ArgumentList const& Args)
     {
         ArgumentErrors ReturnValue;
         try
         {
-               
+            GetPlayerIndex(Args);
         }
         catch(std::exception const& e)
         {

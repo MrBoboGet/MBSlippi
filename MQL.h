@@ -401,12 +401,12 @@ namespace MBSlippi
             return IsType<MQL_Metric>() || IsType<MQL_MetricCombiner>() || IsType<MQL_Filter_Literal>();
         }
         
-        template<typename T>
+        template<typename T,typename = std::enable_if_t<std::is_constructible_v<VariantType,T>>>
         T const& GetType() const
         {
             return std::get<T>(m_Data);
         }
-        template<typename T>
+        template<typename T,typename = std::enable_if_t<std::is_constructible_v<VariantType,T>>>
         T& GetType()
         {
             return std::get<T>(m_Data);
