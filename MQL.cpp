@@ -32,6 +32,15 @@ namespace MBSlippi
     {
         return m_PositionalArguments.size() == 0 && m_KeyArgs.size() == 0;
     }
+    std::vector<std::string> ArgumentList::GetKeys() const
+    {
+        std::vector<std::string> ReturnValue;
+        for(auto const& Keys : m_KeyPositions)
+        {
+            ReturnValue.push_back(Keys.first);
+        }
+        return ReturnValue;
+    }
     void ArgumentList::SetParentArgList(ArgumentList const* ParentList)
     {
         m_ParentArgList = ParentList;
@@ -629,6 +638,19 @@ namespace MBSlippi
 
                 OutDiagnostics.emplace_back(std::move(NewDiagnostic));
             }
+            if(Attribute[AttributeOffset].Value == "Character")
+            {
+                MBCharacter Character = StringToMBCharacter(PredicateToVerify.Value);
+                if(Character == MBCharacter::Null)
+                {
+                    MBLSP::Diagnostic NewDiagnostic;
+                    NewDiagnostic.message = "Invalid character string";
+                    NewDiagnostic.range.start.line = PredicateToVerify.ValuePosition.Line;
+                    NewDiagnostic.range.start.character = PredicateToVerify.ValuePosition.ByteOffset;
+                    NewDiagnostic.range.end = NewDiagnostic.range.start + PredicateToVerify.Value.size()+2;
+                    OutDiagnostics.emplace_back(std::move(NewDiagnostic));
+                }
+            }
             //Guaranteed to be player attributes at this point
             if(!(Attribute[AttributeOffset].Value == "Character" || Attribute[AttributeOffset].Value == "Tag" || Attribute[AttributeOffset].Value == "Code"))
             {
@@ -777,7 +799,18 @@ namespace MBSlippi
     }
     void MQLEvaluator::p_AddKeyError(std::vector<MBLSP::Diagnostic>& OutDiagnostics,Filter_Component_Func const& Func,std::string const& UnknownKey,std::string_view Error)
     {
-        p_AddDiagnostic(OutDiagnostics,Func.FilterName,Error);
+        //p_AddDiagnostic(OutDiagnostics,Func.FilterName,Error);
+        for(auto const& Arg : Func.ArgumentList.Arguments)
+        {
+            if(Arg.IsType<Filter_Arg_Named>())
+            {
+                auto const& KeyArg = Arg.GetType<Filter_Arg_Named>();
+                if(KeyArg.Name == UnknownKey)
+                {
+                    p_AddDiagnostic(OutDiagnostics,KeyArg.NamePosition,KeyArg.Name.size(),Error);
+                }
+            }
+        }
     }
     void MQLEvaluator::p_AddDiagnostic(std::vector<MBLSP::Diagnostic>& OutDiagnostics,MBCC::TokenPosition Begin,int Length,std::string_view Message)
     {
@@ -1077,9 +1110,15 @@ namespace MBSlippi
                     NewMetric.Args = p_ConvertArgList(AssociatedModule,ParentArgList,Func.ArgumentList,OutDiagnostics);
                     NewMetric.Metric = MetricIt->second;
                     OutType = MetricIt->second.ResultType;
-                    if(NewMetric.Metric.ArgChecker != nullptr)
+                    if(NewMetric.Metric.ArgCheckers.size() > 0)
                     {
-                        auto Errors = NewMetric.Metric.ArgChecker(NewMetric.Args);
+                        NewMetric.Args.SetParentArgList(&ParentArgList);
+                        ArgumentErrors Errors;
+                        for(auto const& ArgChecker : NewMetric.Metric.ArgCheckers)
+                        {
+                            ArgChecker(Errors,NewMetric.Args);
+                        }
+                        NewMetric.Args.SetParentArgList(nullptr);
                         p_AddDiagnostics(Func,ParentArgList,NewMetric.Args,Errors,OutDiagnostics);
                     }
                     ReturnValue = std::move(NewMetric);
@@ -1203,8 +1242,9 @@ namespace MBSlippi
                             NewValue.Filter->Arguments,
                             NewValue.Args,
                             *NewValue.Filter->Component);
+                    auto ValidKey = NewValue.Filter->Arguments.GetKeys();
+                    ArgErrors.ValidKeys.insert(ValidKey.begin(),ValidKey.end());
                     NewValue.Args.SetParentArgList(nullptr);
-
                     p_AddDiagnostics(FuncFilter,ParentArgList,NewValue.Args,ArgErrors,OutDiagnostics);
                     return NewValue;
                 }
@@ -1228,9 +1268,15 @@ namespace MBSlippi
                     NewValue.Args = p_ConvertArgList(AssociatedModule,ParentArgList,FuncFilter.ArgumentList,OutDiagnostics);
                     NewValue.Filter = It->second;
                     NewValue.Negated = FuncFilter.Negated;
-                    if(NewValue.Filter.ArgChecker != nullptr)
+                    if(NewValue.Filter.ArgCheckers.size() > 0)
                     {
-                        auto Errors = NewValue.Filter.ArgChecker(NewValue.Args);
+                        NewValue.Args.SetParentArgList(&ParentArgList);
+                        ArgumentErrors Errors;
+                        for(auto const& ArgChecker : NewValue.Filter.ArgCheckers)
+                        {
+                            ArgChecker(Errors,NewValue.Args);
+                        }
+                        NewValue.Args.SetParentArgList(nullptr);
                         p_AddDiagnostics(FuncFilter,ParentArgList,NewValue.Args,Errors,OutDiagnostics);
                     }
                     return NewValue;
@@ -1304,10 +1350,10 @@ namespace MBSlippi
                 OutError.GenericErrors.push_back("Errors in referenced filter");   
             }
         }
-        if(InError.UnknownKeys.size() > 0 && OutError.GenericErrors.size() == 0)
-        {
-            OutError.GenericErrors.push_back("Errors in referenced filter");   
-        }
+        //if(InError.UnknownKeys.size() > 0 && OutError.GenericErrors.size() == 0)
+        //{
+        //    OutError.GenericErrors.push_back("Errors in referenced filter");   
+        //}
     }
     ArgumentErrors MQLEvaluator::p_VerifyReferenceArguments(MQL_Module& AssociatedModule,ArgumentList const& ArgDef , ArgumentList const& CalledArguments,MQL_Filter& FilterToVerify)
     {
@@ -1323,10 +1369,15 @@ namespace MBSlippi
         else if(FilterToVerify.IsType<MQL_IntervallExtractor>())
         {
             auto& Extractor = FilterToVerify.GetType<MQL_IntervallExtractor>();
-            if(Extractor.Filter.ArgChecker != nullptr)
+            if(Extractor.Filter.ArgCheckers.size() > 0)
             {
                 Extractor.Args.SetParentArgList(&CalledArguments);
-                p_FillErrors(ReturnValue,CalledArguments,Extractor.Args,Extractor.Filter.ArgChecker(Extractor.Args));
+                ArgumentErrors Errors;
+                for(auto const& ArgChecker : Extractor.Filter.ArgCheckers)
+                {
+                    ArgChecker(Errors,Extractor.Args);
+                }
+                p_FillErrors(ReturnValue,CalledArguments,Extractor.Args,Errors);
                 Extractor.Args.SetParentArgList(nullptr);
             }
         }
@@ -1340,10 +1391,15 @@ namespace MBSlippi
         else if(FilterToVerify.IsType<MQL_Metric>())
         {
             auto& Metric = FilterToVerify.GetType<MQL_Metric>();
-            if(Metric.Metric.ArgChecker != nullptr)
+            if(Metric.Metric.ArgCheckers.size() > 0)
             {
                 Metric.Args.SetParentArgList(&CalledArguments);
-                p_FillErrors(ReturnValue,CalledArguments,Metric.Args,Metric.Metric.ArgChecker(Metric.Args));
+                ArgumentErrors Errors;
+                for(auto const& ArgChecker : Metric.Metric.ArgCheckers)
+                {
+                    ArgChecker(Errors,Metric.Args);
+                }
+                p_FillErrors(ReturnValue,CalledArguments,Metric.Args,Errors);
                 Metric.Args.SetParentArgList(nullptr);
             }
         }
@@ -1366,9 +1422,12 @@ namespace MBSlippi
         {
             p_AddDiagnostic(OutDiagnostics,Func.FilterName,Error);
         }
-        for(auto const& Key : Errors.UnknownKeys)
+        for(auto const& Key : ErrorArgList.GetKeys())
         {
-            p_AddKeyError(OutDiagnostics,Func,Key.first,Key.second);
+            if(Errors.ValidKeys.find(Key) == Errors.ValidKeys.end())
+            {
+                p_AddKeyError(OutDiagnostics,Func,Key,"No key-argument named \""+Key+"\"");
+            }
         }
         for(auto const& Arg : Errors.PositionalErrors)
         {
@@ -2848,18 +2907,327 @@ namespace MBSlippi
         }
         return(ReturnValue);
     }
-    ArgumentErrors MQLEvaluator::PlayerArgChecker(ArgumentList const& Args)
+    bool MQLEvaluator::p_IsInteger(MQL_Filter const& Value)
     {
-        ArgumentErrors ReturnValue;
+        if(!Value.IsLiteral())
+        {
+            return false;
+        }
+        auto const& Literal = Value.GetType<MQL_Filter_Literal>().Value;
+        if(Literal.IsType<Literal_Number>())
+        {
+            return true;
+        }
+        else if(Literal.IsType<Literal_String>())
+        {
+            auto const& String = Literal.GetType<Literal_String>().Value;
+            for(int i = 0; i < String.size();i++)
+            {
+                char CurrentChar = String[i];
+                if(CurrentChar >= '0' && CurrentChar <= '9')
+                {
+                }
+                else if(i == 0 && CurrentChar == '-' && String.size() > 1)
+                {
+                }
+                else
+                {
+                    return false;   
+                }
+            }
+            return true;
+        }
+        return false;
+    }
+    int MQLEvaluator::p_GetInteger(MQL_Filter const& Value)
+    {
+        int ReturnValue = 0;
+        auto const& Literal = Value.GetType<MQL_Filter_Literal>();
+        if(Literal.Value.IsType<Literal_Number>())
+        {
+            return Literal.Value.GetType<Literal_Number>().Value;   
+        }
+        else if(Literal.Value.IsType<Literal_String>())
+        {
+            return std::stoi(Literal.Value.GetType<Literal_String>().Value);
+        }
+        else
+        {
+            throw std::runtime_error("Cannot convert non string value to an integer");   
+        }
+        return ReturnValue;
+    }
+    bool MQLEvaluator::p_IsFloat(MQL_Filter const& Value)
+    {
+        if(!Value.IsLiteral())
+        {
+            return false;
+        }
+        auto const& Literal = Value.GetType<MQL_Filter_Literal>().Value;
+        if(Literal.IsType<Literal_String>())
+        {
+            auto const& String = Literal.GetType<Literal_String>().Value;
+            bool HasDot = false;
+            for(int i = 0; i < String.size();i++)
+            {
+                char CurrentChar = String[i];
+                if(CurrentChar >= '0' && CurrentChar <= '9')
+                {
+                }
+                else if(CurrentChar == '.' && !HasDot)
+                {
+                    HasDot = true;
+                }
+                else if(i == 0 && CurrentChar == '-' && String.size() > 1)
+                {
+                }
+                else
+                {
+                    return false;   
+                }
+            }
+            return true;
+        }
+        return false;
+    }
+    float MQLEvaluator::p_GetFloat(MQL_Filter const& Value)
+    {
+        return std::stof(p_GetString(Value));
+    }
+    bool MQLEvaluator::p_IsString(MQL_Filter const& Value)
+    {
+        return Value.IsLiteral() && Value.GetType<MQL_Filter_Literal>().Value.IsType<Literal_String>();
+    }
+    std::string MQLEvaluator::p_GetString(MQL_Filter const& Value)
+    {
+        return Value.GetType<MQL_Filter_Literal>().Value.GetType<Literal_String>().Value;
+    }
+    void MQLEvaluator::PlayerArgChecker(ArgumentErrors& OutErrors,ArgumentList const& Args)
+    {
+        OutErrors.ValidKeys.insert("Player");
         try
         {
             GetPlayerIndex(Args);
         }
         catch(std::exception const& e)
         {
-            ReturnValue.KeyErrors["Player"] = "Invalid player specification, must be a integer as a string or literal between 0 and 3";
+            OutErrors.KeyErrors["Player"] = "Invalid player specification, must be a integer as a string or literal between 0 and 3";
         }
-        return ReturnValue;
+    }
+    void MQLEvaluator::MoveArgChecker(ArgumentErrors& OutError,ArgumentList const& Args)
+    {
+        if(Args.PositionalCount() != 1)
+        {
+            OutError.GenericErrors.push_back("Exactly one positional argument is with the move name");
+        }
+        else
+        {
+            MQL_Filter const& MoveValue = Args[0];
+            if(!MoveValue.IsLiteral())
+            {
+                OutError.GenericErrors.push_back("First argument is not of string type");
+                return;
+            }
+            auto const& Literal = MoveValue.GetType<MQL_Filter_Literal>();
+            if(!Literal.Value.IsType<Literal_String>())
+            {
+                OutError.GenericErrors.push_back("First argument is not of string type");
+                return;
+            }
+            MBAttackID Move = StringToMBAttackID(Literal.Value.GetType<Literal_String>().Value);
+            if(Move == MBAttackID::None)
+            {
+                OutError.PositionalErrors[0] = "Invalid move name \""+Literal.Value.GetType<Literal_String>().Value+"\"";
+            }
+        }
+    }
+    void MQLEvaluator::ShieldArgChecker(ArgumentErrors& OutError,ArgumentList const& Args)
+    {
+        OutError.ValidKeys.insert("Shielding");
+        OutError.ValidKeys.insert("Shieldstun");
+    }
+    void MQLEvaluator::ExpandArgChecker(ArgumentErrors& OutError,ArgumentList const& Args)
+    {
+        OutError.ValidKeys.insert({"Left","Right"});
+        for(auto const& Key : {"Left","Right"})
+        {
+            if(Args.HasNamedVariable(Key))
+            {
+                if(!p_IsInteger(Args[Key]))
+                {
+                    OutError.KeyErrors[Key] = Key+std::string(" must be an integer or a string convertible to a integer"); 
+                }
+            }
+        }
+    }
+    void MQLEvaluator::PlayerFlagArgChecker(ArgumentErrors& OutError,ArgumentList const& Args)
+    {
+        for(int i = 0; i < Args.PositionalCount();i++)
+        {
+            auto const& Value = Args[i];
+            if(!p_IsString(Value))
+            {
+                OutError.PositionalErrors[i] = "Positional arguments must be of string type";
+            }
+            auto const& Argument = p_GetString(Value);
+            if( !(Argument == "Airborne" || Argument == "Hitlag" || Argument == "FastFall"))
+            {
+                OutError.PositionalErrors[i] = "Invalid player flag";
+            }
+        }
+    }
+    void MQLEvaluator::ActionStateArgChecker(ArgumentErrors& OutError,ArgumentList const& Args)
+    {
+        if(Args.PositionalCount() != 1)
+        {
+            OutError.GenericErrors.push_back("Exactly one positional argument required with action state name");
+        }
+        else
+        {
+            MQL_Filter const& MoveValue = Args[0];
+            if(!p_IsString(MoveValue))
+            {
+                OutError.GenericErrors.push_back("Argument is not of string type");
+                return;
+            }
+            MBActionState Move = StringToMBActionState(p_GetString(MoveValue));
+            if(Move == MBActionState::None)
+            {
+                OutError.PositionalErrors[0] = "Invalid action state name \""+p_GetString(MoveValue)+"\"";
+            }
+        }
+    }
+    void MQLEvaluator::UntilArgChecker(ArgumentErrors& OutError,ArgumentList const& Args)
+    {
+        OutError.ValidKeys.insert({"State","Flag","Pred","Skip"});
+        if(!Args.HasNamedVariable("State") && 
+                !Args.HasNamedVariable("Flag") && !Args.HasNamedVariable("Pred"))
+        {
+            OutError.GenericErrors.push_back("Until requires either 'State','Flag' or 'Pred' key argument");
+        }
+        if(Args.HasNamedVariable("State"))
+        {
+            MBActionState StateToCheck = MBActionState::None;
+            auto const& StateValue = Args["State"];
+            if(!p_IsString(StateValue))
+            {
+                OutError.KeyErrors["State"] = "State argument must be of string type";
+            }
+            else
+            {
+                StateToCheck = StringToMBActionState(p_GetString(StateValue));
+                if(StateToCheck == MBActionState::None)
+                {
+                    OutError.KeyErrors["State"] = "Invalid state name";
+                }
+            }
+        }
+        if(Args.HasNamedVariable("Flag"))
+        {
+            auto const& FlagValue = Args["Flag"];
+            if(!p_IsString(FlagValue))
+            {
+                OutError.KeyErrors["Flag"] = "Flag argument must be of string type";
+            }
+            else
+            {
+                auto const& Value = p_GetString(FlagValue);
+                if( !(Value == "Airborne" || Value == "NoAirborne"))
+                {
+                    OutError.KeyErrors["Flag"] = "Invalid flag value";
+                }
+            }
+        }
+        if(Args.HasNamedVariable("Skip"))
+        {
+            auto const& SkipVar = Args["Skip"];
+            if(!p_IsInteger(SkipVar))
+            {
+                OutError.KeyErrors["Skip"] = "Skip value must be an integer or string convertible to integer";
+            }
+            else
+            {
+                int Skip = p_GetInteger(SkipVar);
+                if(Skip < 0)
+                {
+                    OutError.KeyErrors["Skip"] = "Skip value cannot be negative";
+                }
+            }
+        }
+        //overrides other options
+        if(Args.HasNamedVariable("Pred"))
+        {
+            auto const& PredValue = Args["Pred"];
+            if(!(PredValue.IsFilter()  || PredValue.IsMetric()))
+            {
+                OutError.KeyErrors["Pred"] = "Pred argument must be a filter";
+            }
+        }
+    }
+    void MQLEvaluator::HasArgChecker(ArgumentErrors& OutError,ArgumentList const& Args)
+    {
+        if(Args.PositionalCount() != 1)
+        {
+            OutError.GenericErrors.push_back("Has requries exactly one argument: the filter to apply");   
+            return;
+        }
+        auto const& FilterValue = Args[0];
+        if(!(FilterValue.IsFilter() || FilterValue.IsMetric()))
+        {
+            OutError.PositionalErrors[0] = "Argument must be a filter";   
+        }
+    }
+    void MQLEvaluator::PunishArgChecker(ArgumentErrors& OutError,ArgumentList const& Args)
+    {
+        OutError.ValidKeys.insert({"Count","Percent"});
+        if(Args.HasNamedVariable("Count"))
+        {
+            auto const& CountValue = Args["Count"];
+            if(!p_IsInteger(CountValue))
+            {
+                OutError.KeyErrors["Count"] = "Count must be of integer type";
+            }
+            else
+            {
+                int Count = p_GetInteger(CountValue);   
+                if(Count < 0)
+                {
+                    OutError.KeyErrors["Count"] = "Count cannot be negative";
+                }
+            }
+        }
+        if(Args.HasNamedVariable("Percent"))
+        {
+            auto const& PercentValue = Args["Percent"];
+            if(!p_IsFloat(PercentValue))
+            {
+                OutError.KeyErrors["Percent"] = "Percent must be a float or string convertible to float";
+            }
+            else
+            {
+                int Percent = p_GetFloat(PercentValue);   
+                if(Percent < 0)
+                {
+                    OutError.KeyErrors["Percent"] = "Percent cannot be negative";
+                }
+            }
+        }
+    }
+    void MQLEvaluator::CorneredArgChecker(ArgumentErrors& OutError,ArgumentList const& Args)
+    {
+        OutError.ValidKeys.insert({"Margin","StageMargin","OffstageMargin","Distance"});
+        for(auto const& Key : {"Margin","StageMargin","OffstageMargin","Distance"})
+        {
+            if(Args.HasNamedVariable(Key))
+            {
+                auto const& KeyValue = Args[Key];
+                if(!p_IsFloat(KeyValue))
+                {
+                    OutError.KeyErrors[Key] = Key + std::string(" must be a float or a string convertible to a float");   
+                    continue;
+                }
+            }
+        }
     }
     int MQLEvaluator::GetPlayerIndex(ArgumentList const& ExtraArguments)
     {
@@ -3124,16 +3492,12 @@ namespace MBSlippi
         std::vector<GameIntervall> ReturnValue;
         int PlayerIndex = GetPlayerIndex(ExtraArguments);
         int OpponentIndex = PlayerIndex == 0 ? 1 : 0;
-        int FrameContext = 10;
         if(ExtraArguments.PositionalCount() != 1)
         {
             throw std::runtime_error("HitBy requires exactly 1 positional argument, the name of the hit move");
         }
         MBAttackID Attack = StringToMBAttackID(ExtraArguments.GetPositionalArgumentString(0));
-        if(ExtraArguments.HasNamedVariable("Context"))
-        {
-            FrameContext = std::stoi(ExtraArguments.GetNamedVariableString("Context"));
-        }
+        assert(Attack != MBAttackID::None);
         ReturnValue = ExtractSequences(GameToInspect,IntervallsToInspect,[&]
                 (FrameInfo const& Frame)
                 {

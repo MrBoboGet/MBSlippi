@@ -646,10 +646,6 @@ namespace MBSlippi
                 break;
             }
         }
-        if(ReturnValue == MBAttackID::None)
-        {
-            throw std::runtime_error("No attack ID with name \""+StringToConvert+"\"");
-        }
         return(ReturnValue);
     }
     MBActionState StringToMBActionState(std::string const& StringToConvert)
@@ -662,10 +658,6 @@ namespace MBSlippi
                 ReturnValue = MBActionState(i);
                 break;
             }
-        }
-        if(ReturnValue == MBActionState::None)
-        {
-            throw std::runtime_error("No AtionState with name \""+StringToConvert+"\"");
         }
         return(ReturnValue);
     }
@@ -708,17 +700,29 @@ namespace MBSlippi
         "MrGameAndWatch" , 
         "Ganondorf"    , 
         "Roy"            , 
-        "Null"
     };
     std::string MBCharacterToString(MBCharacter CharacterToConvert)
     {
         std::string ReturnValue;
-        if(uint64_t(CharacterToConvert) > uint64_t(MBCharacter::Null))
+        if(uint64_t(CharacterToConvert) >= uint64_t(MBCharacter::Null))
         {
             throw std::runtime_error("Invalid MBCharacter value");
         }
         ReturnValue = i_MBCharacterToStringMap[size_t(CharacterToConvert)];
         return(ReturnValue);
+    }
+    MBCharacter StringToMBCharacter(std::string_view CharacterString)
+    {
+           
+        MBCharacter ReturnValue = MBCharacter::Null;
+        for(int i = 0; i < sizeof(i_MBCharacterToStringMap)/sizeof(char*);i++)
+        {
+            if(CharacterString == i_MBCharacterToStringMap[i])
+            {
+                return MBCharacter(i);   
+            }
+        }
+        return ReturnValue;
     }
 
     PlayerFrameInfo h_ParsePlayerFrameInfo(Event_PostFrameUpdate const& EventToParse)

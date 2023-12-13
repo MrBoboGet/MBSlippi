@@ -27,6 +27,7 @@ namespace MBSlippi
         MQL_Filter const* p_GetNamedVariable(std::string const& StringToSearch) const; 
     public:
         bool Empty() const;
+        std::vector<std::string> GetKeys() const;
 
         ArgumentList() = default;
 
@@ -295,20 +296,20 @@ namespace MBSlippi
     {
         std::unordered_map<int,std::string> PositionalErrors;
         std::unordered_map<std::string,std::string> KeyErrors;
-        std::unordered_map<std::string,std::string> UnknownKeys;
+        std::unordered_set<std::string> ValidKeys;
         std::vector<std::string> GenericErrors;
     };
-    typedef ArgumentErrors (*ArgumentCheckerType)(ArgumentList const& Arguments);
+    typedef void (*ArgumentCheckerType)(ArgumentErrors& OutErrors,ArgumentList const& Arguments);
     struct BuiltinFilterInfo
     {
         BuiltinFilterType Filter = nullptr;
-        ArgumentCheckerType ArgChecker = nullptr;
+        std::vector<ArgumentCheckerType> ArgCheckers;
     };
     struct BuiltinMetric
     {
         MetricFuncType Func = nullptr;
         std::type_index ResultType = std::type_index(typeid(nullptr));
-        ArgumentCheckerType ArgChecker = nullptr;
+        std::vector<ArgumentCheckerType> ArgCheckers;
     };
     enum class OperatorType
     {
@@ -444,8 +445,24 @@ namespace MBSlippi
     class MQLEvaluator
     {
     private:
+        static bool p_IsInteger(MQL_Filter const& Value);
+        static int p_GetInteger(MQL_Filter const& Value);
+        static bool p_IsString(MQL_Filter const& Value);
+        static std::string p_GetString(MQL_Filter const& Value);
+        static bool p_IsFloat(MQL_Filter const& Value);
+        static float p_GetFloat(MQL_Filter const& Value);
 
-        static ArgumentErrors PlayerArgChecker(ArgumentList const& Args);
+        static void PlayerArgChecker(ArgumentErrors& OutError,ArgumentList const& Args);
+        static void MoveArgChecker(ArgumentErrors& OutError,ArgumentList const& Args);
+        static void ShieldArgChecker(ArgumentErrors& OutError,ArgumentList const& Args);
+        static void ExpandArgChecker(ArgumentErrors& OutError,ArgumentList const& Args);
+        static void PlayerFlagArgChecker(ArgumentErrors& OutError,ArgumentList const& Args);
+        static void ActionStateArgChecker(ArgumentErrors& OutError,ArgumentList const& Args);
+        static void UntilArgChecker(ArgumentErrors& OutError,ArgumentList const& Args);
+        static void HasArgChecker(ArgumentErrors& OutError,ArgumentList const& Args);
+        static void PunishArgChecker(ArgumentErrors& OutError,ArgumentList const& Args);
+        static void CorneredArgChecker(ArgumentErrors& OutError,ArgumentList const& Args);
+
         static int GetPlayerIndex(ArgumentList const& ExtraArguments);
     
         //static std::vector<GameIntervall> HasMove(MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,GameIntervall IntervallToInspect);
@@ -472,18 +489,18 @@ namespace MBSlippi
             //{"HasHitBy",HasHitBy},
             //{"HasProjectile",HasProjectile},
             //{"HasState",HasState},
-            {"Punishes",{BiggestPunishes,PlayerArgChecker}},
-            {"Move",{Move,PlayerArgChecker}},
-            {"InShield",{InShield,PlayerArgChecker}},
-            {"Expand",{Expand,nullptr}},
-            {"HitBy",{InShield,PlayerArgChecker}},
-            {"PlayerFlags",{PlayerFlags,PlayerArgChecker}},
-            {"ActionState",{ActionState,PlayerArgChecker}},
-            {"Until",{Until,nullptr}},
-            {"Offstage",{Offstage,PlayerArgChecker}},
-            {"Cornered",{Cornered,PlayerArgChecker}},
-            {"Has",{Has,nullptr}},
-            {"Normalize",{Normalize,nullptr}},
+            {"Punishes",{BiggestPunishes,{PlayerArgChecker,PunishArgChecker}}},
+            {"Move",{Move,{PlayerArgChecker,MoveArgChecker}}},
+            {"InShield",{InShield,{PlayerArgChecker,ShieldArgChecker}}},
+            {"Expand",{Expand,{ExpandArgChecker}}},
+            {"HitBy",{InShield,{PlayerArgChecker,MoveArgChecker}}},
+            {"PlayerFlags",{PlayerFlags,{PlayerArgChecker,PlayerFlagArgChecker}}},
+            {"ActionState",{ActionState,{PlayerArgChecker,ActionStateArgChecker}}},
+            {"Until",{Until,{PlayerArgChecker,UntilArgChecker}}},
+            {"Offstage",{Offstage,{PlayerArgChecker}}},
+            {"Cornered",{Cornered,{PlayerArgChecker,CorneredArgChecker}}},
+            {"Has",{Has,{HasArgChecker}}},
+            {"Normalize",{Normalize,{}}},
         };
 
         //Metrics
@@ -497,14 +514,14 @@ namespace MBSlippi
         static std::vector<MQL_MetricVariable> Length METRIC_ARGLIST;
         std::unordered_map<std::string,BuiltinMetric> m_BuiltinMetrics = 
         {
-            {"Percent",{Percent,typeid(float),PlayerArgChecker}},
-            {"Delay",{Delay,typeid(int),PlayerArgChecker}},
-            {"End",{End,typeid(int),nullptr}},
-            {"Begin",{Begin,typeid(int),nullptr}},
-            {"File",{File,typeid(std::string),nullptr}},
-            {"MoveName",{MoveName,typeid(std::string),PlayerArgChecker}},
-            {"PercentDiff",{PercentDiff,typeid(float),PlayerArgChecker}},
-            {"Length",{Length,typeid(int),nullptr}},
+            {"Percent",{Percent,typeid(float),{PlayerArgChecker}}},
+            {"Delay",{Delay,typeid(int),{PlayerArgChecker}}},
+            {"End",{End,typeid(int),{}}},
+            {"Begin",{Begin,typeid(int),{}}},
+            {"File",{File,typeid(std::string),{}}},
+            {"MoveName",{MoveName,typeid(std::string),{PlayerArgChecker}}},
+            {"PercentDiff",{PercentDiff,typeid(float),{PlayerArgChecker}}},
+            {"Length",{Length,typeid(int),{}}},
         };
 
         std::vector<SpecServer> m_SpecServers;
