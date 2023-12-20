@@ -1083,10 +1083,23 @@ namespace MBSlippi
             else if(Literal.Value.IsType<Literal_Symbol>())
             {
                 Literal_Symbol const& Symbol = Literal.Value.GetType<Literal_Symbol>();
+                if(ParentArgList.HasNamedVariable(Symbol.Value))
+                {
+                    auto const& Var = ParentArgList[Symbol.Value];
+                    assert(!Var.IsSymbol());
+                    OutType = Var.GetTypeID();
+                }
+                else
+                {
+                    if(!ParentArgList.HasNamedVariable(NewLiteral.Value.GetType<Literal_Symbol>().Value))
+                    {
+                        p_AddDiagnostic(OutDiagnostics,Literal.Value,"Cannot find variable with name \"" + NewLiteral.Value.GetType<Literal_Symbol>().Value+"\"");
+                    }
+                    class Invalid{};
+                    OutType = typeid(Invalid);
+                }
                 //auto& Variable = AssociatedModule.ModuleScope.GetVariable(Symbol.Value);
                 //what type...
-                class Invalid{};
-                OutType = typeid(Invalid);
             }
             ReturnValue = NewLiteral;
         }
@@ -1244,6 +1257,7 @@ namespace MBSlippi
                             *NewValue.Filter->Component);
                     auto ValidKey = NewValue.Filter->Arguments.GetKeys();
                     ArgErrors.ValidKeys.insert(ValidKey.begin(),ValidKey.end());
+                    p_TypeCheckArgs(ArgErrors, NewValue.Filter->Arguments,NewValue.Args);
                     NewValue.Args.SetParentArgList(nullptr);
                     p_AddDiagnostics(FuncFilter,ParentArgList,NewValue.Args,ArgErrors,OutDiagnostics);
                     return NewValue;
@@ -1385,6 +1399,10 @@ namespace MBSlippi
         {
             auto& Reference = FilterToVerify.GetType<MQL_FilterReference>();
             Reference.Args.SetParentArgList(&CalledArguments);
+
+            auto const& FilterDefArgs = Reference.Filter->Arguments;
+            //ensure that values supplied have the same type
+            p_TypeCheckArgs(ReturnValue,FilterDefArgs,Reference.Args);
             p_FillErrors(ReturnValue,CalledArguments,Reference.Args,p_VerifyReferenceArguments(*m_LoadedModules[Reference.Filter->AssociatedModule],Reference.Filter->Arguments,Reference.Args,*Reference.Filter->Component));
             Reference.Args.SetParentArgList(nullptr);
         }
@@ -1415,6 +1433,36 @@ namespace MBSlippi
         //Filter only values that are relevant for the positional parts
         
         return ReturnValue;
+    }
+    void MQLEvaluator::p_TypeCheckArgs(ArgumentErrors& OutErrors,ArgumentList const& ArgDef,ArgumentList const& CalledArguments)
+    {
+        for(auto const& Key : CalledArguments.GetKeys())
+        {
+            if(ArgDef.HasNamedVariable(Key))
+            {
+                auto SuppliedType = CalledArguments[Key].GetTypeID();
+                auto DefinedType = ArgDef[Key].GetTypeID();
+                if(DefinedType != SuppliedType)
+                {
+                    OutErrors.KeyErrors[Key] = "Invalid type: supplied type is "+
+                        std::string(SuppliedType.name())+" while required type is " + SuppliedType.name();
+                }
+            }
+        }
+        for(int i = 0; i < CalledArguments.PositionalCount();i++)
+        {
+            if(i >= ArgDef.PositionalCount())
+            {
+                break;   
+            }
+            auto SuppliedType = CalledArguments[i].GetTypeID();
+            auto DefinedType = ArgDef[i].GetTypeID();
+            if(DefinedType != SuppliedType)
+            {
+                OutErrors.PositionalErrors[i] = "Invalid type: supplied type is "+
+                    std::string(SuppliedType.name())+" while required type is " + SuppliedType.name();
+            }
+        }
     }
     void MQLEvaluator::p_AddDiagnostics(Filter_Component_Func const& Func,ArgumentList const& ParentArgList,ArgumentList const& ErrorArgList,ArgumentErrors const& Errors,std::vector<MBLSP::Diagnostic>& OutDiagnostics)
     {
@@ -2287,10 +2335,10 @@ namespace MBSlippi
             Negated = Combiner.Negated;
             if(Combiner.Type == OperatorType::Add)
             {
-                ReturnValue = InputIntervalls;
+                ReturnValue = {};
                 for(auto const& SubFilter : Combiner.Operands)
                 {
-                    std::vector<GameIntervall> NewSituations = p_EvaluateGameIntervalls(AssociatedModule,InputGame,ReturnValue,ArgList,SubFilter);
+                    std::vector<GameIntervall> NewSituations = p_EvaluateGameIntervalls(AssociatedModule,InputGame,InputIntervalls,ArgList,SubFilter);
                     std::vector<GameIntervall> NewReturnValue;
                     NewReturnValue.resize(NewSituations.size()+ReturnValue.size());
                     std::merge(NewSituations.begin(),NewSituations.end(),ReturnValue.begin(),ReturnValue.end(),NewReturnValue.begin());
@@ -2340,6 +2388,12 @@ namespace MBSlippi
             //probably redundant
             std::sort(ReturnValue.begin(),ReturnValue.end());
         }
+        #ifndef NDBEG
+        for(auto const& Intervall : ReturnValue)
+        {
+            assert(Intervall.LastFrame <= InputGame.Frames.size() -1);
+        }
+        #endif
         return ReturnValue;
     }
 
@@ -2443,15 +2497,31 @@ namespace MBSlippi
             }
             else if(Literal.Value.IsType<Literal_Symbol>())
             {
-                std::string const& SymbolValue = ArgList.GetNamedVariableString(Literal.Value.GetType<Literal_Symbol>().Value);
-                ReturnValue = {SymbolValue};
+                auto const& Value = ArgList[Literal.Value.GetType<Literal_Symbol>().Value];
+                assert(Value.IsLiteral());
+                auto const& Literal = Value.GetType<MQL_Filter_Literal>().Value;
+                assert(!Literal.IsType<Literal_Symbol>());
+                if(Literal.IsType<Literal_String>())
+                {
+                    ReturnValue = {Literal.GetType<Literal_String>().Value};
+                }
+                else if(Literal.IsType<Literal_Number>())
+                {
+                    ReturnValue = {Literal.GetType<Literal_Number>().Value};
+                }
+                else
+                {
+                    assert(false && "EvaluateMetric doesn't cover all cases for possible literal values");   
+                }
             }
         }
         else if(Filter.IsType<MQL_Metric>())
         {
             auto const& Metric = Filter.GetType<MQL_Metric>();
             assert(Metric.Metric.Func != nullptr);
-            ReturnValue = Metric.Metric.Func(InputGame,Metric.Args,InputIntervalls);
+            ArgumentList Args (Metric.Args);
+            Args.SetParentArgList(&ArgList);
+            ReturnValue = Metric.Metric.Func(InputGame,Args,InputIntervalls);
         }
         else if(Filter.IsType<MQL_MetricCombiner>())
         {
@@ -3359,29 +3429,50 @@ namespace MBSlippi
         if(ExtraArguments.HasNamedVariable("Pred"))
         {
             MQL_Filter const& Predicate = ExtraArguments["Pred"];
-            ArgumentList ArgList;
-            for(auto const& InputIntervall : IntervallsToInspect)
+            if(Predicate.IsMetric())
             {
-                GameIntervall Intervall;
-                Intervall.FirstFrame = Skip == -1 ? InputIntervall.FirstFrame : InputIntervall.FirstFrame+Skip;
-                Intervall.LastFrame = InputIntervall.LastFrame;
-                if(Intervall.FirstFrame > Intervall.LastFrame)
+                for(auto const& InputIntervall : IntervallsToInspect)
                 {
-                    continue;   
-                }
-                auto MetricResults = Context.GetEvaluator().p_EvaluateMetric(GameToInspect,h_SplitIntervall(Intervall),ArgList,Predicate);
-                int IntervallEnd = Intervall.FirstFrame;
-                for(auto const& Result : MetricResults)
-                {
-                    assert(std::holds_alternative<bool>(Result.Data));
-                    if(std::get<bool>(Result.Data))
+                    GameIntervall Intervall;
+                    Intervall.FirstFrame = Skip == -1 ? InputIntervall.FirstFrame : InputIntervall.FirstFrame+Skip;
+                    Intervall.LastFrame = InputIntervall.LastFrame;
+                    if(Intervall.FirstFrame > Intervall.LastFrame)
                     {
-                        break;   
+                        continue;   
                     }
-                    IntervallEnd++;
+                    auto MetricResults = Context.GetEvaluator().p_EvaluateMetric(GameToInspect,h_SplitIntervall(Intervall),ExtraArguments,Predicate);
+                    int IntervallEnd = Intervall.FirstFrame;
+                    for(auto const& Result : MetricResults)
+                    {
+                        assert(std::holds_alternative<bool>(Result.Data));
+                        if(std::get<bool>(Result.Data))
+                        {
+                            break;   
+                        }
+                        IntervallEnd++;
+                    }
+                    Intervall.LastFrame = std::min(size_t(IntervallEnd),GameToInspect.Frames.size()-1);
+                    ReturnValue.push_back(Intervall);
                 }
-                Intervall.LastFrame = IntervallEnd;
-                ReturnValue.push_back(Intervall);
+            }
+            else if(Predicate.IsFilter())
+            {
+                for(auto const& InputIntervall : IntervallsToInspect)
+                {
+                    GameIntervall Intervall;
+                    Intervall.FirstFrame = Skip == -1 ? InputIntervall.FirstFrame : InputIntervall.FirstFrame+Skip;
+                    Intervall.LastFrame = InputIntervall.LastFrame;
+                    if(Intervall.FirstFrame > Intervall.LastFrame)
+                    {
+                        continue;   
+                    }
+                    auto FilterResult = Context.GetEvaluator().p_EvaluateGameIntervalls(Context.GetModule(),GameToInspect,{Intervall},ExtraArguments,Predicate);
+                    if(FilterResult.size() > 0)
+                    {
+                        Intervall.LastFrame = FilterResult.front().FirstFrame;   
+                    }
+                    ReturnValue.push_back(Intervall);
+                }
             }
             return ReturnValue;
         }
@@ -3739,7 +3830,7 @@ namespace MBSlippi
             }
             for(int i = ActionIndex; i >= Intervall.FirstFrame;i--)
             {
-                if(!StateIsActionable(GameToInspect.Frames[i].PlayerInfo[PlayerIndex].ActionState))
+                if(!FrameIsActionable(GameToInspect.Frames[i].PlayerInfo[PlayerIndex]))
                 {
                     break;
                 }
@@ -3806,10 +3897,19 @@ namespace MBSlippi
         }
         return ReturnValue;
     }
-    std::vector<MQL_MetricVariable> MQLEvaluator::File METRIC_ARGLIST
+    std::vector<MQL_MetricVariable> MQLEvaluator::ActionableFrames METRIC_ARGLIST
     {
         std::vector<MQL_MetricVariable> ReturnValue;
         int PlayerIndex = GetPlayerIndex(ExtraArguments);
+        for(auto const& Intervall : IntervallToInspect)
+        {
+            ReturnValue.push_back(GameToInspect.Frames[Intervall.FirstFrame].PlayerInfo[PlayerIndex].ActionableFrames);
+        }
+        return ReturnValue;
+    }
+    std::vector<MQL_MetricVariable> MQLEvaluator::File METRIC_ARGLIST
+    {
+        std::vector<MQL_MetricVariable> ReturnValue;
         for(auto const& Intervall : IntervallToInspect)
         {
             ReturnValue.push_back(GameToInspect.Metadata.GamePath);

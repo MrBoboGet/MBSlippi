@@ -385,6 +385,28 @@ namespace MBSlippi
         MQL_Filter(){};
        
 
+        std::type_index GetTypeID() const
+        {
+            if(IsLiteral())
+            {
+                auto const& Literal = GetType<MQL_Filter_Literal>().Value;
+                if(Literal.IsType<Literal_String>())
+                {
+                    return typeid(std::string);
+                }
+                else if(Literal.IsType<Literal_Number>())
+                {
+                    return typeid(int);   
+                }
+            }
+            else 
+            {
+                return typeid(MQL_Filter);
+            }
+
+            return typeid(nullptr);
+        }
+        
         bool IsFilter() const
         {
             return IsType<MQL_FilterCombiner>() || IsType<MQL_FilterReference>() || IsType<MQL_IntervallExtractor>();
@@ -512,6 +534,7 @@ namespace MBSlippi
         static std::vector<MQL_MetricVariable> MoveName METRIC_ARGLIST;
         static std::vector<MQL_MetricVariable> PercentDiff METRIC_ARGLIST;
         static std::vector<MQL_MetricVariable> Length METRIC_ARGLIST;
+        static std::vector<MQL_MetricVariable> ActionableFrames METRIC_ARGLIST;
         std::unordered_map<std::string,BuiltinMetric> m_BuiltinMetrics = 
         {
             {"Percent",{Percent,typeid(float),{PlayerArgChecker}}},
@@ -522,6 +545,7 @@ namespace MBSlippi
             {"MoveName",{MoveName,typeid(std::string),{PlayerArgChecker}}},
             {"PercentDiff",{PercentDiff,typeid(float),{PlayerArgChecker}}},
             {"Length",{Length,typeid(int),{}}},
+            {"ActionableFrames",{ActionableFrames,typeid(int),{PlayerArgChecker}}},
         };
 
         std::vector<SpecServer> m_SpecServers;
@@ -546,6 +570,7 @@ namespace MBSlippi
         void p_FillErrors(ArgumentErrors& OutError,ArgumentList const& ArgDef,ArgumentList const& FilterArgs ,ArgumentErrors const& InError);
         void p_CombineErrors(ArgumentErrors& OutError,ArgumentErrors InError);
         ArgumentErrors p_VerifyReferenceArguments(MQL_Module& AssociatedModule, ArgumentList const& ArgDef,ArgumentList const& CalledArguments,MQL_Filter& FilterToVerify);
+        void p_TypeCheckArgs(ArgumentErrors& OutErrors,ArgumentList const& ArgDef,ArgumentList const& CalledArguments);
         void p_AddDiagnostics(Filter_Component_Func const& Func,ArgumentList const& ParentArgList,ArgumentList const& ErrorArgList,ArgumentErrors const& Errors,std::vector<MBLSP::Diagnostic>& OutDiagnostics);
 
         void p_VerifyGameInfoPredicate_Direct(MQL_Module& AssociatedModule,Identifier const& Attribute,GameInfoPredicate_Direct& PredicateToVerify,

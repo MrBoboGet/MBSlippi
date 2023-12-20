@@ -13,16 +13,22 @@ namespace MBSlippi
 
     //    return(ReturnValue);
     //}
-    bool StateIsActionable(MBActionState StateToInspect)
+    bool FrameIsActionable(PlayerFrameInfo FrameToInspect)
     {
         bool ReturnValue = false;       
-        ReturnValue = (StateToInspect == MBActionState::None ||
+        auto StateToInspect = FrameToInspect.ActionState;
+        ReturnValue = (
                StateToInspect == MBActionState::Running ||
-               StateToInspect == MBActionState::Null ||
+               StateToInspect == MBActionState::Standing ||
                StateToInspect == MBActionState::Tumbling ||
                StateToInspect == MBActionState::Dashing ||
+               StateToInspect == MBActionState::Walking ||
                StateToInspect == MBActionState::Shielding ||
-               StateToInspect == MBActionState::Walking);
+               StateToInspect == MBActionState::Falling);
+        if(StateToInspect == MBActionState::None && FrameToInspect.StateFlags.Airborne)
+        {
+            ReturnValue = true;
+        }
         return(ReturnValue);
     }
     inline MBAttackID StateToMBAttackID_Fox(Event_PostFrameUpdate const& AssociatedState)
@@ -431,7 +437,7 @@ namespace MBSlippi
                     AssociatedState.ActionStateID == ActionState::FallAerialB
                 )
         {
-            ReturnValue = MBActionState::Tumbling;
+            ReturnValue = MBActionState::Falling;
         }
         else if (AssociatedState.ActionStateID == ActionState::DamageFall)
         {
@@ -541,6 +547,10 @@ namespace MBSlippi
         {
             ReturnValue = MBActionState::Attacking;
         }
+        else if (AssociatedState.ActionStateID == ActionState::Wait)
+        {
+            ReturnValue = MBActionState::Standing;
+        }
         return(ReturnValue);
     }
     MBActionStateFlags FrameToMBActionStateFlags(Event_PostFrameUpdate const& AssociatedState)
@@ -618,6 +628,7 @@ namespace MBSlippi
         "Airdodge",
         "Jump",
         "DoubleJump",
+        "Standing",
     };
     std::string MBActionStateToString(MBActionState StateToConvert)
     { 
@@ -826,13 +837,13 @@ namespace MBSlippi
                     auto& CurrentFrame = Result.Frames.back();
                     for(int i = 0; i < 4; i++)
                     {
-                        if(StateIsActionable(CurrentFrame.PlayerInfo[i].ActionState))
+                        if(FrameIsActionable(CurrentFrame.PlayerInfo[i]))
                         {
                             ActionableFrameCount[i] += 1;    
                         }
                         else
                         {
-                            ActionableFrameCount[i] = 0;   
+                            ActionableFrameCount[i] = 0;
                         }
                         CurrentFrame.PlayerInfo[i].ActionableFrames = ActionableFrameCount[i];
                     }

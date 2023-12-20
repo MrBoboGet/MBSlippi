@@ -82,6 +82,7 @@ namespace MBSlippi
         Airdodge,
         Jump,
         DoubleJump,
+        Standing,
         Null
     };
     
@@ -148,7 +149,6 @@ namespace MBSlippi
     MBAttackID StringToMBAttackID(std::string const& StringToConvert);
     MBActionState StringToMBActionState(std::string const& StringToConvert);
     
-    bool StateIsActionable(MBActionState StateToInspect);
     struct PlayerInfo
     {
         std::string Tag;
@@ -190,6 +190,7 @@ namespace MBSlippi
             return(ReturnValue);
         }
     };
+    bool FrameIsActionable(PlayerFrameInfo StateToInspect);
     struct FrameInfo
     {
         PlayerFrameInfo PlayerInfo[4];
