@@ -44,6 +44,9 @@ namespace MBSlippi
     void ArgumentList::SetParentArgList(ArgumentList const* ParentList)
     {
         m_ParentArgList = ParentList;
+        m_EvaluatedKeyPositions.clear();
+        m_EvaluatedPositionalPositions.clear();
+        m_EvaluatedKeyPositions.clear();
     }
     ArgumentList::ArgumentList(std::vector<MQL_Filter> PositionalArguments,std::unordered_map<std::string,MQL_Filter>& KeyArgs)
     {
@@ -111,7 +114,57 @@ namespace MBSlippi
     {
         return(m_KeyPositions.find(VariableToCheck) != m_KeyPositions.end());
     }
-    MQL_Filter const* ArgumentList::p_GetEvaluatedValue(MQL_Filter const& Value) const
+    MQL_Filter ArgumentList::p_EvaluateConstExpr(MQL_Filter const& Expr) const
+    {
+        MQL_Filter_Literal ReturnValue;
+        MeleeGame Game;
+        std::vector<MQL_MetricVariable> Result;
+        if(m_ParentArgList == nullptr)
+        {
+            Result = MQLEvaluator::EvaluateMetric(Game,{{0,0}},ArgumentList(),Expr);
+        }
+        else
+        {
+            Result = MQLEvaluator::EvaluateMetric(Game,{{0,0}},*m_ParentArgList,Expr);
+        }
+        assert(Result.size() == 1);
+        ReturnValue.Value = p_VariableToLiteral(Result[0]);
+        return ReturnValue;
+    }
+    Literal ArgumentList::p_VariableToLiteral(MQL_MetricVariable const& Var)
+    {
+        Literal ReturnValue;
+        if(std::holds_alternative<bool>(Var.Data))
+        {
+            Literal_Number NewRetValue;
+            NewRetValue.Value = std::get<bool>(Var.Data);
+            ReturnValue = NewRetValue;
+        }
+        else if(std::holds_alternative<int>(Var.Data))
+        {
+            Literal_Number NewRetValue;
+            NewRetValue.Value = std::get<int>(Var.Data);
+            ReturnValue = NewRetValue;
+        }
+        else if(std::holds_alternative<std::string>(Var.Data))
+        {
+            Literal_String NewRetValue;
+            NewRetValue.Value = std::get<std::string>(Var.Data);
+            ReturnValue = NewRetValue;
+        }
+        else if(std::holds_alternative<float>(Var.Data))
+        {
+            Literal_Number NewRetValue;
+            NewRetValue.Value = std::get<float>(Var.Data);
+            ReturnValue = NewRetValue;
+        }
+        else
+        {
+            assert(false && "p_VariableToLiteral doesn't cover all cases");   
+        }
+        return ReturnValue;
+    }
+    MQL_Filter const* ArgumentList::p_LookUpVar(MQL_Filter const& Value) const
     {
         MQL_Filter const* ReturnValue = nullptr;
         if(!Value.IsLiteral())
@@ -132,7 +185,7 @@ namespace MBSlippi
         {
             auto const& PosRef = Literal.GetType<Literal_PosRef>();
             assert(PosRef.Pos < m_PositionalArguments.size());
-            return p_GetEvaluatedValue(m_PositionalArguments[PosRef.Pos]);
+            return p_LookUpVar(m_PositionalArguments[PosRef.Pos]);
         }
         else
         {
@@ -149,62 +202,111 @@ namespace MBSlippi
             return ReturnValue;
         }
         auto const& Var = m_KeyArgs[VarIt->second];
-        return p_GetEvaluatedValue(Var);
+        auto const* LookedUpVar = p_LookUpVar(Var);
+        if(LookedUpVar == nullptr)
+        {
+            return nullptr;   
+        }
+        assert(LookedUpVar != nullptr);
+        auto const& Value = *LookedUpVar;
+        if(Value.IsConstExpr())
+        {
+            //ensures that vector doesnt get resized
+            m_EvaluatedValues.reserve(PositionalCount() + m_KeyArgs.size());
+            if(auto It = m_EvaluatedKeyPositions.find(StringToSearch); It == m_EvaluatedKeyPositions.end())
+            {
+                auto EvaluatedValue = p_EvaluateConstExpr(Value);
+                m_EvaluatedKeyPositions[StringToSearch] = m_EvaluatedValues.size();
+                m_EvaluatedValues.push_back(std::move(EvaluatedValue));
+                return &m_EvaluatedValues.back();
+            }      
+            else
+            {
+                return & m_EvaluatedValues[It->second];
+            }
+        }
+        return &Value;   
+        //return p_GetEvaluatedValue(Var);
+    }
+    MQL_Filter const* ArgumentList::p_GetEvaluatedValue(size_t AssociatedIndex) const
+    {
+        MQL_Filter const*  ReturnValue = nullptr;
+        auto const& Var = m_PositionalArguments[AssociatedIndex];
+        auto const* LookedUpVar = p_LookUpVar(Var);
+        if(LookedUpVar == nullptr)
+        {
+            throw std::runtime_error("Error in variable lookup");
+        }
+        auto const& Value = *LookedUpVar;
+        if(Value.IsConstExpr())
+        {
+            //ensures that vector doesnt get resized
+            m_EvaluatedValues.reserve(PositionalCount() + m_KeyArgs.size());
+            if(auto It = m_EvaluatedPositionalPositions.find(AssociatedIndex); It == m_EvaluatedPositionalPositions.end())
+            {
+                auto EvaluatedValue = p_EvaluateConstExpr(Value);
+                m_EvaluatedPositionalPositions[AssociatedIndex] = m_EvaluatedValues.size();
+                m_EvaluatedValues.push_back(std::move(EvaluatedValue));
+                return &m_EvaluatedValues.back();
+            }      
+            else
+            {
+                return & m_EvaluatedValues[It->second];
+            }
+        }
+        return &Value;   
+        //return p_GetEvaluatedValue(Var);
+
     }
     std::string ArgumentList::GetNamedVariableString(std::string const& VariableName) const
     {
         std::string ReturnValue;
-        auto VarIt = m_KeyPositions.find(VariableName);
-        if(VarIt == m_KeyPositions.end())
+        MQL_Filter const& Result = (*this)[VariableName];
+        if(!Result.IsLiteral())
         {
-            throw std::runtime_error("Can't find variable with name"+VariableName+ " in argument list");   
+            throw std::runtime_error("Variable not of string or integer type");
         }
-        auto const& Var = m_KeyArgs[VarIt->second];
-        if(!Var.IsType<MQL_Filter_Literal>())
+        auto const& Literal = Result.GetType<MQL_Filter_Literal>().Value;
+        if(Literal.IsType<Literal_String>())
         {
-            throw std::runtime_error("Value of variable in NamedVariableString was not a string or integer");
+            return Literal.GetType<Literal_String>().Value;
         }
-        auto const& Value = Var.GetType<MQL_Filter_Literal>().Value;
-        if(Value.IsType<Literal_String>())
+        else if(Literal.IsType<Literal_Number>())
         {
-            ReturnValue = Value.GetType<Literal_String>().Value;
+            return std::to_string(Literal.GetType<Literal_Number>().Value);
         }
-        else if(Value.IsType<Literal_Symbol>())
+        else
         {
-            //look for symbol in partent scope
-            if(m_ParentArgList == nullptr)
+            if(!Result.IsLiteral())
             {
-                throw std::runtime_error("Symbol lookup requires parent ArgList");
+                throw std::runtime_error("Variable not of string or integer type");
             }
-            ReturnValue = m_ParentArgList->GetNamedVariableString(Value.GetType<Literal_Symbol>().Value);
         }
         return ReturnValue;
     }
     std::string ArgumentList::GetPositionalArgumentString(int Index) const
     {
         std::string ReturnValue;
-        if(Index > m_PositionalArguments.size())
+        MQL_Filter const& Result = (*this)[Index];
+        if(!Result.IsLiteral())
         {
-            throw std::runtime_error("Index out of range in Positional argument access");   
+            throw std::runtime_error("Variable not of string or integer type");
         }
-        auto const& Var = m_PositionalArguments[Index];
-        if(!Var.IsType<MQL_Filter_Literal>())
-        {
-            throw std::runtime_error("Variable of PositionalArgumentString was not of type string or integer");
-        }
-        auto const& Literal = Var.GetType<MQL_Filter_Literal>().Value;
+        auto const& Literal = Result.GetType<MQL_Filter_Literal>().Value;
         if(Literal.IsType<Literal_String>())
         {
-            ReturnValue = Literal.GetType<Literal_String>().Value;
+            return Literal.GetType<Literal_String>().Value;
         }
-        else if(Literal.IsType<Literal_Symbol>())
+        else if(Literal.IsType<Literal_Number>())
         {
-            //look for symbol in partent scope
-            if(m_ParentArgList == nullptr)
+            return std::to_string(Literal.GetType<Literal_Number>().Value);
+        }
+        else
+        {
+            if(!Result.IsLiteral())
             {
-                throw std::runtime_error("Symbol lookup requires parent ArgList");
+                throw std::runtime_error("Variable not of string or integer type");
             }
-            ReturnValue = m_ParentArgList->GetNamedVariableString(Literal.GetType<Literal_Symbol>().Value);
         }
         return ReturnValue;
     }
@@ -218,7 +320,9 @@ namespace MBSlippi
         {
             throw std::runtime_error("Variable access out of bounds in argument list");   
         }
-        return m_PositionalArguments[Index];
+        MQL_Filter const* ReturnValue = p_GetEvaluatedValue(Index);
+        assert(ReturnValue != nullptr);
+        return *ReturnValue;
     }
     MQL_Filter const& ArgumentList::operator[](std::string const& Name) const
     {
@@ -1028,6 +1132,7 @@ namespace MBSlippi
         std::type_index Lhs = typeid(nullptr);
         std::type_index Rhs = typeid(nullptr);
         std::type_index NewType = typeid(nullptr);
+        bool IsConstExpr = true;
         for(auto Index : PartOperator.OperatorPositions)
         {
             ReturnValue.Operands.push_back(p_ConvertMetricOperatorList(AssociatedModule,
@@ -1040,6 +1145,16 @@ namespace MBSlippi
             {
                 Rhs = NewType;   
             }
+
+            auto const& LastValue = ReturnValue.Operands.back();
+            if(LastValue.IsType<MQL_MetricCombiner>())
+            {
+                IsConstExpr = IsConstExpr && LastValue.GetType<MQL_MetricCombiner>().IsConstexpr;
+            }
+            else if(LastValue.IsType<MQL_Metric>())
+            {
+                IsConstExpr = IsConstExpr && LastValue.GetType<MQL_Metric>().IsConstexpr;
+            }
             //else if(ResultType != NewType)
             //{
             //    p_AddDiagnostic(OutDiagnostics,FilterToConvert,PrevIndex,Index,
@@ -1049,6 +1164,7 @@ namespace MBSlippi
         }
         ReturnValue.LhsType = Lhs;
         ReturnValue.RhsType = Rhs;
+        ReturnValue.IsConstexpr = IsConstExpr;
         if(ReturnValue.Type == OperatorType::Add || ReturnValue.Type == OperatorType::Pipe)
         {
             p_AddDiagnostic(OutDiagnostics,FilterToConvert,BeginIndex,EndIndex,"Invalid operator for metric filter");
@@ -1061,6 +1177,7 @@ namespace MBSlippi
                         "Invalid operator with lhs of type "+std::string(Lhs.name())+" and rhs of type "+ Rhs.name());
             }
         }
+        ReturnValue.ResultType = OutType;
         return ReturnValue;
     }
     MQL_Filter MQLEvaluator::p_ConvertMetricComponent(MQL_Module& AssociatedModule,ArgumentList& ParentArgList,
@@ -1081,7 +1198,7 @@ namespace MBSlippi
                 OutType = typeid(int);
             }
             else if(Literal.Value.IsType<Literal_Symbol>())
-            {
+            {   
                 Literal_Symbol const& Symbol = Literal.Value.GetType<Literal_Symbol>();
                 if(ParentArgList.HasNamedVariable(Symbol.Value))
                 {
@@ -1123,6 +1240,8 @@ namespace MBSlippi
                     NewMetric.Args = p_ConvertArgList(AssociatedModule,ParentArgList,Func.ArgumentList,OutDiagnostics);
                     NewMetric.Metric = MetricIt->second;
                     OutType = MetricIt->second.ResultType;
+                    NewMetric.IsConstexpr = MetricIt->second.IsConstexpr;
+                    NewMetric.ResultType = MetricIt->second.ResultType;
                     if(NewMetric.Metric.ArgCheckers.size() > 0)
                     {
                         NewMetric.Args.SetParentArgList(&ParentArgList);
@@ -1183,6 +1302,31 @@ namespace MBSlippi
         }
         return ReturnValue;
     }
+    MQL_Filter MQLEvaluator::p_ConvertArgComponent(MQL_Module& AssociatedModule, ArgumentList& ParentArgList, Filter_Component const& Filter,std::vector<MBLSP::Diagnostic>& OutDiagnostics)
+    {
+        MQL_Filter ReturnValue;
+        if(Filter.IsType<Filter_OperatorList>())
+        {
+            auto const& Operators = Filter.GetType<Filter_OperatorList>();
+            if(Operators.Components.size() == 1)
+            {
+                return p_ConvertArgComponent(AssociatedModule,ParentArgList,Operators.Components[0],OutDiagnostics);
+            }
+        }
+        else if(Filter.IsType<Filter_Component_Func>())
+        {
+            auto const& Func = Filter.GetType<Filter_Component_Func>();
+            if(auto It = m_BuiltinMetrics.find(Func.FilterName.Parts[0].Value); It != m_BuiltinMetrics.end())
+            {
+                if(It->second.IsConstexpr)
+                {
+                    std::type_index OutType = typeid(nullptr);
+                    return p_ConvertMetricComponent(AssociatedModule,ParentArgList,Filter,OutDiagnostics,OutType);
+                }
+            }
+        }
+        return p_ConvertFilterComponent(AssociatedModule,ParentArgList,Filter,OutDiagnostics,true);
+    }
     ArgumentList MQLEvaluator::p_ConvertArgList(MQL_Module& AssociatedModule, ArgumentList& ParentArgList,Filter_ArgList const& ArgsToConvert,std::vector<MBLSP::Diagnostic>& OutDiagnostics)
     {
         ArgumentList ReturnValue;
@@ -1192,12 +1336,12 @@ namespace MBSlippi
         {
             if(Arg.IsType<Filter_Arg_Positional>())
             {
-                PositionalArguments.push_back(p_ConvertFilterComponent(AssociatedModule,ParentArgList,Arg.GetType<Filter_Arg_Positional>().Argument,OutDiagnostics,true));
+                PositionalArguments.push_back(p_ConvertArgComponent(AssociatedModule,ParentArgList,Arg.GetType<Filter_Arg_Positional>().Argument,OutDiagnostics));
             }
             else if(Arg.IsType<Filter_Arg_Named>())
             {
                 auto const& NewKeyArg = Arg.GetType<Filter_Arg_Named>();
-                KeyArgs[NewKeyArg.Name] = p_ConvertFilterComponent(AssociatedModule,ParentArgList,NewKeyArg.Argument,OutDiagnostics,true);
+                KeyArgs[NewKeyArg.Name] = p_ConvertArgComponent(AssociatedModule,ParentArgList,NewKeyArg.Argument,OutDiagnostics);
             }
         }
         return ArgumentList(std::move(PositionalArguments),KeyArgs);
@@ -2299,6 +2443,26 @@ namespace MBSlippi
     //    }
     //    return(ReturnValue);
     //}
+    std::vector<GameIntervall> MQLEvaluator::p_EvaluateSubIntervalls(
+            MQL_Module& AssociatedModule,
+            MeleeGame const& InputGame,
+            std::vector<GameIntervall> const& InputIntervalls,
+            ArgumentList const& ArgList,
+            MQL_Filter const& Filter)
+    {
+        std::vector<GameIntervall> ReturnValue;
+        auto Parent = ArgList.GetParentArgList();
+        if(Parent == nullptr)
+        {
+            ArgumentList TempList;
+            return p_EvaluateGameIntervalls(AssociatedModule,InputGame,InputIntervalls,TempList,Filter);
+        }
+        else
+        {
+            return p_EvaluateGameIntervalls(AssociatedModule,InputGame,InputIntervalls,*Parent,Filter);
+        }
+        return ReturnValue;
+    }
     std::vector<GameIntervall> MQLEvaluator::p_EvaluateGameIntervalls(
             MQL_Module& AssociatedModule,
             MeleeGame const& InputGame,
@@ -2368,7 +2532,7 @@ namespace MBSlippi
         {
             auto const& Combiner = Filter.GetType<MQL_MetricCombiner>();
             Negated = Combiner.Negated;
-            auto Results = p_EvaluateMetric(InputGame,InputIntervalls,ArgList,Filter);
+            auto Results = EvaluateMetric(InputGame,InputIntervalls,ArgList,Filter);
             for(size_t i = 0; i < Results.size();i++)
             {
                 if(std::get<bool>(Results[i].Data))
@@ -2472,7 +2636,7 @@ namespace MBSlippi
 
         return ReturnValue;
     }
-    std::vector<MQL_MetricVariable> MQLEvaluator::p_EvaluateMetric(
+    std::vector<MQL_MetricVariable> MQLEvaluator::EvaluateMetric(
             MeleeGame const& InputGame,
             std::vector<GameIntervall> const& InputIntervalls,
             ArgumentList const& ArgList,
@@ -2527,8 +2691,8 @@ namespace MBSlippi
         {
             auto const& Combiner = Filter.GetType<MQL_MetricCombiner>();
             assert(Combiner.Operands.size() == 2);
-            std::vector<MQL_MetricVariable> Lhs = p_EvaluateMetric(InputGame,InputIntervalls,ArgList,Combiner.Operands[0]);
-            std::vector<MQL_MetricVariable> Rhs = p_EvaluateMetric(InputGame,InputIntervalls,ArgList,Combiner.Operands[1]);
+            std::vector<MQL_MetricVariable> Lhs = EvaluateMetric(InputGame,InputIntervalls,ArgList,Combiner.Operands[0]);
+            std::vector<MQL_MetricVariable> Rhs = EvaluateMetric(InputGame,InputIntervalls,ArgList,Combiner.Operands[1]);
             if(Combiner.LhsType == typeid(std::string))
             {
                 if(Combiner.Type == OperatorType::Plus)
@@ -2694,7 +2858,7 @@ namespace MBSlippi
             std::vector<std::vector<MQL_MetricVariable>> Values;
             for(auto const& Metric : Columns)
             {
-                Values.push_back(p_EvaluateMetric(Game.GameData,Game.IntervallsToRecord,ArgList,Metric));
+                Values.push_back(EvaluateMetric(Game.GameData,Game.IntervallsToRecord,ArgList,Metric));
             }
             for(size_t i = 0; i < Game.IntervallsToRecord.size();i++)
             {
@@ -3299,6 +3463,27 @@ namespace MBSlippi
             }
         }
     }
+    void MQLEvaluator::OtherArgChecker(ArgumentErrors& OutError,ArgumentList const& Args)
+    {
+        if(Args.PositionalCount() != 1)
+        {
+            OutError.GenericErrors.push_back("Other requires exactly 1 positional option");   
+            return;
+        }
+        auto const& PosOption = Args[0];
+        if(!PosOption.IsLiteral())
+        {
+            OutError.PositionalErrors[0] = "Must be of integer type";
+        }
+        else
+        {
+            auto const& Literal = PosOption.GetType<MQL_Filter_Literal>().Value;
+            if(!Literal.IsType<Literal_Number>())
+            {
+                OutError.PositionalErrors[0] = "Must be of integer type";
+            }
+        }
+    }
     int MQLEvaluator::GetPlayerIndex(ArgumentList const& ExtraArguments)
     {
         int ReturnValue = 0;
@@ -3440,7 +3625,9 @@ namespace MBSlippi
                     {
                         continue;   
                     }
-                    auto MetricResults = Context.GetEvaluator().p_EvaluateMetric(GameToInspect,h_SplitIntervall(Intervall),ExtraArguments,Predicate);
+                    //parent of this arglist is the metric supplied as argument scope
+                    auto MetricResults = Context.GetEvaluator().EvaluateMetric(GameToInspect,h_SplitIntervall(Intervall),
+                            ExtraArguments.GetParentArgList() == nullptr ? ExtraArguments : *ExtraArguments.GetParentArgList() ,Predicate);
                     int IntervallEnd = Intervall.FirstFrame;
                     for(auto const& Result : MetricResults)
                     {
@@ -3466,7 +3653,7 @@ namespace MBSlippi
                     {
                         continue;   
                     }
-                    auto FilterResult = Context.GetEvaluator().p_EvaluateGameIntervalls(Context.GetModule(),GameToInspect,{Intervall},ExtraArguments,Predicate);
+                    auto FilterResult = Context.GetEvaluator().p_EvaluateSubIntervalls(Context.GetModule(),GameToInspect,{Intervall},ExtraArguments,Predicate);
                     if(FilterResult.size() > 0)
                     {
                         Intervall.LastFrame = FilterResult.front().FirstFrame;   
@@ -3742,10 +3929,9 @@ namespace MBSlippi
         for(auto const& Intervall : IntervallsToInspect)
         {
             IntervallVector[0] = Intervall;
-            ArgumentList ArgList;
             if(Filter.IsFilter())
             {
-                auto SubsetIntervalls = Context.GetEvaluator().p_EvaluateGameIntervalls(Context.GetModule(),GameToInspect,IntervallVector,ArgList,Filter);
+                auto SubsetIntervalls = Context.GetEvaluator().p_EvaluateSubIntervalls(Context.GetModule(),GameToInspect,IntervallVector,ExtraArguments,Filter);
                 if(SubsetIntervalls.size() > 0)
                 {
                     ReturnValue.push_back(Intervall);   
@@ -3753,7 +3939,7 @@ namespace MBSlippi
             }
             else
             {
-                auto MetricResults = Context.GetEvaluator().p_EvaluateMetric(GameToInspect,h_SplitIntervall(Intervall),ArgList,Filter);
+                auto MetricResults = Context.GetEvaluator().EvaluateMetric(GameToInspect,h_SplitIntervall(Intervall),ExtraArguments,Filter);
                 for(auto const& Result : MetricResults)
                 {
                     assert(std::holds_alternative<bool>(Result.Data));
@@ -3905,6 +4091,12 @@ namespace MBSlippi
         {
             ReturnValue.push_back(GameToInspect.Frames[Intervall.FirstFrame].PlayerInfo[PlayerIndex].ActionableFrames);
         }
+        return ReturnValue;
+    }
+    std::vector<MQL_MetricVariable> MQLEvaluator::Other METRIC_ARGLIST
+    {
+        std::vector<MQL_MetricVariable> ReturnValue;
+        ReturnValue.push_back( (ExtraArguments[0].GetType<MQL_Filter_Literal>().Value.GetType<Literal_Number>().Value + 1)%2);
         return ReturnValue;
     }
     std::vector<MQL_MetricVariable> MQLEvaluator::File METRIC_ARGLIST

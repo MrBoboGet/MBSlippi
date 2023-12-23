@@ -46,7 +46,7 @@ namespace MBSlippi
 
         void p_PushDiagnostics(DocumentInfo& DocumentData,std::string const& URI);
         std::vector<MBLSP::SemanticToken> p_ExtractTokens(Module const& Spec);
-        DocumentInfo p_CreateDocumentInfo(std::string const& Content);
+        DocumentInfo p_CreateDocumentInfo(std::string const& Content,std::filesystem::path DocumentPath);
         std::unordered_map<std::string,DocumentInfo> m_OpenedDocuments;
     public:
         //Mandatory to support

@@ -13,6 +13,7 @@ namespace MBSlippi
 {
     typedef int  ModuleID;
     class MQL_Filter;
+    class MQL_MetricVariable;
     class ArgumentList
     {
         ArgumentList const* m_ParentArgList = nullptr;
@@ -21,10 +22,21 @@ namespace MBSlippi
         std::vector<MQL_Filter> m_KeyArgs;
         std::unordered_map<std::string,size_t> m_KeyPositions;
 
-        void p_AddKey(std::string const& Key,MQL_Filter Value);
+        //kinda hacky but walla walla
+        mutable std::vector<MQL_Filter> m_EvaluatedValues;
 
-        MQL_Filter const* p_GetEvaluatedValue(MQL_Filter const& Value) const; 
+        mutable std::unordered_map<std::string,size_t> m_EvaluatedKeyPositions;
+        mutable std::unordered_map<size_t,size_t> m_EvaluatedPositionalPositions;
+
+        void p_AddKey(std::string const& Key,MQL_Filter Value);
+        
+        MQL_Filter p_EvaluateConstExpr(MQL_Filter const& Expr) const; 
+        static Literal p_VariableToLiteral(MQL_MetricVariable const& Var);
+
+        MQL_Filter const* p_LookUpVar(MQL_Filter const& Value) const; 
+        MQL_Filter const* p_GetEvaluatedValue(size_t AssociatedIndex) const; 
         MQL_Filter const* p_GetNamedVariable(std::string const& StringToSearch) const; 
+
     public:
         bool Empty() const;
         std::vector<std::string> GetKeys() const;
@@ -32,6 +44,11 @@ namespace MBSlippi
         ArgumentList() = default;
 
         void SetParentArgList(ArgumentList const* ParentList);
+        ArgumentList const* GetParentArgList() const
+        {
+            return m_ParentArgList;   
+        }
+
         ArgumentList(std::vector<MQL_Filter> PositionalArguments,std::unordered_map<std::string,MQL_Filter>& KeyArgs);
         //includes parent scope
         ArgumentList(ArgumentList const& DefinitionBindings,ArgumentList const& SuppliedArguments);
@@ -310,6 +327,7 @@ namespace MBSlippi
         MetricFuncType Func = nullptr;
         std::type_index ResultType = std::type_index(typeid(nullptr));
         std::vector<ArgumentCheckerType> ArgCheckers;
+        bool IsConstexpr = false;
     };
     enum class OperatorType
     {
@@ -338,8 +356,10 @@ namespace MBSlippi
     struct MQL_MetricCombiner
     {
         std::vector<MQL_Filter> Operands;
+        bool  IsConstexpr = false;
         std::type_index LhsType = typeid(nullptr);
         std::type_index RhsType = typeid(nullptr);
+        std::type_index ResultType = typeid(nullptr);
         OperatorType Type = OperatorType::Null;
         bool Negated = false;
     };
@@ -361,6 +381,8 @@ namespace MBSlippi
     };
     struct MQL_Metric
     {
+        bool IsConstexpr = false;
+        std::type_index ResultType = typeid(nullptr);
         ArgumentList Args;
         BuiltinMetric Metric;
     };
@@ -399,9 +421,24 @@ namespace MBSlippi
                     return typeid(int);   
                 }
             }
-            else 
+            else if(IsConstExpr())
             {
-                return typeid(MQL_Filter);
+                if(IsType<MQL_MetricCombiner>())
+                {
+                    return GetType<MQL_MetricCombiner>().ResultType;
+                }
+                else  if(IsType<MQL_Metric>())
+                {
+                    return GetType<MQL_Metric>().ResultType;
+                }
+                else
+                {
+                    assert(false && "GetTypeID doesn't cover all cases");
+                }
+            }
+            else
+            {
+                return typeid(MQL_Filter);   
             }
 
             return typeid(nullptr);
@@ -410,6 +447,23 @@ namespace MBSlippi
         bool IsFilter() const
         {
             return IsType<MQL_FilterCombiner>() || IsType<MQL_FilterReference>() || IsType<MQL_IntervallExtractor>();
+        }
+        bool IsConstExpr() const
+        {
+            bool ReturnValue = false;
+            if(!IsMetric())
+            {
+                return false;   
+            }
+            if(IsType<MQL_MetricCombiner>() && GetType<MQL_MetricCombiner>().IsConstexpr)
+            {
+                ReturnValue = true;   
+            }
+            if(IsType<MQL_Metric>() && GetType<MQL_Metric>().IsConstexpr)
+            {
+                ReturnValue = true;   
+            }
+            return ReturnValue;
         }
         bool IsLiteral() const
         {
@@ -484,6 +538,7 @@ namespace MBSlippi
         static void HasArgChecker(ArgumentErrors& OutError,ArgumentList const& Args);
         static void PunishArgChecker(ArgumentErrors& OutError,ArgumentList const& Args);
         static void CorneredArgChecker(ArgumentErrors& OutError,ArgumentList const& Args);
+        static void OtherArgChecker(ArgumentErrors& OutError,ArgumentList const& Args);
 
         static int GetPlayerIndex(ArgumentList const& ExtraArguments);
     
@@ -535,6 +590,7 @@ namespace MBSlippi
         static std::vector<MQL_MetricVariable> PercentDiff METRIC_ARGLIST;
         static std::vector<MQL_MetricVariable> Length METRIC_ARGLIST;
         static std::vector<MQL_MetricVariable> ActionableFrames METRIC_ARGLIST;
+        static std::vector<MQL_MetricVariable> Other METRIC_ARGLIST;
         std::unordered_map<std::string,BuiltinMetric> m_BuiltinMetrics = 
         {
             {"Percent",{Percent,typeid(float),{PlayerArgChecker}}},
@@ -546,6 +602,7 @@ namespace MBSlippi
             {"PercentDiff",{PercentDiff,typeid(float),{PlayerArgChecker}}},
             {"Length",{Length,typeid(int),{}}},
             {"ActionableFrames",{ActionableFrames,typeid(int),{PlayerArgChecker}}},
+            {"Other",{Other,typeid(int),{OtherArgChecker},true}},
         };
 
         std::vector<SpecServer> m_SpecServers;
@@ -591,7 +648,13 @@ namespace MBSlippi
         //std::vector<GameIntervall> p_EvaluateGameIntervalls(MQL_Module& AssociatedModule,ArgumentList& ParentArgList,Filter_Component const& FilterToUse,
         //        std::vector<GameIntervall> const& InputIntervalls,MeleeGame const& GameToFilter);
 
-        
+      
+        std::vector<GameIntervall> p_EvaluateSubIntervalls(
+                MQL_Module& AssociatedModule,
+                MeleeGame const& InputGame,
+                std::vector<GameIntervall> const& InputIntervalls,
+                ArgumentList const& ArgList,
+                MQL_Filter const& Filter);
         std::vector<GameIntervall> p_EvaluateGameIntervalls(
                 MQL_Module& AssociatedModule,
                 MeleeGame const& InputGame,
@@ -599,11 +662,6 @@ namespace MBSlippi
                 ArgumentList const& ArgList,
                 MQL_Filter const& Filter);
 
-        std::vector<MQL_MetricVariable> p_EvaluateMetric(
-                MeleeGame const& InputGame,
-                std::vector<GameIntervall> const& InputIntervalls,
-                ArgumentList const& ArgList,
-                MQL_Filter const& Filter);
         
         //converts and verifies
         struct PrecedenceInfo
@@ -644,6 +702,7 @@ namespace MBSlippi
         MQL_Filter p_ConvertFilterComponent(MQL_Module& AssociatedModule,ArgumentList& ParentArgList,
                 Filter_Component const& FilterToConvert,std::vector<MBLSP::Diagnostic>& OutDiagnostics,bool AllowLiterals = false);
 
+        MQL_Filter p_ConvertArgComponent(MQL_Module& AssociatedModule, ArgumentList& ParentArgList,Filter_Component const& Filter,std::vector<MBLSP::Diagnostic>& OutDiagnostics);
         ArgumentList p_ConvertArgList(MQL_Module& AssociatedModule, ArgumentList& ParentArgList,Filter_ArgList const& ArgsToConvert,std::vector<MBLSP::Diagnostic>& OutDiagnostics);
       
         static MBLSP::Position p_GetBegin(Literal const& Component);
@@ -664,6 +723,12 @@ namespace MBSlippi
 
         bool p_EvaluateImport(MQL_Module& AssociatedModule,Import& ImportStatement,std::vector<MBLSP::Diagnostic>& OutDiagnostics);
     public:
+        static std::vector<MQL_MetricVariable> EvaluateMetric(
+                MeleeGame const& InputGame,
+                std::vector<GameIntervall> const& InputIntervalls,
+                ArgumentList const& ArgList,
+                MQL_Filter const& Filter);
+
         void SetDBAdapter(MeleeGameDBAdapter* NewAdapter);
         void SetRecorder(MeleeGameRecorder* NewRecorder);
         void InitializeServers(std::vector<ServerInitilizationData> const& ServersToInitialize);

@@ -277,7 +277,7 @@ namespace MBSlippi
         std::sort(ReturnValue.begin(),ReturnValue.end());
         return(ReturnValue);
     }
-    SlippiLSP::DocumentInfo SlippiLSP::p_CreateDocumentInfo(std::string const& Content)
+    SlippiLSP::DocumentInfo SlippiLSP::p_CreateDocumentInfo(std::string const& Content,std::filesystem::path DocumentPath)
     {
         DocumentInfo ReturnValue;
         m_Tokenizer.SetText(Content);
@@ -289,7 +289,8 @@ namespace MBSlippi
             MQLEvaluator Evaluator;
             Evaluator.SetDBAdapter(&m_TempHandler);
             Evaluator.SetRecorder(&m_TempHandler);
-            MQL_Module TempModule;
+            MQL_Module TempModule = Evaluator.GetModule(Evaluator.LoadEmptyModule());
+            TempModule.ModulePath = DocumentPath;
             Evaluator.VerifyModule(TempModule,ReturnValue.ParsedModule,ReturnValue.Diagnostics);
             if(!m_Tokenizer.IsEOF(m_Tokenizer.Peek()))
             {
@@ -339,7 +340,7 @@ namespace MBSlippi
     }
     void SlippiLSP::OpenedDocument(std::string const& URI,std::string const& Content)
     {
-        m_OpenedDocuments[URI] = p_CreateDocumentInfo(Content);
+        m_OpenedDocuments[URI] = p_CreateDocumentInfo(Content, MBLSP::URLDecodePath(URI));
         p_PushDiagnostics(m_OpenedDocuments[URI],URI);
     }
     void SlippiLSP::ClosedDocument(std::string const& URI)
@@ -348,13 +349,13 @@ namespace MBSlippi
     }
     void SlippiLSP::DocumentChanged(std::string const& URI,std::string const& NewContent)
     {
-        DocumentInfo NewDocumentInfo = p_CreateDocumentInfo(NewContent);
+        DocumentInfo NewDocumentInfo = p_CreateDocumentInfo(NewContent, MBLSP::URLDecodePath(URI));
         m_OpenedDocuments[URI] = std::move(NewDocumentInfo);
         p_PushDiagnostics(m_OpenedDocuments[URI],URI);
     }
     void SlippiLSP::DocumentChanged(std::string const& URI,std::string const& NewContent,std::vector<MBLSP::TextChange> const& Changes)
     {
-        DocumentInfo NewDocumentInfo = p_CreateDocumentInfo(NewContent);
+        DocumentInfo NewDocumentInfo = p_CreateDocumentInfo(NewContent, MBLSP::URLDecodePath(URI));
         if(!NewDocumentInfo.CorrectParsing && m_OpenedDocuments[URI].SemanticTokens.size() != 0)
         {
             NewDocumentInfo.SemanticTokens = MBLSP::UpdateSemanticTokens(m_OpenedDocuments[URI].SemanticTokens,Changes);
