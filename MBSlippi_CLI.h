@@ -1,5 +1,4 @@
 #pragma once
-#include "MBSlippiScript.h"
 #include "MBSlippiConfig.h"
 #include <MBCLI/MBCLI.h>
 #include <MBPacketManager/MB_PacketProtocol.h>
@@ -10,6 +9,7 @@
 
 #include <MBParsing/Csv.h>
 
+#include "DolphinConfig.h"
 namespace MBSlippi
 {
     //LSP in syntax transporatation only

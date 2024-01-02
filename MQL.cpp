@@ -84,7 +84,7 @@ namespace MBSlippi
             m_PositionalArguments[ CurrentArgumentIndex] = SuppliedArguments.m_PositionalArguments[CurrentArgumentIndex];
             Literal_PosRef Ref;
             Ref.Pos = CurrentArgumentIndex;
-            p_AddKey(DefinitionBindings.m_PositionalArguments[CurrentArgumentIndex].GetType<MQL_Filter_Literal>().Value.GetType<Literal_Symbol>().Value,
+            p_AddKey(DefinitionBindings.m_PositionalArguments[CurrentArgumentIndex].GetType<MQL_Filter_Literal>().Value.GetType<Literal_Symbol>().Value, 
                     MQL_Filter_Literal{Ref});
             CurrentArgumentIndex++;
         }
@@ -1763,7 +1763,7 @@ namespace MBSlippi
         bool ReturnValue = true;
         std::vector<MBLSP::Diagnostic> Diagnostics;
         //no redeclaration allowed, should allow redeclaration if of the same type
-        auto const& VariableBase = DeclarationToVerify.GetType<VariableDeclaration_Base>();
+        auto const& VariableBase = DeclarationToVerify.GetType<VariableDeclaration>().GetBase();
         bool VariableExists = false;
         if(AssociatedModule.ModuleScope.HasVariable(VariableBase.Name))
         {
@@ -1775,6 +1775,50 @@ namespace MBSlippi
             Diagnostics.push_back(std::move(NewDiagnostic));
             VariableExists = true;
         }
+
+
+        //struct TestType
+        //{
+        //    typedef std::string BASE;
+        //};
+        //struct Test2Type : public  TestType
+        //{
+        //    typedef int BASE;
+        //};
+        //struct Test3Type : public  Test2Type
+        //{
+        //    typedef float BASE;
+        //};
+
+        //typedef Statement::Base::i_BaseType<VariableDeclaration>::type TB;
+        //static_assert(std::is_same_v<TB,void>);
+       
+
+        //typedef typename VariableDeclaration::BASE ligma; 
+        //typedef std::void_t<typename VariableDeclaration::BASE> a;
+
+        //static_assert(std::is_same_v<SBase,Statement_Base>);
+        //static_assert(std::is_same_v<SResolved,void>);
+        //static_assert(std::is_same_v<Test2,void>);
+        //static_assert(std::is_same_v<Test2,VariableDeclaration_Base>);
+        //static_assert(std::is_base_of_v<Statement_Base,VariableDeclaration_Filter>);
+
+      
+        //typedef MBCC::BaseType<VariableDeclaration>::type test;
+        //typedef MBCC::BaseType<VariableDeclaration2>::type test3;
+        //typedef MBCC::BaseType<Statement>::type test2;
+
+        //
+        //constexpr bool PossibleType = Statement::PossibleType_v<VariableDeclaration_Filter>;
+        //static_assert(PossibleType);
+       
+
+        typedef MBCC::BaseType<VariableDeclaration>::type Test; 
+        typedef Statement::TypeBaseParent_t<VariableDeclaration> Test2;
+
+        //static_assert(!std::is_same_v<Test,void>,"Bruh bruh bruh, what the fuck is the difference for VariableDeclaration");
+        //typedef MBCC::BaseType<Statement>::type bruh; 
+        
         if(DeclarationToVerify.IsType<VariableDeclaration_Filter>())
         {
             auto const& FilterVariable = DeclarationToVerify.GetType<VariableDeclaration_Filter>();
@@ -1918,7 +1962,7 @@ namespace MBSlippi
         {
             ReturnValue = VerifySelection(AssociatedModule,SpecToVerify.GetType<Selection>(),OutDiagnostics);
         }
-        else if(SpecToVerify.IsType<VariableDeclaration_Base>())
+        else if(SpecToVerify.IsType<VariableDeclaration>())
         {
             ReturnValue = VerifyVariableDeclaration(AssociatedModule,SpecToVerify,OutDiagnostics);
         }
@@ -1945,7 +1989,7 @@ namespace MBSlippi
         MQL_Module TempModule = MQL_Module(AssociatedModule);
         for(auto& Statement : SpecToVerify.Statements)
         {
-            if(Statement.IsType<VariableDeclaration_Base>())
+            if(Statement.IsType<VariableDeclaration>())
             {
                 ReturnValue = VerifyVariableDeclaration(TempModule,Statement,OutDiagnostics,true) && ReturnValue;
             }
@@ -2882,7 +2926,7 @@ namespace MBSlippi
         {
             EvaluateSelection(AssociatedModule,StatementToEvaluate.GetType<Selection>(),OutDiagnostics);
         }
-        else if(StatementToEvaluate.IsType<VariableDeclaration_Base>())
+        else if(StatementToEvaluate.IsType<VariableDeclaration>())
         {
             EvaluateVariableDeclaration(AssociatedModule,StatementToEvaluate,OutDiagnostics);
         }
@@ -2926,7 +2970,7 @@ namespace MBSlippi
             {
                 std::string ModuleContent = MBUtility::ReadWholeFile(CanonicalModulePath);
                 m_Tokenizer.SetText(std::move(ModuleContent));
-                NewModule.Contents = ParseModule(m_Tokenizer);
+                FillModule(NewModule.Contents,m_Tokenizer);
                 EvaluateModule(NewModule,NewModule.Contents,NewModule.LoadErrors);
             }
             catch(MBCC::ParsingException const& e)
@@ -2996,7 +3040,7 @@ namespace MBSlippi
             NewVariableData->Arguments = p_ConvertArgList(AssociatedModule,ParentArgList,FilterDefinition.Arguments,OutDiagnostics);
             NewVariableData->Component = std::make_shared<MQL_Filter>(p_ConvertFilterComponent(AssociatedModule,NewVariableData->Arguments,FilterDefinition.Component,OutDiagnostics));
             NewVariable.Data = std::move(NewVariableData);
-            AssociatedModule.ModuleScope.AddVariable(SpecToEvaluate.GetType<VariableDeclaration_Base>().Name, std::move(NewVariable));
+            AssociatedModule.ModuleScope.AddVariable(SpecToEvaluate.GetType<VariableDeclaration>().GetBase().Name, std::move(NewVariable));
         }
         else if(SpecToEvaluate.IsType<VariableDeclaration_GameList>())
         {
@@ -3004,7 +3048,7 @@ namespace MBSlippi
             MQL_LazyGameList Value;
             Value.GamesToRetrieve = SpecToEvaluate.GetType<VariableDeclaration_GameList>().Selection;
             NewVariable.Data = std::move(Value);
-            AssociatedModule.ModuleScope.AddVariable(SpecToEvaluate.GetType<VariableDeclaration_Base>().Name, std::move(NewVariable));
+            AssociatedModule.ModuleScope.AddVariable(SpecToEvaluate.GetType<VariableDeclaration>().GetBase().Name, std::move(NewVariable));
         }
         else if(SpecToEvaluate.IsType<VariableDeclaration_GameInfoPredicate>())
         {
@@ -3013,7 +3057,7 @@ namespace MBSlippi
             Value.IsPlayerAssignment = false;
             Value.Predicate = SpecToEvaluate.GetType<VariableDeclaration_GameInfoPredicate>().Predicate;
             NewVariable.Data = std::move(Value);
-            AssociatedModule.ModuleScope.AddVariable(SpecToEvaluate.GetType<VariableDeclaration_Base>().Name, std::move(NewVariable));
+            AssociatedModule.ModuleScope.AddVariable(SpecToEvaluate.GetType<VariableDeclaration>().GetBase().Name, std::move(NewVariable));
         }
         else if(SpecToEvaluate.IsType<VariableDeclaration_PlayerSelection>())
         {
@@ -3022,7 +3066,7 @@ namespace MBSlippi
             Value.IsPlayerAssignment = true;
             Value.Predicate = SpecToEvaluate.GetType<VariableDeclaration_PlayerSelection>().Predicate;
             NewVariable.Data = std::move(Value);
-            AssociatedModule.ModuleScope.AddVariable(SpecToEvaluate.GetType<VariableDeclaration_Base>().Name, std::move(NewVariable));
+            AssociatedModule.ModuleScope.AddVariable(SpecToEvaluate.GetType<VariableDeclaration>().GetBase().Name, std::move(NewVariable));
         }
         else if(SpecToEvaluate.IsEmpty())
         {

@@ -6,7 +6,6 @@
 #include <MBUtility/MBFiles.h>
 #include <filesystem>
 
-#include "MBSlippiScript.h"
 
 namespace MBSlippi
 {
@@ -171,13 +170,13 @@ namespace MBSlippi
 		MBUtility::MBFileOutputStream FrameSkipTestStream(&FrameSkipTestFile);
 		MBParsing::SerialiseUBJSON(FrameSkipTestStream, ObjectToWrite);
 
-		MBError MBSParseResult = true;
-		auto Statements = MBScript::ParseFile("./TestScript.mbs", &MBSParseResult);
-		assert(MBSParseResult == true);
-		MBScript::ExecutionEnvironment ExecutionEnvironment;
-		MBParsing::JSONObject SlippiModuleConfig = MBParsing::ParseJSONObject(MBUtility::ReadWholeFile("./MBSlippiConfig.json"), 0, 0, nullptr);
-		ExecutionEnvironment.AddModule(std::make_unique<MBSlippi::MBS_SlippiModule>(SlippiModuleConfig));
-		ExecutionEnvironment.Execute(Statements);
+		//MBError MBSParseResult = true;
+		//auto Statements = MBScript::ParseFile("./TestScript.mbs", &MBSParseResult);
+		//assert(MBSParseResult == true);
+		//MBScript::ExecutionEnvironment ExecutionEnvironment;
+		//MBParsing::JSONObject SlippiModuleConfig = MBParsing::ParseJSONObject(MBUtility::ReadWholeFile("./MBSlippiConfig.json"), 0, 0, nullptr);
+		//ExecutionEnvironment.AddModule(std::make_unique<MBSlippi::MBS_SlippiModule>(SlippiModuleConfig));
+		//ExecutionEnvironment.Execute(Statements);
 		return(0);
 	}
 }

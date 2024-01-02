@@ -212,10 +212,15 @@ namespace MBSlippi
         {
             p_ExtractTokens(OutTokens,StatementToExamine.GetType<Import>());
         }
-        else if(StatementToExamine.IsType<VariableDeclaration_Base>())
+        else if(StatementToExamine.IsType<VariableDeclaration>())
         {
-            auto const& VariableType = StatementToExamine.GetType<VariableDeclaration_Base>();
+            auto const& VariableType = StatementToExamine.GetType<VariableDeclaration>().GetBase();
             OutTokens.push_back(MBLSP::SemanticToken(MBLSP::TokenType::Property,h_Convert(VariableType.NamePosition),VariableType.Name.size()));
+
+            //typedef Statement::i_BaseType<VariableDeclaration>::type Test;
+            typedef MBCC::BaseType<VariableDeclaration>::type Test; 
+            typedef Statement::TypeBaseParent_t<VariableDeclaration> Test2;
+            
             if(StatementToExamine.IsType<VariableDeclaration_Filter>())
             {
                 auto const& FilterType = StatementToExamine.GetType<VariableDeclaration_Filter>();
@@ -283,9 +288,8 @@ namespace MBSlippi
         m_Tokenizer.SetText(Content);
         try
         {
-            ReturnValue.ParsedModule = ParseModule(m_Tokenizer);
-            ReturnValue.Tokens = p_ExtractTokens(ReturnValue.ParsedModule);
-            ReturnValue.SemanticTokens = MBLSP::CalculateSemanticTokens(ReturnValue.Tokens);
+            //ReturnValue.ParsedModule = ParseModule(m_Tokenizer);
+            FillModule(ReturnValue.ParsedModule,m_Tokenizer);
             MQLEvaluator Evaluator;
             Evaluator.SetDBAdapter(&m_TempHandler);
             Evaluator.SetRecorder(&m_TempHandler);
@@ -321,6 +325,8 @@ namespace MBSlippi
             ReturnValue.Diagnostics.back().range.start.character = 0;
             ReturnValue.Diagnostics.back().message = e.what();
         }
+        ReturnValue.Tokens = p_ExtractTokens(ReturnValue.ParsedModule);
+        ReturnValue.SemanticTokens = MBLSP::CalculateSemanticTokens(ReturnValue.Tokens);
         return(ReturnValue);
     }
     MBLSP::Initialize_Response SlippiLSP::HandleRequest(MBLSP::InitializeRequest const& Request)
@@ -358,7 +364,8 @@ namespace MBSlippi
         DocumentInfo NewDocumentInfo = p_CreateDocumentInfo(NewContent, MBLSP::URLDecodePath(URI));
         if(!NewDocumentInfo.CorrectParsing && m_OpenedDocuments[URI].SemanticTokens.size() != 0)
         {
-            NewDocumentInfo.SemanticTokens = MBLSP::UpdateSemanticTokens(m_OpenedDocuments[URI].SemanticTokens,Changes);
+            NewDocumentInfo.Tokens =MBLSP::CombineTokens(std::move(NewDocumentInfo.Tokens),  MBLSP::UpdateSemanticTokens(m_OpenedDocuments[URI].Tokens,Changes));
+            NewDocumentInfo.SemanticTokens = MBLSP::CalculateSemanticTokens(NewDocumentInfo.Tokens);
         }
         m_OpenedDocuments[URI] = std::move(NewDocumentInfo);
         p_PushDiagnostics(m_OpenedDocuments[URI],URI);

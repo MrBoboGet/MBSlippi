@@ -23,6 +23,9 @@
 
 #include <MBUtility/StreamReader.h>
 #include <MBUtility/FileStreams.h>
+#include <stdexcept>
+
+#include "MBSlippiParsing.h"
 
 namespace MBSlippi
 {
@@ -239,7 +242,7 @@ namespace MBSlippi
         std::filesystem::remove_all(DumpDirectory);
         if (!std::filesystem::exists(m_Config.ReplayDolphinDirectory + "/User/Config/Dolphin.ini") || !std::filesystem::exists(m_Config.ReplayDolphinDirectory + "/User/Config/GFX.ini"))
         {
-            throw MBScript::MBSRuntimeException("Dolphin configs doesnt exist. Invalid dolphin replay path specified?");
+            throw std::runtime_error("Dolphin configs doesnt exist. Invalid dolphin replay path specified?");
         }
         DolphinGFX.WriteValues(m_Config.ReplayDolphinDirectory + "/User/Config/GFX.ini");
         DolphinINI.WriteValues(m_Config.ReplayDolphinDirectory + "/User/Config/Dolphin.ini");
@@ -292,7 +295,6 @@ namespace MBSlippi
             m_Terminal.PrintLine("Empty list of games to record, skipping recording");
             return;   
         }
-        std::unique_ptr<MBScript::MBSObject> ReturnValue = std::make_unique<MBScript::MBSObject>();
         //std::string ReplayInfoFile = MBUnicode::PathToUTF8(OutPath);
         std::string OutputVideo = MBUnicode::PathToUTF8(OutPath);
         DolphinConfigParser OriginalIni;
@@ -745,56 +747,6 @@ namespace MBSlippi
     }
     void MBSlippiCLIHandler::p_Handle_Execute_Legacy(MBCLI::ProcessedCLInput const& Input)
     {
-        if (Input.TopCommandArguments.size() != 1)
-        {
-            m_Terminal.SetTextColor(MBCLI::ANSITerminalColor::Red);
-            m_Terminal.Print("execute needs exactly 1 argument: the path to a MBScript file");
-            std::exit(1);
-        }
-        std::string SlippiScriptToExecute = Input.TopCommandArguments[0];
-        MBError Result = true;
-        std::vector<std::unique_ptr<MBScript::MBSStatement>> StatementsToExecute = MBScript::ParseFile(SlippiScriptToExecute, &Result);
-        if (!Result)
-        {
-            m_Terminal.SetTextColor(MBCLI::ANSITerminalColor::Red);
-            m_Terminal.Print("Error parsing MBScript file: " + Result.ErrorMessage);
-            m_Terminal.SetTextColor(MBCLI::ANSITerminalColor::White);
-            std::exit(1);
-        }
-        MBScript::ExecutionEnvironment ExecutionEnvironment;
-        ExecutionEnvironment.AddModule(std::unique_ptr<MBS_SlippiModule>(new MBS_SlippiModule(m_Config)));
-        try
-        {
-            MBError ExecutionResult = ExecutionEnvironment.Execute(StatementsToExecute);
-            if (!ExecutionResult)
-            {
-                m_Terminal.SetTextColor(MBCLI::ANSITerminalColor::Red);
-                m_Terminal.Print("Error executing MBScript file" + ExecutionResult.ErrorMessage);
-                m_Terminal.SetTextColor(MBCLI::ANSITerminalColor::White);
-                std::exit(1);
-            }
-        }
-        catch (MBScript::MBSRuntimeException const& e)
-        {
-            m_Terminal.SetTextColor(MBCLI::ANSITerminalColor::Red);
-            m_Terminal.Print("Unhandled MBScript runtime error: " + std::string(e.what()));
-            m_Terminal.SetTextColor(MBCLI::ANSITerminalColor::White);
-            std::exit(1);
-        }
-        catch (std::runtime_error const& e)
-        {
-            m_Terminal.SetTextColor(MBCLI::ANSITerminalColor::Red);
-            m_Terminal.Print("Error with MBScript implementation: " + std::string(e.what()));
-            m_Terminal.SetTextColor(MBCLI::ANSITerminalColor::White);
-            std::exit(1);
-        }
-        catch (std::exception const& e)
-        {
-            m_Terminal.SetTextColor(MBCLI::ANSITerminalColor::Red);
-            m_Terminal.Print("Unkown error occured: " + std::string(e.what()));
-            m_Terminal.SetTextColor(MBCLI::ANSITerminalColor::White);
-            std::exit(1);
-        }
     }
     void MBSlippiCLIHandler::p_Handle_Play(MBCLI::ProcessedCLInput const& Input)
     {
