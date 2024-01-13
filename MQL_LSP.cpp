@@ -342,6 +342,7 @@ namespace MBSlippi
         ReturnValue.result->capabilities.semanticTokensProvider->legend = Legend;
         ReturnValue.result->capabilities.semanticTokensProvider->full = true;
         ReturnValue.result->capabilities.semanticTokensProvider->range = false;
+        ReturnValue.result->capabilities.completionProvider = MBLSP::CompletionOptions();
         return(ReturnValue); 
     }
     void SlippiLSP::OpenedDocument(std::string const& URI,std::string const& Content)
@@ -407,6 +408,18 @@ namespace MBSlippi
         ReturnValue.result = MBLSP::SemanticTokens();
         ReturnValue.result->data = MBLSP::GetTokenRange(DocIt->second.SemanticTokens,Request.params.range);
         return(ReturnValue);
+    }
+    MBLSP::Completion_Response SlippiLSP::HandleRequest(MBLSP::Completion_Request const& Request)
+    {
+        MBLSP::Completion_Response ReturnValue;
+        auto DocIt = m_OpenedDocuments.find(Request.params.textDocument.uri);
+        if(DocIt == m_OpenedDocuments.end())
+        {
+            throw std::runtime_error("Attempting semanticTokens/range on unopened document");   
+        }
+        auto const& AST = DocIt->second.ParsedModule;
+
+        return ReturnValue;
     }
 
 }

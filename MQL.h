@@ -9,6 +9,8 @@
 #include <type_traits>
 
 #include <unordered_set>
+
+#include <MBUtility/StaticVariant.h>
 namespace MBSlippi
 {
     typedef int  ModuleID;
@@ -498,7 +500,6 @@ namespace MBSlippi
     #define FILTER_ARGLIST (MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,std::vector<GameIntervall> const& IntervallsToInspect,CallContext& Context)
     #define METRIC_ARGLIST (MeleeGame const& GameToInspect,ArgumentList const& ExtraArguments,std::vector<GameIntervall> const& IntervallToInspect)
    
-
     class MQLEvaluator;
     class CallContext
     {
@@ -518,6 +519,40 @@ namespace MBSlippi
             return m_Evaluator;   
         }
     };
+    struct MQL_VariableAssignment 
+    {
+        MBLSP::Position Begin;
+        MBLSP::Position End;
+        std::string Name;
+        MQL_Variable Value;
+    };
+    struct MQL_Import
+    {
+        MBLSP::Position Begin;
+        MBLSP::Position End;
+
+        Identifier ModuleIdentifier;
+        std::string BoundName;
+        ModuleID ImportedModule = -1;
+    };
+    struct MQL_Selection
+    {
+        MBLSP::Position GamesBegin;
+        MBLSP::Position FilterBegin;
+        MBLSP::Position ResultBegin;
+        MBLSP::Position End;
+
+        GameSelection Games;
+        MQL_Filter Filter;
+        Result Output;
+    };
+    //class MQL_Statement : MBUtility::StaticVariant<MQL_VariableAssignment,MQL_Selection,MQL_Import>
+    //{
+    //public:
+    //    using Base::operator=;
+    //};
+    typedef MBUtility::StaticVariant<MQL_VariableAssignment,MQL_Selection,MQL_Import> MQL_Statement;
+
     class MQLEvaluator
     {
     private:
@@ -718,10 +753,20 @@ namespace MBSlippi
         static void p_AddDiagnostic(std::vector<MBLSP::Diagnostic>& OutDiagnostics,Identifier const& ErrorIdentifier,std::string_view Message);
         static void p_AddDiagnostic(std::vector<MBLSP::Diagnostic>& OutDiagnostics,Filter_OperatorList const& ErrorList,int Begin,int End,std::string_view Message);
         static void p_AddDiagnostic(std::vector<MBLSP::Diagnostic>& OutDiagnostics,Filter_Component const& ErrorFilter,std::string_view Message);
+
+
+        void p_VerifyVariableDeclaration(MQL_Module& AssociatedModule,Statement& SpecToEvaluate,std::vector<MBLSP::Diagnostic>& OutDiagnostics);
         
         void p_InitializeServers();
 
-        bool p_EvaluateImport(MQL_Module& AssociatedModule,Import& ImportStatement,std::vector<MBLSP::Diagnostic>& OutDiagnostics);
+        MQL_Statement p_EvaluateImport(MQL_Module& AssociatedModule,Import& ImportStatement,std::vector<MBLSP::Diagnostic>& OutDiagnostics);
+
+        void p_EvaluateImport(MQL_Module& AssociatedModule, MQL_Import& ImportStatement);
+        void p_EvaluateSelection(MQL_Module& AssociatedModule, MQL_Selection& ImportStatement);
+        void p_EvaluateVariableDeclaration(MQL_Module& AssociatedModule, MQL_VariableAssignment& ImportStatement);
+
+
+        MQL_Statement p_VerifyVariableDeclaration(MQL_Module& AssociatedModule,Statement& DeclarationToVerify,std::vector<MBLSP::Diagnostic>& OutDiagnostics,bool UpdateState=false);
     public:
         static std::vector<MQL_MetricVariable> EvaluateMetric(
                 MeleeGame const& InputGame,
@@ -739,17 +784,22 @@ namespace MBSlippi
         MQL_Module& GetModule(ModuleID ID);
 
         //
-        bool VerifyVariableDeclaration(MQL_Module& AssociatedModule,Statement& DeclarationToVerify,std::vector<MBLSP::Diagnostic>& OutDiagnostics,bool UpdateState=false);
-        bool VerifyStatement(MQL_Module& AssociatedModule,Statement& SpecToVerify,std::vector<MBLSP::Diagnostic>& OutDiagnostics);
-        bool VerifySelection(MQL_Module& AssociatedModule,Selection& SpecToVerify,std::vector<MBLSP::Diagnostic>& OutDiagnostics);
+        MQL_Statement VerifyVariableDeclaration(MQL_Module& AssociatedModule,Statement& DeclarationToVerify,std::vector<MBLSP::Diagnostic>& OutDiagnostics);
+        MQL_Statement VerifyStatement(MQL_Module& AssociatedModule,Statement& SpecToVerify,std::vector<MBLSP::Diagnostic>& OutDiagnostics);
+        MQL_Statement VerifySelection(MQL_Module& AssociatedModule,Selection& SpecToVerify,std::vector<MBLSP::Diagnostic>& OutDiagnostics);
 
         //special semantics, in that it modifies the scope, so that modules can be verified correct
         //without needing to actually execute the actions, relatively hacky
-        bool VerifyModule(MQL_Module& AssociatedModule,Module& SpecToVerify,std::vector<MBLSP::Diagnostic>& OutDiagnostics);
-        void EvaluateStatement(MQL_Module& AssociatedModule,Statement& SpecToEvaluate,std::vector<MBLSP::Diagnostic>& OutDiagnostics);
-        void EvaluateImport(MQL_Module& AssociatedModule,Import& ImportToEvaluate,std::vector<MBLSP::Diagnostic>& OutDiagnostics);
-        void EvaluateSelection(MQL_Module& AssociatedModule,Selection& SpecToEvaluate,std::vector<MBLSP::Diagnostic>& OutDiagnostics);
-        void EvaluateVariableDeclaration(MQL_Module& AssociatedModule,Statement& SpecToEvaluate,std::vector<MBLSP::Diagnostic>& OutDiagnostics);
-        void EvaluateModule(MQL_Module& AssociatedModule,Module& SpecToEvaluate,std::vector<MBLSP::Diagnostic>& OutDiagnostics);
+        std::vector<MQL_Statement> VerifyModule(MQL_Module& AssociatedModule,Module& SpecToVerify,std::vector<MBLSP::Diagnostic>& OutDiagnostics);
+
+
+
+        //Execution
+        void EvaluateStatement(MQL_Module& AssociatedModule,MQL_Statement& StatementToEvaluate);
+        void EvaluateModule(MQL_Module& AssociatedModule,std::vector<MQL_Statement>& StatementsToEvaluate);
+
+        //void EvaluateImport(MQL_Module& AssociatedModule,Import& ImportToEvaluate,std::vector<MBLSP::Diagnostic>& OutDiagnostics);
+        //void EvaluateSelection(MQL_Module& AssociatedModule,Selection& SpecToEvaluate,std::vector<MBLSP::Diagnostic>& OutDiagnostics);
+        //void EvaluateVariableDeclaration(MQL_Module& AssociatedModule,Statement& SpecToEvaluate,std::vector<MBLSP::Diagnostic>& OutDiagnostics);
     };
 }

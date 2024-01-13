@@ -6,6 +6,12 @@
 #include <MBLSP/SemanticTokens.h>
 namespace MBSlippi
 {
+
+    struct Scope
+    {
+           
+    };
+
     class SlippiLSP : public MBLSP::LSP_Server
     {
     private:
@@ -15,6 +21,7 @@ namespace MBSlippi
             Module ParsedModule;
             std::vector<MBLSP::Diagnostic> Diagnostics;
             std::vector<MBLSP::SemanticToken> Tokens;
+            //std::vector<std::string> Completions;
             std::vector<int> SemanticTokens;
         };
         MBLSP::LSP_ServerHandler* m_AssociatedHandler = nullptr;
@@ -44,6 +51,10 @@ namespace MBSlippi
         void p_ExtractTokens(std::vector<MBLSP::SemanticToken>& OutTokens,Selection const& SelectionToExamine);
         void p_ExtractTokens(std::vector<MBLSP::SemanticToken>& OutTokens,Import const& ImportToExamine);
 
+        void p_GetCompletions(std::vector<std::string>& Completions,MQL_Scope const& Context ,Identifier const& Identifier);
+        void p_GetStringCompletion(std::vector<std::string>& Completions,MQL_Scope const& Context ,Identifier const& Identifier);
+
+
         void p_PushDiagnostics(DocumentInfo& DocumentData,std::string const& URI);
         std::vector<MBLSP::SemanticToken> p_ExtractTokens(Module const& Spec);
         DocumentInfo p_CreateDocumentInfo(std::string const& Content,std::filesystem::path DocumentPath);
@@ -63,6 +74,7 @@ namespace MBSlippi
         virtual MBLSP::GotoDefinition_Response HandleRequest(MBLSP::GotoDefinition_Request const& Request) override;
         virtual MBLSP::SemanticToken_Response HandleRequest(MBLSP::SemanticToken_Request const& Request) override;
         virtual MBLSP::SemanticTokensRange_Response HandleRequest(MBLSP::SemanticTokensRange_Request const& Request) override;
+        virtual MBLSP::Completion_Response HandleRequest(MBLSP::Completion_Request const& Request) override;
 
     };
 }
