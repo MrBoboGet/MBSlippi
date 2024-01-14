@@ -12,18 +12,63 @@ namespace MBSlippi
            
     };
 
+    struct DocumentInfo
+    {
+        bool CorrectParsing = true;
+        std::filesystem::path ModulePath;
+        MQL_Module ResultModule;
+        Module ParsedModule;
+        std::vector<MQL_Statement> Statements;
+        std::vector<MBLSP::Diagnostic> Diagnostics;
+        std::vector<MBLSP::SemanticToken> Tokens;
+        //std::vector<std::string> Completions;
+        std::vector<int> SemanticTokens;
+
+
+    };
+
+    class CompletionsExtractor
+    {
+        std::vector<std::string> m_Result;
+        MQLEvaluator m_Evaluator;
+        DocumentInfo * m_Document = nullptr;
+        
+        void p_GetCompletions(MBLSP::Position CursorPosition, std::vector<MQL_Statement> const& Statements);
+
+        void p_GetCompletions(MBLSP::Position CursorPosition, MQL_Import const& Statement);
+        void p_GetImportCompletions(MBLSP::Position CursorPosition, Identifier const& ImportPath);
+
+        void p_GetCompletions(MBLSP::Position CursorPosition, MQL_VariableAssignment const& Statement);
+        void p_GetCompletions(MBLSP::Position CursorPosition, MQL_Selection const& Statement);
+
+        void p_GetCompletions(MBLSP::Position CursorPosition, MQL_Filter const& Statement);
+        void p_GetIdentifierCompletions(MBLSP::Position CursorPosition, Identifier const& Statement);
+
+
+        void p_GetCompletions(MBLSP::Position CursorPosition, GameInfoPredicate const& Predicate,bool IsPlayerAssignment);
+        void p_GetAttributeCompletions(MBLSP::Position CursorPosition, Identifier const& Attribute,bool IsPlayerAssignment);
+        int p_GetIdentifierIndex(MBLSP::Position CursorPosition,Identifier const& Ident);
+
+        void p_GetAttributeValueCompletions(MBLSP::Position CursorPosition, Identifier const& Attribute, GameInfoPredicate_Direct const& Valu,bool IsPlayerAssignment);
+
+        void p_GetCompletions(MBLSP::Position CursorPosition, ArgumentList const& VerifiedArgs);
+        void p_GetCompletions(MBLSP::Position CursorPosition, GameSelection const& Selection);
+        void p_GetCompletions(MBLSP::Position CursorPosition, UsingDirective const& Using);
+        void p_GetCompletions(MBLSP::Position CursorPosition, MQL_Result const& Output);
+
+
+        bool p_Empty(MBCC::TokenPosition Pos);
+        bool p_In(MBLSP::Position Left,MBLSP::Position Right,MBLSP::Position Cursor);
+        bool p_In(MBCC::TokenPosition Left,MBCC::TokenPosition Right,MBLSP::Position Cursor);
+        bool p_In(Identifier const& Ident,MBLSP::Position Cursor);
+    public:
+        std::vector<std::string> GetCompletions(DocumentInfo& Document,MBLSP::Position CursorPosition);
+    };
+
+    
     class SlippiLSP : public MBLSP::LSP_Server
     {
     private:
-        struct DocumentInfo
-        {
-            bool CorrectParsing = true;
-            Module ParsedModule;
-            std::vector<MBLSP::Diagnostic> Diagnostics;
-            std::vector<MBLSP::SemanticToken> Tokens;
-            //std::vector<std::string> Completions;
-            std::vector<int> SemanticTokens;
-        };
         MBLSP::LSP_ServerHandler* m_AssociatedHandler = nullptr;
         MBCC::Tokenizer m_Tokenizer = GetTokenizer();
         

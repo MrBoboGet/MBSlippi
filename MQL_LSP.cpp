@@ -13,6 +13,332 @@ namespace MBSlippi
         return(ReturnValue);
     }
 
+
+    //BEGIN CompletionsExtractor
+    bool CompletionsExtractor::p_Empty(MBCC::TokenPosition Pos)
+    {
+        return Pos.ByteOffset == 0 && Pos.Line == 0;
+    }
+    bool CompletionsExtractor::p_In(MBLSP::Position Left,MBLSP::Position Right,MBLSP::Position Cursor)
+    {
+        bool ReturnValue = false;
+        if(Left <= Cursor)
+        {
+            if((Right.character == 0 && Right.line == 0) || Cursor <= Right)
+            {
+                ReturnValue = true;
+            }
+        }
+        return ReturnValue;
+    }
+    bool CompletionsExtractor::p_In(MBCC::TokenPosition Left,MBCC::TokenPosition Right,MBLSP::Position Cursor)
+    {
+        return p_In(h_Convert(Left),h_Convert(Right),Cursor);
+    }
+    bool CompletionsExtractor::p_In(Identifier const& Ident,MBLSP::Position Cursor)
+    {
+        bool ReturnValue = false;
+        if(Ident.Parts.size() > 0)
+        {
+            return p_In(h_Convert(Ident.Parts.front().Position),h_Convert(Ident.End),Cursor);
+        }
+        return ReturnValue;
+    }
+    void CompletionsExtractor::p_GetCompletions(MBLSP::Position CursorPosition, std::vector<MQL_Statement> const& Statements)
+    {
+        for(auto const& Statement : Statements)
+        {
+            if(Statement.IsType<MQL_Import>())
+            {
+                auto const& Import = Statement.GetType<MQL_Import>();
+                if(p_In(Import.Begin,Import.End,CursorPosition))
+                {
+                    p_GetCompletions(CursorPosition,Import);
+                }
+            }
+            else if(Statement.IsType<MQL_VariableAssignment>())
+            {
+                auto const& Assignment = Statement.GetType<MQL_VariableAssignment>();
+                if(p_In(Assignment.Begin,Assignment.End,CursorPosition))
+                {
+                    p_GetCompletions(CursorPosition,Assignment);
+                }
+            }
+            else if(Statement.IsType<MQL_Selection>())
+            {
+                auto const& Selection = Statement.GetType<MQL_Selection>();
+                p_GetCompletions(CursorPosition,Selection);
+            }
+        }   
+    }
+    void CompletionsExtractor::p_GetCompletions(MBLSP::Position CursorPosition, MQL_Import const& Statement)
+    {
+        if(p_In(Statement.ModuleIdentifier,CursorPosition))
+        {
+            p_GetImportCompletions(CursorPosition,Statement.ModuleIdentifier);
+        }
+    }
+    void CompletionsExtractor::p_GetImportCompletions(MBLSP::Position Cursor, Identifier const& ImportPath)
+    {
+        auto SearchDirectories = m_Evaluator.GetModuleSearchDirectories(m_Document->ModulePath);
+        std::filesystem::path BasePath;
+        for(auto const& Token : ImportPath.Parts)
+        {
+            if(p_In( h_Convert(Token.Position),h_Convert(Token.Position)+Token.Value.size()+1,Cursor))
+            {
+                break;
+            }
+            BasePath /= Token.Value;
+        }
+        for(auto const& Dir : SearchDirectories)
+        {
+            std::filesystem::directory_iterator DirIterator(Dir/BasePath);
+            for(auto const& Entry : DirIterator)
+            {
+                if(Entry.is_regular_file())
+                {
+                    if(Entry.path().extension() == ".slpspec")
+                    {
+                        m_Result.push_back(MBUnicode::PathToUTF8(Entry.path().filename().replace_extension("")));
+                    }
+                }
+                else if(Entry.is_directory())
+                {
+                    m_Result.push_back(MBUnicode::PathToUTF8(Entry.path().filename()));
+                }
+            }
+        }
+    }
+    void CompletionsExtractor::p_GetCompletions(MBLSP::Position CursorPosition, MQL_VariableAssignment const& Statement)
+    {
+        if(std::holds_alternative<MQL_Variable_GameInfoPredicate>(Statement.Value.Data))
+        {
+            auto const& Predicate = std::get<MQL_Variable_GameInfoPredicate>(Statement.Value.Data);
+            if(p_In(Predicate.Predicate.Begin,Predicate.Predicate.End,CursorPosition))
+            {
+                p_GetCompletions(CursorPosition,Predicate.Predicate,Predicate.IsPlayerAssignment);
+            }
+        }
+        else if(std::holds_alternative<MQL_LazyGameList>(Statement.Value.Data))
+        {
+            auto const& GameList = std::get<MQL_LazyGameList>(Statement.Value.Data);
+            p_GetCompletions(CursorPosition,GameList.GamesToRetrieve);
+        }
+        else if(std::holds_alternative<std::shared_ptr<MQL_FilterDefinition>>(Statement.Value.Data))
+        {
+            auto const& FilterDef = std::get<std::shared_ptr<MQL_FilterDefinition>>(Statement.Value.Data);
+            p_GetCompletions(CursorPosition,FilterDef->Arguments);
+            p_GetCompletions(CursorPosition,*FilterDef->Component);
+        }
+    }
+    void CompletionsExtractor::p_GetCompletions(MBLSP::Position CursorPosition, MQL_Selection const& Statement)
+    {
+        p_GetCompletions(CursorPosition,Statement.Filter);
+        p_GetCompletions(CursorPosition,Statement.Games);
+        p_GetCompletions(CursorPosition,Statement.Output);
+    }
+    void CompletionsExtractor::p_GetCompletions(MBLSP::Position CursorPosition, MQL_Filter const& Statement)
+    {
+        if(p_In(Statement.Begin,Statement.End,CursorPosition))
+        {
+            if(Statement.IsType<MQL_FilterCombiner>())
+            {
+                auto const& Combiner = Statement.GetType<MQL_FilterCombiner>();
+                for(auto const& SubFilter : Combiner.Operands)
+                {
+                    p_GetCompletions(CursorPosition,SubFilter);
+                }
+            }
+            else if(Statement.IsType<MQL_MetricCombiner>())
+            {
+                auto const& Combiner = Statement.GetType<MQL_MetricCombiner>();
+                for(auto const& SubFilter : Combiner.Operands)
+                {
+                    p_GetCompletions(CursorPosition,SubFilter);
+                }
+            }
+            else if(Statement.IsType<MQL_IntervallExtractor>())
+            {
+                auto const& Filter = Statement.GetType<MQL_IntervallExtractor>();
+                p_GetIdentifierCompletions(CursorPosition,Filter.Name);
+                p_GetCompletions(CursorPosition,Filter.Args);
+            }
+            else if(Statement.IsType<MQL_InvalidFilter>())
+            {
+                auto const& Filter = Statement.GetType<MQL_InvalidFilter>();
+                p_GetIdentifierCompletions(CursorPosition,Filter.Name);
+                p_GetCompletions(CursorPosition,Filter.Args);
+            }
+            else if(Statement.IsType<MQL_FilterReference>())
+            {
+                auto const& Filter = Statement.GetType<MQL_FilterReference>();
+                p_GetIdentifierCompletions(CursorPosition,Filter.Name);
+                p_GetCompletions(CursorPosition,Filter.Args);
+            }
+            else if(Statement.IsType<MQL_Metric>())
+            {
+                auto const& Filter = Statement.GetType<MQL_Metric>();
+                p_GetIdentifierCompletions(CursorPosition,Filter.Name);
+                p_GetCompletions(CursorPosition,Filter.Args);
+            }
+        }
+    }
+    void CompletionsExtractor::p_GetIdentifierCompletions(MBLSP::Position CursorPosition, Identifier const& Statement)
+    {
+        int TargetPosition = p_GetIdentifierIndex(CursorPosition,Statement);
+        MQL_Scope* TargetScope = &m_Document->ResultModule.ModuleScope;
+        for(int i  = 0; i < TargetPosition;i++)
+        {
+            if(TargetScope->HasBinding(Statement.Parts[i].Value))
+            {
+                TargetScope = &TargetScope->GetBinding(Statement.Parts[i].Value)->ModuleScope;
+            }
+            else
+            {
+                return;   
+            }
+        }
+        m_Result = TargetScope->GetPossibleVars();
+        if(TargetPosition == 0)
+        {
+            auto Extra = m_Evaluator.BuiltinNames();
+            m_Result.insert(m_Result.end(),Extra.begin(),Extra.end());
+        }
+    }
+    void CompletionsExtractor::p_GetCompletions(MBLSP::Position CursorPosition, GameInfoPredicate const& Predicate,bool IsPlayerAssignment)
+    {
+        if(!p_In(Predicate.Begin,Predicate.End,CursorPosition))
+        {
+            return;
+        }
+        p_GetAttributeCompletions(CursorPosition,Predicate.Attribute,IsPlayerAssignment);
+        if(Predicate.Data.IsType<GameInfoPredicate_Direct>())
+        {
+            p_GetAttributeValueCompletions(CursorPosition,Predicate.Attribute,Predicate.Data.GetType<GameInfoPredicate_Direct>(),IsPlayerAssignment);
+        }
+        for(auto const& SubPredicate : Predicate.ExtraTerms)
+        {
+            p_GetCompletions(CursorPosition,SubPredicate,IsPlayerAssignment);
+        }
+    }
+    void CompletionsExtractor::p_GetAttributeCompletions(MBLSP::Position CursorPosition, Identifier const& Attribute,bool IsPlayerAssignment)
+    {
+        if(!p_In(Attribute,CursorPosition))
+        {
+            return;   
+        }
+        int PartIndex = p_GetIdentifierIndex(CursorPosition,Attribute);
+        if(PartIndex == 0)
+        {
+            m_Result.push_back("Stage");
+            m_Result.push_back("Date");
+            if(IsPlayerAssignment)
+            {
+                m_Result.push_back("Character");
+                m_Result.push_back("Tag");
+                m_Result.push_back("Code");
+            }
+            else
+            {
+                m_Result.push_back("Tag");   
+                m_Result.push_back("Code");   
+                m_Result.push_back("Character");   
+            }
+        }
+        else if(PartIndex == 1)
+        {
+            m_Result.push_back("Tag");   
+            m_Result.push_back("Code");   
+            m_Result.push_back("Character");   
+        }
+    }
+    int CompletionsExtractor::p_GetIdentifierIndex(MBLSP::Position CursorPosition,Identifier const& Ident)
+    {
+        int ReturnValue = 0;
+        for(int i = 0; i < Ident.Parts.size();i++)
+        {
+            if(p_In(Ident.Parts[i].Position,Ident.Parts[i].Position+Ident.Parts[i].Value.size(),CursorPosition))
+            {
+                ReturnValue = i;
+                break;
+            }
+            ReturnValue = i;
+        }
+        return ReturnValue;
+    }
+
+    void CompletionsExtractor::p_GetAttributeValueCompletions(MBLSP::Position CursorPosition, Identifier const& Attribute, GameInfoPredicate_Direct const& Value,bool IsPlayerAssignment)
+    {
+        if(p_In(Value.ValuePosition,Value.ValuePosition+Value.Value.size()+2,CursorPosition))
+        {
+            if(Attribute.Parts.size() == 1)
+            {
+                if(Attribute.Parts[0].Value  == "Stage")
+                {
+                    m_Result = PossibleStageStrings();
+                }
+            }
+            int PlayerAttributeIndex = IsPlayerAssignment ? 0 : 1;
+            if(Attribute.Parts.size() >= PlayerAttributeIndex+1)
+            {
+                if(Attribute.Parts[PlayerAttributeIndex].Value == "Character")
+                {
+                    m_Result = PossibleMBCharacterStrings();
+                }
+            }
+        }
+    }
+    void CompletionsExtractor::p_GetCompletions(MBLSP::Position CursorPosition,ArgumentList const& VerifiedArgs)
+    {
+        for(auto const& Key : VerifiedArgs.GetKeys())
+        {
+            p_GetCompletions(CursorPosition,VerifiedArgs[Key]);
+        }
+        for(int i = 0; i < VerifiedArgs.PositionalCount();i++)
+        {
+            p_GetCompletions(CursorPosition,VerifiedArgs[i]);
+        }
+    }
+    void CompletionsExtractor::p_GetCompletions(MBLSP::Position CursorPosition, GameSelection const& Selection)
+    {
+        p_GetCompletions(CursorPosition,Selection.Using);
+        p_GetCompletions(CursorPosition,Selection.Assignment.PlayerCondition,true);
+        p_GetCompletions(CursorPosition,Selection.GameCondition,false);
+    }
+    void CompletionsExtractor::p_GetCompletions(MBLSP::Position CursorPosition, UsingDirective const& Using)
+    {
+        if(Using.GameSets.size() > 0 && p_In(Using.GameSets.front().Position,Using.End, CursorPosition))
+        {
+            auto ReplayDir = MBSystem::GetUserHomeDirectory()/".mbslippi/Replays";
+            std::filesystem::directory_iterator DirIt(ReplayDir);
+            for(auto const& Entry : DirIt)
+            {
+                if(Entry.is_directory())
+                {
+                    m_Result.push_back(MBUnicode::PathToUTF8(Entry.path().filename()));
+                }   
+            }
+        }
+    }
+    void CompletionsExtractor::p_GetCompletions(MBLSP::Position CursorPosition, MQL_Result const& Output)
+    {
+        if(Output.IsType<MQL_Result_Tabulate>())
+        {
+            auto const& Tabulate = Output.GetType<MQL_Result_Tabulate>();
+            for(auto const& Col : Tabulate.Columns)
+            {
+                p_GetCompletions(CursorPosition,Col.second);
+            }
+        }
+    }
+    std::vector<std::string> CompletionsExtractor::GetCompletions(DocumentInfo& Document,MBLSP::Position CursorPosition)
+    {
+        m_Result = {};
+        m_Document = &Document;
+        p_GetCompletions(CursorPosition,Document.Statements);
+        return m_Result;
+    }
+    //END Completion extarctor
     void SlippiLSP::p_ExtractTokens(std::vector<MBLSP::SemanticToken>& OutTokens,Literal const& LiteralToExamine)
     {
         OutTokens.push_back(GetToken(LiteralToExamine));
@@ -282,20 +608,33 @@ namespace MBSlippi
         std::sort(ReturnValue.begin(),ReturnValue.end());
         return(ReturnValue);
     }
-    SlippiLSP::DocumentInfo SlippiLSP::p_CreateDocumentInfo(std::string const& Content,std::filesystem::path DocumentPath)
+    DocumentInfo SlippiLSP::p_CreateDocumentInfo(std::string const& Content,std::filesystem::path DocumentPath)
     {
         DocumentInfo ReturnValue;
+        ReturnValue.ModulePath = DocumentPath;
         m_Tokenizer.SetText(Content);
         try
         {
             //ReturnValue.ParsedModule = ParseModule(m_Tokenizer);
-            FillModule(ReturnValue.ParsedModule,m_Tokenizer);
+            try
+            {
+                FillModule(ReturnValue.ParsedModule,m_Tokenizer);
+            }
+            catch(MBCC::ParsingException const& ParseException)
+            {
+                ReturnValue.CorrectParsing = false;
+                MBLSP::Diagnostic NewDiagnostic;
+                NewDiagnostic.range.start = h_Convert(ParseException.Position);
+                NewDiagnostic.range.end = NewDiagnostic.range.start +m_Tokenizer.Peek().Value.size();
+                NewDiagnostic.message = "Error parsing "+ParseException.NonterminalName+": expected "+ParseException.ExpectedType;
+                ReturnValue.Diagnostics.push_back(NewDiagnostic);
+            }
             MQLEvaluator Evaluator;
             Evaluator.SetDBAdapter(&m_TempHandler);
             Evaluator.SetRecorder(&m_TempHandler);
-            MQL_Module TempModule = Evaluator.GetModule(Evaluator.LoadEmptyModule());
-            TempModule.ModulePath = DocumentPath;
-            Evaluator.VerifyModule(TempModule,ReturnValue.ParsedModule,ReturnValue.Diagnostics);
+            ReturnValue.ResultModule = Evaluator.GetModule(Evaluator.LoadEmptyModule());
+            ReturnValue.ResultModule.ModulePath = DocumentPath;
+            ReturnValue.Statements = Evaluator.VerifyAndUpdateModule(ReturnValue.ResultModule,ReturnValue.ParsedModule,ReturnValue.Diagnostics);
             if(!m_Tokenizer.IsEOF(m_Tokenizer.Peek()))
             {
                 ReturnValue.Diagnostics.push_back(MBLSP::Diagnostic());
@@ -304,15 +643,6 @@ namespace MBSlippi
                 ReturnValue.Diagnostics.back().range.end = ReturnValue.Diagnostics.back().range.start+m_Tokenizer.Peek().Value.size();
                 ReturnValue.Diagnostics.back().message = "trailing junk";
             }
-        }
-        catch(MBCC::ParsingException const& ParseException)
-        {
-            ReturnValue.CorrectParsing = false;
-            MBLSP::Diagnostic NewDiagnostic;
-            NewDiagnostic.range.start = h_Convert(ParseException.Position);
-            NewDiagnostic.range.end = NewDiagnostic.range.start +m_Tokenizer.Peek().Value.size();
-            NewDiagnostic.message = "Error parsing "+ParseException.NonterminalName+": expected "+ParseException.ExpectedType;
-            ReturnValue.Diagnostics.push_back(NewDiagnostic);
         }
         catch(std::exception const& e)
         {
@@ -412,13 +742,20 @@ namespace MBSlippi
     MBLSP::Completion_Response SlippiLSP::HandleRequest(MBLSP::Completion_Request const& Request)
     {
         MBLSP::Completion_Response ReturnValue;
+        ReturnValue.result = MBLSP::Completion_Result();
         auto DocIt = m_OpenedDocuments.find(Request.params.textDocument.uri);
         if(DocIt == m_OpenedDocuments.end())
         {
             throw std::runtime_error("Attempting semanticTokens/range on unopened document");   
         }
-        auto const& AST = DocIt->second.ParsedModule;
-
+        CompletionsExtractor Extractor;
+        auto Completions = Extractor.GetCompletions(DocIt->second,Request.params.position);
+        for(auto const& Completion : Completions)
+        {
+            MBLSP::CompletionItem Item;
+            Item.label = Completion;
+            ReturnValue.result->items.push_back(std::move(Item));
+        }
         return ReturnValue;
     }
 

@@ -140,6 +140,7 @@ namespace MBSlippi
 
     MBCharacter InternalCharacterIDToMBCharacter(InternalCharacterID IDToConvert);
     std::string MBCharacterToString(MBCharacter CharacterToConvert); 
+    std::vector<std::string> PossibleMBCharacterStrings();
     MBCharacter StringToMBCharacter(std::string_view CharacterString);
 
 

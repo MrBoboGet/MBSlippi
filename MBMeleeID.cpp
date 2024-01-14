@@ -722,6 +722,10 @@ namespace MBSlippi
         ReturnValue = i_MBCharacterToStringMap[size_t(CharacterToConvert)];
         return(ReturnValue);
     }
+    std::vector<std::string> PossibleMBCharacterStrings()
+    {
+        return std::vector<std::string>(i_MBCharacterToStringMap,i_MBCharacterToStringMap+sizeof(i_MBCharacterToStringMap)/sizeof(char*));
+    }
     MBCharacter StringToMBCharacter(std::string_view CharacterString)
     {
            

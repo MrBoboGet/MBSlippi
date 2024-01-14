@@ -4,6 +4,7 @@
 #include <string>
 
 #include <stdexcept>
+#include <vector>
 namespace MBSlippi
 {
     enum class ActionState : uint16_t
@@ -1142,6 +1143,10 @@ namespace MBSlippi
             return("PS");
         }
         return("");
+    }
+    inline std::vector<std::string> PossibleStageStrings()
+    {
+        return {"BF","DL","FD","FOD","YS","PS"};
     }
     inline StageID StringToStageID(std::string const& StringToConvert)
     {

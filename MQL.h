@@ -13,6 +13,16 @@
 #include <MBUtility/StaticVariant.h>
 namespace MBSlippi
 {
+
+    inline MBLSP::Position Convert(MBCC::TokenPosition Value)
+    {
+        MBLSP::Position ReturnValue;
+        ReturnValue.line = Value.Line;
+        ReturnValue.character = Value.ByteOffset;
+        return ReturnValue;
+    }
+
+    
     typedef int  ModuleID;
     class MQL_Filter;
     class MQL_MetricVariable;
@@ -281,9 +291,14 @@ namespace MBSlippi
         //doesn't verify that the variable doesn't already exist
         void AddVariable(std::string const& Name,MQL_Variable Value);
         MQL_Variable& GetVariable(Identifier const& Idf);
+
         bool HasVariable(std::string const& Idf);
         bool HasBinding(std::string const& Idf);
         bool HasVariable(Identifier const& Idf);
+        std::shared_ptr<MQL_Module> GetBinding(std::string const& Idf);
+
+        //For completion functionality
+        std::vector<std::string> GetPossibleVars();
     };
     struct MQL_Context
     {
@@ -371,36 +386,65 @@ namespace MBSlippi
     };
     struct MQL_FilterReference
     {
+        Identifier Name;
         bool Negated = false;
         std::shared_ptr<MQL_FilterDefinition> Filter;
         ArgumentList Args;
     };
     struct MQL_IntervallExtractor
     {
+        Identifier Name;
         bool Negated = false;
         ArgumentList Args;
         BuiltinFilterInfo Filter;
     };
     struct MQL_Metric
     {
+        Identifier Name;
         bool IsConstexpr = false;
         std::type_index ResultType = typeid(nullptr);
         ArgumentList Args;
         BuiltinMetric Metric;
     };
+    struct MQL_InvalidFilter
+    {
+        Identifier Name;
+        ArgumentList Args;
 
+        MQL_InvalidFilter(){};
+        //MQL_InvalidFilter(Filter_Component_Func const& Filter)
+        //{
+        //    Name = Filter.FilterName;
+        //    Arguments = Filter.ArgumentList;
+        //}
+    };
     std::ostream& operator<<(std::ostream& OutStream, MQL_Filter const& FilterToPrint);
 
     class MQL_Filter
     {
-        std::variant<MQL_FilterCombiner, MQL_FilterReference,MQL_Filter_Literal,MQL_MetricCombiner,MQL_IntervallExtractor,MQL_Metric> m_Data;
+        std::variant<MQL_FilterCombiner,
+            MQL_InvalidFilter, 
+            MQL_FilterReference,
+            MQL_Filter_Literal,
+            MQL_MetricCombiner,
+            MQL_IntervallExtractor,
+            MQL_Metric> m_Data;
         typedef decltype(m_Data) VariantType;
         public:
 
+        MBLSP::Position Begin;
+        MBLSP::Position End;
+        
         MQL_Filter(MQL_Filter const&) = default;
         MQL_Filter(MQL_Filter&&) noexcept = default;
         MQL_Filter& operator=(MQL_Filter const&) = default;
         MQL_Filter& operator=(MQL_Filter&&) = default;
+
+        template<typename T,typename = std::enable_if_t<std::is_constructible_v<VariantType,T>>>
+        void AssignValue(T&& Value)
+        {
+            m_Data = std::forward<T>(Value);   
+        }
         template<typename T,typename = std::enable_if_t<std::is_constructible_v<VariantType,T>>>
         MQL_Filter(T&& Data)
         {
@@ -535,6 +579,16 @@ namespace MBSlippi
         std::string BoundName;
         ModuleID ImportedModule = -1;
     };
+    struct MQL_Result_Tabulate
+    {
+        std::vector<std::pair<std::string,MQL_Filter>> Columns;
+        std::string OutFile;
+    };
+    struct MQL_Result_Record
+    {
+        std::string OutFile;
+    };
+    typedef MBUtility::StaticVariant<MQL_Result_Tabulate,MQL_Result_Record> MQL_Result;
     struct MQL_Selection
     {
         MBLSP::Position GamesBegin;
@@ -544,7 +598,7 @@ namespace MBSlippi
 
         GameSelection Games;
         MQL_Filter Filter;
-        Result Output;
+        MQL_Result Output;
     };
     //class MQL_Statement : MBUtility::StaticVariant<MQL_VariableAssignment,MQL_Selection,MQL_Import>
     //{
@@ -670,13 +724,13 @@ namespace MBSlippi
         void p_VerifyGameInfoPredicate(MQL_Module& AssociatedModule,GameInfoPredicate& PredicateToVerify,bool IsPlayerAssignment,std::vector<MBLSP::Diagnostic>& OutDiagnostics);
         void p_VerifyPlayerAssignment(MQL_Module& AssociatedModule,PlayerAssignment& AssignmentToVerify,std::vector<MBLSP::Diagnostic>& OutDiagnostics);
         void p_VerifyGameSelection(MQL_Module& AssociatedModule,GameSelection& SelectionToVerify,std::vector<MBLSP::Diagnostic>& OutDiagnostics);
-        void p_VerifyResult(MQL_Module& AssociatedModule,Result& ResultToVerify,std::vector<MBLSP::Diagnostic>& OutDiagnostics);
+        MQL_Result p_VerifyResult(MQL_Module& AssociatedModule,Result& ResultToVerify,std::vector<MBLSP::Diagnostic>& OutDiagnostics);
 
         bool p_SatisfiesPlayerAssignment(MQL_Module& AssociatedModule,SlippiGamePlayerInfo const& PlayerInfo,GameInfoPredicate const& PredicateToEvaluate);
         bool p_EvaluateGameSelection(MQL_Module& AssociatedModule,SlippiGameInfo const& GameInfo,char InAssignment[4],GameInfoPredicate const& PredicateToEvaluate);
         bool p_GetPlayerAssignments(MQL_Module& AssociatedModule,SlippiGameInfo const& GameInfo,PlayerAssignment const& AssignemntToApply,char OutAssignemnts[4]);
         void p_ApplyAssignment(MeleeGame& GameToModify,char InAssignments[4]);
-        void p_EvaluateTabulate(MQL_Module& AssociatedModule ,std::vector<RecordingInfo> const& FilterResult,Result_Tabulate const& TabulateInfo);
+        void p_EvaluateTabulate(MQL_Module& AssociatedModule ,std::vector<RecordingInfo> const& FilterResult,MQL_Result_Tabulate const& TabulateInfo);
         std::string p_MetricToName(Filter_Component const& FilterToConvert);
 
         std::vector<MeleeGame> p_RetrieveSpecGames(MQL_Module& AssociatedModule,GameSelection const& GameSelection);
@@ -791,6 +845,7 @@ namespace MBSlippi
         //special semantics, in that it modifies the scope, so that modules can be verified correct
         //without needing to actually execute the actions, relatively hacky
         std::vector<MQL_Statement> VerifyModule(MQL_Module& AssociatedModule,Module& SpecToVerify,std::vector<MBLSP::Diagnostic>& OutDiagnostics);
+        std::vector<MQL_Statement> VerifyAndUpdateModule(MQL_Module& AssociatedModule,Module& SpecToVerify,std::vector<MBLSP::Diagnostic>& OutDiagnostics);
 
 
 
@@ -798,6 +853,11 @@ namespace MBSlippi
         void EvaluateStatement(MQL_Module& AssociatedModule,MQL_Statement& StatementToEvaluate);
         void EvaluateModule(MQL_Module& AssociatedModule,std::vector<MQL_Statement>& StatementsToEvaluate);
 
+
+        //Functionality shared between evaluator and LSP
+        std::vector<std::filesystem::path> GetModuleSearchDirectories(std::filesystem::path const& ModulePath);
+        std::vector<std::string> BuiltinNames();
+        
         //void EvaluateImport(MQL_Module& AssociatedModule,Import& ImportToEvaluate,std::vector<MBLSP::Diagnostic>& OutDiagnostics);
         //void EvaluateSelection(MQL_Module& AssociatedModule,Selection& SpecToEvaluate,std::vector<MBLSP::Diagnostic>& OutDiagnostics);
         //void EvaluateVariableDeclaration(MQL_Module& AssociatedModule,Statement& SpecToEvaluate,std::vector<MBLSP::Diagnostic>& OutDiagnostics);

@@ -77,6 +77,8 @@ return *this;
 class Filter_Component_Base :  public MBCC::AST_Base
 {
 public:
+MBCC::TokenPosition Begin;
+MBCC::TokenPosition End;
 bool Negated =  false;
 std::unique_ptr<AST_Base> Copy() const override{return(MBCC::CopyAST(*this));}
 
@@ -201,6 +203,7 @@ class Identifier :  public MBCC::AST_Base
 {
 public:
 std::vector<Token> Parts;
+MBCC::TokenPosition End;
 std::unique_ptr<AST_Base> Copy() const override{return(MBCC::CopyAST(*this));}
 
 };
@@ -223,6 +226,7 @@ class UsingDirective :  public MBCC::AST_Base
 public:
 MBCC::TokenPosition UsingPosition;
 std::vector<Token> GameSets;
+MBCC::TokenPosition End;
 std::unique_ptr<AST_Base> Copy() const override{return(MBCC::CopyAST(*this));}
 
 };
@@ -331,6 +335,8 @@ std::unique_ptr<AST_Base> Copy() const override{return(MBCC::CopyAST(*this));}
 class GameInfoPredicate :  public MBCC::AST_Base
 {
 public:
+MBCC::TokenPosition Begin;
+MBCC::TokenPosition End;
 Identifier Attribute;
 GameInfoPredicate_Data Data;
 std::string Operator;
@@ -364,6 +370,7 @@ public:
 MBCC::TokenPosition ImportPosition;
 Identifier ImportPath;
 ImportBinding Binding;
+MBCC::TokenPosition End;
 std::unique_ptr<AST_Base> Copy() const override{return(MBCC::CopyAST(*this));}
 
 };
@@ -779,18 +786,14 @@ Token ParseToken(MBCC::Tokenizer& Tokenizer);
 void FillToken(Token& ReturnValue,MBCC::Tokenizer& Tokenizer);
 Token ParseToken_0(MBCC::Tokenizer& Tokenizer);
 void FillToken_0(Token& ReturnValue,MBCC::Tokenizer& Tokenizer);
-UsingDirective ParseGameList(MBCC::Tokenizer& Tokenizer);
-void FillGameList(UsingDirective& ReturnValue,MBCC::Tokenizer& Tokenizer);
-UsingDirective ParseGameList_0(MBCC::Tokenizer& Tokenizer);
-void FillGameList_0(UsingDirective& ReturnValue,MBCC::Tokenizer& Tokenizer);
-UsingDirective Parse_L9(MBCC::Tokenizer& Tokenizer);
-void Fill_L9(UsingDirective& ReturnValue,MBCC::Tokenizer& Tokenizer);
-UsingDirective Parse_L9_0(MBCC::Tokenizer& Tokenizer);
-void Fill_L9_0(UsingDirective& ReturnValue,MBCC::Tokenizer& Tokenizer);
 UsingDirective ParseUsingDirective(MBCC::Tokenizer& Tokenizer);
 void FillUsingDirective(UsingDirective& ReturnValue,MBCC::Tokenizer& Tokenizer);
 UsingDirective ParseUsingDirective_0(MBCC::Tokenizer& Tokenizer);
 void FillUsingDirective_0(UsingDirective& ReturnValue,MBCC::Tokenizer& Tokenizer);
+UsingDirective Parse_L9(MBCC::Tokenizer& Tokenizer);
+void Fill_L9(UsingDirective& ReturnValue,MBCC::Tokenizer& Tokenizer);
+UsingDirective Parse_L9_0(MBCC::Tokenizer& Tokenizer);
+void Fill_L9_0(UsingDirective& ReturnValue,MBCC::Tokenizer& Tokenizer);
 ImportBinding ParseImportBinding(MBCC::Tokenizer& Tokenizer);
 void FillImportBinding(ImportBinding& ReturnValue,MBCC::Tokenizer& Tokenizer);
 ImportBinding ParseImportBinding_0(MBCC::Tokenizer& Tokenizer);

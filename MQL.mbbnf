@@ -85,6 +85,7 @@ struct VariableDeclaration_PlayerSelection : VariableDeclaration
 struct Identifier
 {
     List<Token> Parts;
+    tokenPos End;
 }
 
 struct VariableDeclaration_GameInfoPredicate : VariableDeclaration
@@ -115,6 +116,7 @@ struct UsingDirective
 {
     tokenPos UsingPosition;
     List<Token> GameSets;
+    tokenPos End;
 }
 
 struct GameSelection
@@ -153,6 +155,8 @@ struct GameInfoPredicate_Direct : GameInfoPredicate_Data
 
 struct GameInfoPredicate
 {
+    tokenPos Begin;
+    tokenPos End;
     Identifier Attribute;
     GameInfoPredicate_Data Data;
     string Operator;
@@ -219,6 +223,8 @@ struct AttributeList
 
 struct Filter_Component
 {
+    tokenPos Begin;
+    tokenPos End;
     bool Negated = false;
 }
 
@@ -277,6 +283,7 @@ struct Import : Statement
     tokenPos ImportPosition;
     Identifier ImportPath;
     ImportBinding Binding;
+    tokenPos End;
 }
 
 struct Selection : Statement
@@ -327,17 +334,17 @@ def Identifier2=Identifier;
 def Token2=Token;
 Identifier2 = Parts=Token2 (dot Parts=Token2)*;
 Token2 = Position=TOKEN.Position Value=idf;
-Filter_Component_Func = NamePosition=TOKEN.Position FilterName=Identifier2 ArgumentList=Filter_ArgList;
+Filter_Component_Func = Begin = TOKEN.Position NamePosition=TOKEN.Position FilterName=Identifier2 ArgumentList=Filter_ArgList End=TOKEN.Position;
 
 Filter_Term =   lpar this=Filter_Component rpar |
-                this=Filter_Component_Func |
-                this=Filter_Component_Literal |
+                this=Filter_Component_Func|
+                this=Filter_Component_Literal|
                 bang this=Filter_Term Negated=true;
 
 Filter_Component_Literal = Value=Literal;
 
 def Filter_Component=Filter_OperatorList;
-Filter_Component = Components=Filter_Term (Operators=ExprOperator.Op Components=Filter_Term)*;
+Filter_Component = Begin = TOKEN.Position Components=Filter_Term (Operators=ExprOperator.Op Components=Filter_Term)* End = TOKEN.Position;
 
 
 Filter= FilterPosition = TOKEN.Position FILTER Component=Filter_Component;
@@ -350,11 +357,11 @@ GameInfoPredicate_Or =  Operator=OR this=GameInfoPredicateOr;
 GameInfoPredicate_And = Operator=AND this=GameInfoPredicate;
 
 GameInfoPredicate_Direct =  Comparison=Comparator.Op ValuePosition = TOKEN.Position Value=string;
-GameInfoPredicate_Base = Attribute=Identifier Data=GameInfoPredicate_Direct?;
+GameInfoPredicate_Base = Begin = TOKEN.Position Attribute=Identifier Data=GameInfoPredicate_Direct? End = TOKEN.Position;
 
 
 def GameInfoPredicateOr = GameInfoPredicate;
-GameInfoPredicateOr = Operator="||" ExtraTerms=GameInfoPredicate_Term ExtraTerms=GameInfoPredicate_Or*;
+GameInfoPredicateOr = Begin = TOKEN.Position Operator="||" ExtraTerms=GameInfoPredicate_Term ExtraTerms=GameInfoPredicate_Or* End = TOKEN.Position;
 
 def GameInfoPredicate_Term=GameInfoPredicate;
 GameInfoPredicate_Term = 
@@ -362,7 +369,7 @@ GameInfoPredicate_Term =
     bang this=GameInfoPredicate_Term Negated=true | 
     this=GameInfoPredicate_Base;
 
-GameInfoPredicate = Operator="&&" ExtraTerms=GameInfoPredicateOr ExtraTerms=GameInfoPredicate_And*;
+GameInfoPredicate = Begin = TOKEN.Position Operator="&&" ExtraTerms=GameInfoPredicateOr ExtraTerms=GameInfoPredicate_And* End = TOKEN.Position;
 
 
 
@@ -399,18 +406,15 @@ VariableDeclaration = this=VariableDeclaration_Filter | this=VariableDeclaration
 Module = Statements=Statement*;
 
 
-Identifier = Parts=Token (dot Parts=Token)*;
+Identifier = Parts=Token (dot Parts=Token)* End=TOKEN.Position;
 
-def GameList=UsingDirective;
 
 Token = Position=TOKEN.Position Value=idf;
-GameList = GameSets=Token (comma GameSets=Token)*;
 
-
-UsingDirective = UsingPosition = TOKEN.Position USING this=GameList;
+UsingDirective = UsingPosition = TOKEN.Position USING GameSets=Token (comma GameSets=Token)* End=TOKEN.Position;
 
 
 ImportBinding = AsPosition = TOKEN.Position AS ImportName=Token;
-Import =  ImportPosition=TOKEN.Position IMPORT  ImportPath=Identifier Binding=ImportBinding? semi;
+Import =  ImportPosition=TOKEN.Position IMPORT  ImportPath=Identifier Binding=ImportBinding? semi End = TOKEN.Position ;
 
 Statement = this=VariableDeclaration | this=Selection | this=Import;
