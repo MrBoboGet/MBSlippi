@@ -77,15 +77,14 @@ namespace MBSlippi
         *this = DefinitionBindings;
         for(auto const& Argument : SuppliedArguments.m_PositionalArguments)
         {
-            if(CurrentArgumentIndex >= DefinitionBindings.PositionalCount())
-            {
-                break;
-            }
-            m_PositionalArguments[ CurrentArgumentIndex] = SuppliedArguments.m_PositionalArguments[CurrentArgumentIndex];
+            m_PositionalArguments.push_back(SuppliedArguments.m_PositionalArguments[CurrentArgumentIndex]);
             Literal_PosRef Ref;
             Ref.Pos = CurrentArgumentIndex;
-            p_AddKey(DefinitionBindings.m_PositionalArguments[CurrentArgumentIndex].GetType<MQL_Filter_Literal>().Value.GetType<Literal_Symbol>().Value, 
-                    MQL_Filter_Literal{Ref});
+            if(CurrentArgumentIndex < DefinitionBindings.PositionalCount())
+            {
+                p_AddKey(DefinitionBindings.m_PositionalArguments[CurrentArgumentIndex].GetType<MQL_Filter_Literal>().Value.GetType<Literal_Symbol>().Value, 
+                        MQL_Filter_Literal{Ref});
+            }
             CurrentArgumentIndex++;
         }
         for(auto const& Argument : SuppliedArguments.m_KeyPositions)
@@ -1401,23 +1400,23 @@ namespace MBSlippi
             {
                 p_AddDiagnostic(OutDiagnostics,Literal.Value,"Expressions in filter component must be a part of a comparison");
             }
-            else
+            //else
+            //{
+            MQL_Filter_Literal NewLiteral;
+            NewLiteral.Value = Literal.Value;
+            //ReturnValue = NewLiteral;
+            if(NewLiteral.Value.IsType<Literal_Symbol>())
             {
-                MQL_Filter_Literal NewLiteral;
-                NewLiteral.Value = Literal.Value;
-                //ReturnValue = NewLiteral;
-                if(NewLiteral.Value.IsType<Literal_Symbol>())
+                if(!ParentArgList.HasNamedVariable(NewLiteral.Value.GetType<Literal_Symbol>().Value))
                 {
-                    if(!ParentArgList.HasNamedVariable(NewLiteral.Value.GetType<Literal_Symbol>().Value))
-                    {
-                        p_AddDiagnostic(OutDiagnostics,Literal.Value,"Cannot find variable with name \"" + NewLiteral.Value.GetType<Literal_Symbol>().Value+"\"");
-                    }
+                    p_AddDiagnostic(OutDiagnostics,Literal.Value,"Cannot find variable with name \"" + NewLiteral.Value.GetType<Literal_Symbol>().Value+"\"");
                 }
-                ReturnValue.Begin = Convert(Literal.Value.GetBase().ValuePosition);
-                ReturnValue.End = p_GetEnd(Literal.Value);
-                ReturnValue.AssignValue(std::move(NewLiteral));
-                return ReturnValue;
             }
+            ReturnValue.Begin = Convert(Literal.Value.GetBase().ValuePosition);
+            ReturnValue.End = p_GetEnd(Literal.Value);
+            ReturnValue.AssignValue(std::move(NewLiteral));
+            return ReturnValue;
+            //}
         }
         else if(FilterToConvert.IsType<Filter_Component_Func>())
         {

@@ -41,7 +41,7 @@ namespace MBSlippi
         void p_GetCompletions(MBLSP::Position CursorPosition, MQL_VariableAssignment const& Statement);
         void p_GetCompletions(MBLSP::Position CursorPosition, MQL_Selection const& Statement);
 
-        void p_GetCompletions(MBLSP::Position CursorPosition, MQL_Filter const& Statement);
+        void p_GetCompletions(MBLSP::Position CursorPosition,ArgumentList const& ParentArgList , MQL_Filter const& Statement);
         void p_GetIdentifierCompletions(MBLSP::Position CursorPosition, Identifier const& Statement);
 
 
@@ -51,7 +51,7 @@ namespace MBSlippi
 
         void p_GetAttributeValueCompletions(MBLSP::Position CursorPosition, Identifier const& Attribute, GameInfoPredicate_Direct const& Valu,bool IsPlayerAssignment);
 
-        void p_GetCompletions(MBLSP::Position CursorPosition, ArgumentList const& VerifiedArgs);
+        void p_GetCompletions(MBLSP::Position CursorPosition, ArgumentList const& ParentArgList, ArgumentList const& VerifiedArgs);
         void p_GetCompletions(MBLSP::Position CursorPosition, GameSelection const& Selection);
         void p_GetCompletions(MBLSP::Position CursorPosition, UsingDirective const& Using);
         void p_GetCompletions(MBLSP::Position CursorPosition, MQL_Result const& Output);

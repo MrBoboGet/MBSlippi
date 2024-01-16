@@ -332,9 +332,11 @@ def Filter_Term=Filter_Component;
 
 def Identifier2=Identifier;
 def Token2=Token;
-Identifier2 = Parts=Token2 (dot Parts=Token2)*;
+Identifier2 = Parts=Token2 (dot Parts=Token2)* End = TOKEN.Position;
 Token2 = Position=TOKEN.Position Value=idf;
 Filter_Component_Func = Begin = TOKEN.Position NamePosition=TOKEN.Position FilterName=Identifier2 ArgumentList=Filter_ArgList End=TOKEN.Position;
+
+
 
 Filter_Term =   lpar this=Filter_Component rpar |
                 this=Filter_Component_Func|
@@ -405,6 +407,7 @@ VariableDeclaration = this=VariableDeclaration_Filter | this=VariableDeclaration
 
 Module = Statements=Statement*;
 
+Slugma = Filter_Term Selection;
 
 Identifier = Parts=Token (dot Parts=Token)* End=TOKEN.Position;
 

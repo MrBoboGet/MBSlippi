@@ -127,17 +127,19 @@ namespace MBSlippi
         else if(std::holds_alternative<std::shared_ptr<MQL_FilterDefinition>>(Statement.Value.Data))
         {
             auto const& FilterDef = std::get<std::shared_ptr<MQL_FilterDefinition>>(Statement.Value.Data);
-            p_GetCompletions(CursorPosition,FilterDef->Arguments);
-            p_GetCompletions(CursorPosition,*FilterDef->Component);
+            ArgumentList EmptyArgList;
+            p_GetCompletions(CursorPosition,EmptyArgList,FilterDef->Arguments);
+            p_GetCompletions(CursorPosition,FilterDef->Arguments,*FilterDef->Component);
         }
     }
     void CompletionsExtractor::p_GetCompletions(MBLSP::Position CursorPosition, MQL_Selection const& Statement)
     {
-        p_GetCompletions(CursorPosition,Statement.Filter);
+        ArgumentList EmptyArgList;
+        p_GetCompletions(CursorPosition,EmptyArgList,Statement.Filter);
         p_GetCompletions(CursorPosition,Statement.Games);
         p_GetCompletions(CursorPosition,Statement.Output);
     }
-    void CompletionsExtractor::p_GetCompletions(MBLSP::Position CursorPosition, MQL_Filter const& Statement)
+    void CompletionsExtractor::p_GetCompletions(MBLSP::Position CursorPosition, ArgumentList const& ParentArgList ,MQL_Filter const& Statement)
     {
         if(p_In(Statement.Begin,Statement.End,CursorPosition))
         {
@@ -146,7 +148,7 @@ namespace MBSlippi
                 auto const& Combiner = Statement.GetType<MQL_FilterCombiner>();
                 for(auto const& SubFilter : Combiner.Operands)
                 {
-                    p_GetCompletions(CursorPosition,SubFilter);
+                    p_GetCompletions(CursorPosition,ParentArgList,SubFilter);
                 }
             }
             else if(Statement.IsType<MQL_MetricCombiner>())
@@ -154,37 +156,59 @@ namespace MBSlippi
                 auto const& Combiner = Statement.GetType<MQL_MetricCombiner>();
                 for(auto const& SubFilter : Combiner.Operands)
                 {
-                    p_GetCompletions(CursorPosition,SubFilter);
+                    p_GetCompletions(CursorPosition,ParentArgList,SubFilter);
                 }
             }
             else if(Statement.IsType<MQL_IntervallExtractor>())
             {
                 auto const& Filter = Statement.GetType<MQL_IntervallExtractor>();
                 p_GetIdentifierCompletions(CursorPosition,Filter.Name);
-                p_GetCompletions(CursorPosition,Filter.Args);
+                p_GetCompletions(CursorPosition,ParentArgList,Filter.Args);
             }
             else if(Statement.IsType<MQL_InvalidFilter>())
             {
                 auto const& Filter = Statement.GetType<MQL_InvalidFilter>();
                 p_GetIdentifierCompletions(CursorPosition,Filter.Name);
-                p_GetCompletions(CursorPosition,Filter.Args);
+                p_GetCompletions(CursorPosition,ParentArgList,Filter.Args);
             }
             else if(Statement.IsType<MQL_FilterReference>())
             {
                 auto const& Filter = Statement.GetType<MQL_FilterReference>();
                 p_GetIdentifierCompletions(CursorPosition,Filter.Name);
-                p_GetCompletions(CursorPosition,Filter.Args);
+                p_GetCompletions(CursorPosition,ParentArgList,Filter.Args);
             }
             else if(Statement.IsType<MQL_Metric>())
             {
                 auto const& Filter = Statement.GetType<MQL_Metric>();
                 p_GetIdentifierCompletions(CursorPosition,Filter.Name);
-                p_GetCompletions(CursorPosition,Filter.Args);
+                p_GetCompletions(CursorPosition,ParentArgList,Filter.Args);
+            }
+            else if(Statement.IsType<MQL_Filter_Literal>())
+            {
+                auto const& Literal = Statement.GetType<MQL_Filter_Literal>().Value;
+                if(Literal.IsType<Literal_Symbol>())
+                {
+                    auto const& Symbol = Literal.GetType<Literal_Symbol>();
+                    auto EnvirSymbols = ParentArgList.GetKeys();
+                    m_Result.insert(m_Result.end(),EnvirSymbols.begin(),EnvirSymbols.end());
+                    if(p_In(Symbol.ValuePosition,Symbol.ValuePosition+Symbol.Value.size(),CursorPosition))
+                    {
+                        Identifier NewIdentifier;
+                        NewIdentifier.Parts.push_back(Token());
+                        NewIdentifier.Parts.back().Position = Symbol.ValuePosition;
+                        NewIdentifier.Parts.back().Value = Symbol.Value;
+                        p_GetIdentifierCompletions(CursorPosition,NewIdentifier);
+                    }
+                }
             }
         }
     }
     void CompletionsExtractor::p_GetIdentifierCompletions(MBLSP::Position CursorPosition, Identifier const& Statement)
     {
+        if(!p_In(Statement,CursorPosition))
+        {
+            return;   
+        }
         int TargetPosition = p_GetIdentifierIndex(CursorPosition,Statement);
         MQL_Scope* TargetScope = &m_Document->ResultModule.ModuleScope;
         for(int i  = 0; i < TargetPosition;i++)
@@ -198,7 +222,8 @@ namespace MBSlippi
                 return;   
             }
         }
-        m_Result = TargetScope->GetPossibleVars();
+        auto PossibleVars = TargetScope->GetPossibleVars();
+        m_Result.insert(m_Result.end(),PossibleVars.begin(),PossibleVars.end());
         if(TargetPosition == 0)
         {
             auto Extra = m_Evaluator.BuiltinNames();
@@ -288,15 +313,15 @@ namespace MBSlippi
             }
         }
     }
-    void CompletionsExtractor::p_GetCompletions(MBLSP::Position CursorPosition,ArgumentList const& VerifiedArgs)
+    void CompletionsExtractor::p_GetCompletions(MBLSP::Position CursorPosition,ArgumentList const& ParentArgList,ArgumentList const& VerifiedArgs)
     {
         for(auto const& Key : VerifiedArgs.GetKeys())
         {
-            p_GetCompletions(CursorPosition,VerifiedArgs[Key]);
+            p_GetCompletions(CursorPosition,ParentArgList,VerifiedArgs.GetRawVariable(Key));
         }
         for(int i = 0; i < VerifiedArgs.PositionalCount();i++)
         {
-            p_GetCompletions(CursorPosition,VerifiedArgs[i]);
+            p_GetCompletions(CursorPosition,ParentArgList,VerifiedArgs.GetRawVariable(i));
         }
     }
     void CompletionsExtractor::p_GetCompletions(MBLSP::Position CursorPosition, GameSelection const& Selection)
@@ -327,7 +352,8 @@ namespace MBSlippi
             auto const& Tabulate = Output.GetType<MQL_Result_Tabulate>();
             for(auto const& Col : Tabulate.Columns)
             {
-                p_GetCompletions(CursorPosition,Col.second);
+                ArgumentList EmptyArgList;
+                p_GetCompletions(CursorPosition,EmptyArgList,Col.second);
             }
         }
     }

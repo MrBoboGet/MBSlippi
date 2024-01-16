@@ -352,6 +352,7 @@ namespace MBSlippi
         Pipe,
         Minus,
         Plus,
+        Div,
         Times,
         
         //comparisons
@@ -774,6 +775,7 @@ namespace MBSlippi
             {">",{8,OperatorType::ge,true}},
             {">=",{8,OperatorType::geq,true}},
             {"*",{7,OperatorType::Times,true}},
+            {"/",{7,OperatorType::Div,true}},
             {"+",{6,OperatorType::Plus,true}},
             {"-",{6,OperatorType::Minus,true}},
         };
