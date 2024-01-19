@@ -1,0 +1,17 @@
+{
+    "TopDirectory":
+    {
+        "Files":
+        [
+            "index.mbd",
+            "History.mbd"
+        ],
+        "SubDirectories":
+        {
+            "MQL":
+            {
+                "MountDir":"MQL" 
+            }   
+        }
+    }
+}

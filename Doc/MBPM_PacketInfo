@@ -1,0 +1,10 @@
+{
+    "PacketName":"mbslippi_docs",
+    "PacketType":"MBDoc",
+    "TypeInfo":
+    {
+        "Name":"MBSlippi"
+    }
+    "Attributes":[],
+    "Dependancies":[]
+}

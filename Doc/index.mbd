@@ -14,7 +14,7 @@ achieve.
 The documentation is then split into mainly 3 parts, 
 @[Installation](Installation.mbd), which describes how the program is installed
 on the computer, and what kind of environment it expects and uses. Then we have
-the parts describing the @[query language](SlippiSpec/index.mbd), and finally 
+the parts describing the @[query language](MQL), and finally 
 a description of the CLI and how to invoke the program can be found in the 
 @[CLI](CLI.mbd) part.
 

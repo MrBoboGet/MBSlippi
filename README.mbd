@@ -1,0 +1,108 @@
+%title MBSlippi
+
+This repository contains code for working with slippi replays in C++, and is
+split into three parts, a part that parses the raw data present in the replays,
+one part mapping these into a representation closer to how one regularly talks
+about melee, and the most important part combining all of these, MQL, a
+query language to record and analyze replays.
+
+# MQL 
+
+MQL is a language with similar syntax to SQL, and semantics inspired by Bash.
+
+A MQL file consists of a series of statements, with functionality intended to support the
+central select statement. This select statement consists of multiple parts, which
+can be used to determine the games that are to be recorded, and which parts of
+these games are to be recorded.
+
+_# Example
+
+```mql
+IMPORT std;
+Filter ComboFilter() =
+    ActionState(Player="1","HitStun") | 
+    Expand(Right="-1")  | Until(Player="1",State="Dead") |
+    Until(Player="0",State="HitStun") | PercentDiff(Player="1") > 20;
+USING 
+    LocalReplays
+WITH
+    Player1 Code="Foo#0"
+SELECT 
+    Player2.Character="Fox"
+Filter 
+    ComboFilter() | Has(Move("DashAttack")) 
+RECORD
+    "Combos.mp4";
+```
+
+    This script starts by importing the standard library, and then
+    defines a custom filter. This filter is used to select the intervals from each
+    replay that is to be recorded. 
+
+    The next statement is what is doing most of the work, and is split into
+    multiple parts.
+
+    The USING part of the select statement 
+    determines which collection of replays is to be considered, the default
+    being all, followed by an assigment of the
+    player numbers. 
+
+    This assignment is used to specify which player is to be considered player 1
+    for all replays, so that the player numbers in the filter always refer to
+    the same player. Then it determines which replays from the replay set to
+    include, in this case only the replays where the second player is playing
+    fox.
+
+    The Filter part determines what to record from the selected replays.
+    Here it first uses the previously defined "ComboFilter", which returns the
+    combos performed by player 1 on player 2 that result in atleast 20% damage,
+    and then only includes the combos where a dash attack is included.
+
+    More examples can be found at my analyses @[here](https://mrboboget.se/DB/Documentation//MBMelee/Analysis/Sharp/2023-05-09/index.html).
+
+/#
+
+_#  LSP
+
+    MQL also has a
+    @[LSP](https://microsoft.github.io/language-server-protocol/).
+    It supports diagnostics, semantic tokens, and completions.
+
+    It runs on stdin/stdout, and because execution of MQL files are self
+    contained, so is there no project root or similar that needs to be defined.
+    A working @[CoC](https://github.com/neoclide/coc.nvim) config file can
+    therefore look like this:
+
+```json
+{
+    "languageserver": 
+    {
+        "mql": 
+        {
+            "command": "mbslippid",
+            "args": [],
+            "filetypes": ["mql"]
+        }
+    }
+}
+
+```
+/#
+
+# Dependancies
+
+    All of the requirements of the installation can be found in the
+    documentation, but apart from various dependancies on libraries written by
+    me needed for compilation, so is a @[replay dolphin](https://github.com/project-slippi/Ishiiruka/tree/slippi) and 
+    @[ffmpeg](https://ffmpeg.org/) on PATH needed in order to record files. 
+
+# Compilation 
+
+    This project uses @[MBBuild](https://github.com/MrBoboGet/MBPacketManager)
+    for compilation. It is written in portable C++17, and works on both windows
+    and POSIX computers.
+
+# Documentation
+
+    The (incomplete) documentation can be found
+    @[here](https://mrboboget.se/DB/Documentation/MBSlippi/index.html).

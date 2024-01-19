@@ -1,34 +1,37 @@
-# SlippiSpec
+%title MQL
 
-    SlippiSpec is the query language that lies at the heart of MBSlippi, and
-    takes inspiration in both syntax and semantics from SQL and bash. It is
-    intended to provide a uniform way to extract interesting situations from
-    melee games, and values composability over total imperative control over
-    queries, relying heavily on builtin operations over user defined.
+MQL is the query language that lies at the heart of MBSlippi, and
+takes inspiration in both syntax and semantics from SQL and bash. It is
+intended to provide a uniform way to extract interesting situations from
+melee games, and values composability over total imperative control of
+queries, relying heavily on builtin operations over user defined.
 
 # Documentation layout
 
     This document contains a brief description of the most top level behaviour
     of the query language, and more thorough descriptions are split into
-    separate documents. In @[Types](Types.mbd), descriptions for the various
-    types and objects used and referenced throughout MBSlippi are described.
-    In @[Syntax](Syntax.mbd), a complete description of the grammar and encoding
-    is specified, and the different parts of the execution as described here can
-    be found in their respective parts, 
+    separate parts. A complete description of the grammar and encoding
+    can be found in @[Syntax](Syntax.mbd) and the different parts of the
+    execution as described here can be found in their respective parts, 
+    @[Game set specification](GameSetSpecification.mbd),
     @[Player specification](PlayerSpecification.mbd),
     @[Game specification](GameSpecification.mbd),
     @[Filters](Filters.mbd) and 
-    @[Results](Results.mbd).
+    @[Result](Results.mbd).
 
 #_ Overview
 
-    Similar to SQL so can SlippiSpec be split into multiple distinct parts, some
-    of which are optional, and some of which are mandatory. The parts then form a
-    pipeline, where the result from one part influences the next part of
-    the pipeline, which results affect the behavior of further parts and so on.
+    Similar to SQL so is MQL centered around a central SELECT statement, Other
+    features of MQL, that is the variable assignments and import statements, are
+    both used with the end goal of crafting a SELECT statement. 
 
-    The execution can be split into the following parts, ordered in their
-    conceptual order of the executing pipeline.
+    The select statement can in turn be split into multiple distinct parts, some
+    of which are optional, and some of which are mandatory. The parts then form
+    a pipeline, where the result from one part influences the next part of the
+    pipeline, which results affect the behavior of further parts and so on.
+
+    The execution of the SELECT statement can be split into the following parts, ordered in their
+    conceptual order of the execution pipeline.
 
     # Player specification
         
@@ -71,7 +74,7 @@
     # Situation filter
 
         This part of the execution takes it's inspiration from bash, and is the
-        component allowing SlippiSpec to perform more advanced analysis. The
+        component allowing MQL to perform more advanced analysis. The
         fundamental unit of saving and analysis is a game interval, which
         contains the game it belongs to, and which start and end frame it
         contains. Every filter takes as input a game interval, and then outputs
@@ -83,7 +86,9 @@
     # Result
 
         This mandatory parts is the final step of execution, and determines what
-        the output should be. The only currently supported result is that all of
-        the extracted game intervals are saved as a video.
-/_
+        the output should be. It can for example be to save the intervals of the
+        replays into a video file, or to save metrics extracted from the intervals
+        into a csv file.
+
+    /_
 

@@ -1,3 +1,5 @@
+%title History and motivation
+
 # History and motivation
 
 The project started when I wanted a way to more efficiently analyze replays
@@ -15,14 +17,15 @@ and so on.
 When implementing this however, I realized that there were also some other tasks
 that could be improved, the most obvious being, which replays am I actually
 interested in saving? The tool quickly got a goal of being able to automate
-common replay analyzing operations and to integrate easily with bash. This was
-however something that required a bit more knowledge about the actual format of
-the replays, and this is when the C++ slippi replay parser was created.
+common replay analyzing operations and to integrate easily with command line
+use. This was however something that required a bit more knowledge about the
+actual format of the replays, and this is when the C++ slippi replay parser was
+created.
 
 With the parser it was possible to extract important meta data for the played
 matches, such as the stage the game was played on, against which player and
-with which characters etc. Having this parser implemented also meant that the
-possibility to do even more automated analysis was possible. And this is where
+with which characters etc. Having this parser implemented also meant that it was
+possible to do even more automated analysis. And this is where
 the scripting language was first introduced.
 
 The first incarnation of the scripting language used a custom, janky, imperative
@@ -33,8 +36,8 @@ every time you where in shield pressure. It did however have multiple problems.
 The biggest problem, was that the imperative model was inherently prone to
 repetition and boilerplate. Because every part of the analysis was made with
 this scripting language, specifying and filtering the games had to be repeated
-frequently. Because of the nature of replay files, which player you are often
-times have to be determined by a game by game basis. After that, actually
+frequently. Because of the nature of replay files, which player you are is often
+times something that has to be determined on a game by game basis. After that, actually
 extracting the situations you were interested in in a format that could be saved
 also had to be repeated. And when writing the early proof of concepts, I
 realised that practically every new file had the exact same structure. 
@@ -60,21 +63,16 @@ dynamic language. More helpful error messages can also be provided.
 At this point, it was clear that MBSlippi was much more than just a way to save
 replays files. Now the goal is for MBSlippi to provide all the tools neccessary
 to analyze replays files in a programmatic way. This also means that
-interoperability and composability has high priority. Features that also are to
-be implemented are the ability to calculate statistics for games, for example
-how many frames on average are you idle after landing, how many times were you
-hit be raw fox upsmash etc. 
+interoperability and composability has high priority. This lead to the
+introduction of metrics. Metrics returns a scalar for every replay, which can be
+used in filter construction, and also saved to a csv file, which allows for the
+result to be easily accessible from other programs.
 
 Another goal, is the ability to define custom filters. While the builtin
 customization ability to combine filters might be enough for most use cases,
 especially my own, the ability to create custom filters in a language that
-doesn't require a recompilation of the whole program can be very covenient, and
+doesn't require a recompilation of the whole program can be very convenient, and
 allows for the program to in a sense be fully customizable. The current idea for
 this is to use the same model as LSP and DAP, that is extensions are separate
 servers that provide their functionality through IPC.
 
-A REPL is also something that is planned to be added, supporting a more
-interactive and exploratory form of workflow, but that kind of workflow also
-requires more feature from the query language to be usable, such as the ability
-to assign partial results to variables in order to be reused with different
-queries etc.

@@ -3,8 +3,9 @@
     "PacketType":"C++",
     "SubPackets":
     [
-        "/Std"
+        "/Std",
+        "/Doc"
     ],
 	"Attributes":[],
-    "Dependancies":["MBParsing","MBPacketManager","MBScript","MBUnicode","MrBoboDatabase","MBCC","MBLSP"]
+    "Dependancies":["MBParsing","MBPacketManager","MBUnicode","MrBoboDatabase","MBCC","MBLSP"]
 }
